@@ -14,6 +14,9 @@ import {
   insertSubmission,
   updateDraftSubmission,
 } from "./repository";
+import { splitProtectedAnswers } from "@/modules/protected-data/answers";
+import { encryptProtectedPayload } from "@/modules/protected-data/crypto";
+import { synchronizeProtectedCompartments } from "@/modules/protected-data/repository";
 
 export class FormNotAvailableError extends Error {
   constructor() {
@@ -63,15 +66,30 @@ export async function createPublicDraftSubmission(
     throw new SubmissionValidationError(validation.errors);
   }
 
+  const split = splitProtectedAnswers(
+    published.definition,
+    validation.answers,
+  );
   const resumeToken = createDraftResumeToken();
 
-  const submission = await insertSubmission(db, {
-    organizationId: published.form.organizationId,
-    formId: published.form.id,
-    formVersionId: published.version.id,
-    status: "draft",
-    answers: validation.answers,
-    draftTokenHash: hashDraftResumeToken(resumeToken),
+  const submission = await db.transaction(async (tx) => {
+    const created = await insertSubmission(tx, {
+      organizationId: published.form.organizationId,
+      formId: published.form.id,
+      formVersionId: published.version.id,
+      status: "draft",
+      answers: split.ordinaryAnswers,
+      draftTokenHash: hashDraftResumeToken(resumeToken),
+    });
+
+    await synchronizeProtectedCompartments(tx, {
+      organizationId: created.organizationId,
+      submissionId: created.id,
+      compartments: split.compartments,
+      encrypt: encryptProtectedPayload,
+    });
+
+    return created;
   });
 
   return {
@@ -104,11 +122,27 @@ export async function updateDraftSubmissionByToken(
     throw new SubmissionValidationError(validation.errors);
   }
 
-  return updateDraftSubmission(
-    db,
-    submission.id,
-    validation.answers,
-  );
+  const split = splitProtectedAnswers(definition, validation.answers);
+
+  return db.transaction(async (tx) => {
+    const updated = await updateDraftSubmission(
+      tx,
+      submission.id,
+      split.ordinaryAnswers,
+    );
+    if (!updated) {
+      throw new FormNotAvailableError();
+    }
+
+    await synchronizeProtectedCompartments(tx, {
+      organizationId: updated.organizationId,
+      submissionId: updated.id,
+      compartments: split.compartments,
+      encrypt: encryptProtectedPayload,
+    });
+
+    return updated;
+  });
 }
 
 export async function submitDraftSubmissionByToken(
@@ -134,18 +168,29 @@ export async function submitDraftSubmissionByToken(
     throw new SubmissionValidationError(validation.errors);
   }
 
-  const finalized = await finalizeDraftSubmission(
-    db,
-    submission.id,
-    validation.answers,
-    createConfirmationCode(),
-  );
+  const split = splitProtectedAnswers(definition, validation.answers);
 
-  if (!finalized) {
-    throw new FormNotAvailableError();
-  }
+  return db.transaction(async (tx) => {
+    const finalized = await finalizeDraftSubmission(
+      tx,
+      submission.id,
+      split.ordinaryAnswers,
+      createConfirmationCode(),
+    );
 
-  return finalized;
+    if (!finalized) {
+      throw new FormNotAvailableError();
+    }
+
+    await synchronizeProtectedCompartments(tx, {
+      organizationId: finalized.organizationId,
+      submissionId: finalized.id,
+      compartments: split.compartments,
+      encrypt: encryptProtectedPayload,
+    });
+
+    return finalized;
+  });
 }
 
 export async function submitPublicForm(
@@ -175,13 +220,29 @@ export async function submitPublicForm(
     throw new SubmissionValidationError(validation.errors);
   }
 
-  return insertSubmission(db, {
-    organizationId: published.form.organizationId,
-    formId: published.form.id,
-    formVersionId: published.version.id,
-    submitterUserId: submitterUserId ?? null,
-    status: "submitted",
-    answers: validation.answers,
-    confirmationCode: createConfirmationCode(),
+  const split = splitProtectedAnswers(
+    published.definition,
+    validation.answers,
+  );
+
+  return db.transaction(async (tx) => {
+    const submission = await insertSubmission(tx, {
+      organizationId: published.form.organizationId,
+      formId: published.form.id,
+      formVersionId: published.version.id,
+      submitterUserId: submitterUserId ?? null,
+      status: "submitted",
+      answers: split.ordinaryAnswers,
+      confirmationCode: createConfirmationCode(),
+    });
+
+    await synchronizeProtectedCompartments(tx, {
+      organizationId: submission.organizationId,
+      submissionId: submission.id,
+      compartments: split.compartments,
+      encrypt: encryptProtectedPayload,
+    });
+
+    return submission;
   });
 }
