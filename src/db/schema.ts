@@ -1051,3 +1051,158 @@ export const auditEvents = pgTable(
     ),
   ],
 );
+
+
+export const deadlineCalendars = pgTable(
+  "deadline_calendars",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    timeZone: text("time_zone").notNull().default("UTC"),
+    weekendDays: jsonb("weekend_days")
+      .$type<number[]>()
+      .notNull()
+      .default([0, 6]),
+    status: text("status").notNull().default("active"),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("deadline_calendars_organization_idx").on(table.organizationId),
+    uniqueIndex("deadline_calendars_org_key_idx").on(
+      table.organizationId,
+      table.key,
+    ),
+  ],
+);
+
+export const deadlineCalendarExclusions = pgTable(
+  "deadline_calendar_exclusions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    calendarId: uuid("calendar_id")
+      .notNull()
+      .references(() => deadlineCalendars.id, { onDelete: "cascade" }),
+    localDate: text("local_date").notNull(),
+    label: text("label"),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("deadline_calendar_exclusions_calendar_idx").on(
+      table.calendarId,
+      table.localDate,
+    ),
+    uniqueIndex("deadline_calendar_exclusions_unique_idx").on(
+      table.calendarId,
+      table.localDate,
+    ),
+  ],
+);
+
+export const caseDeadlines = pgTable(
+  "case_deadlines",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    policyKey: text("policy_key").notNull(),
+    occurrence: integer("occurrence").notNull().default(1),
+    label: text("label").notNull(),
+    description: text("description"),
+    triggerType: text("trigger_type").notNull(),
+    triggerKey: text("trigger_key"),
+    durationValue: integer("duration_value").notNull(),
+    durationUnit: text("duration_unit").notNull(),
+    calendarId: uuid("calendar_id").references(() => deadlineCalendars.id, {
+      onDelete: "restrict",
+    }),
+    warningBeforeValue: integer("warning_before_value"),
+    warningBeforeUnit: text("warning_before_unit"),
+    pausable: boolean("pausable").notNull().default(false),
+    escalationPriority: text("escalation_priority"),
+    escalationQueueSlug: text("escalation_queue_slug"),
+    policySnapshot: jsonb("policy_snapshot")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    status: text("status").notNull().default("active"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    dueAt: timestamp("due_at", { withTimezone: true }).notNull(),
+    warningAt: timestamp("warning_at", { withTimezone: true }),
+    warningIssuedAt: timestamp("warning_issued_at", { withTimezone: true }),
+    pausedAt: timestamp("paused_at", { withTimezone: true }),
+    accumulatedPauseSeconds: integer("accumulated_pause_seconds")
+      .notNull()
+      .default(0),
+    overdueAt: timestamp("overdue_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    escalatedAt: timestamp("escalated_at", { withTimezone: true }),
+    escalationAttempts: integer("escalation_attempts").notNull().default(0),
+    lastEscalationError: text("last_escalation_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("case_deadlines_organization_idx").on(table.organizationId),
+    index("case_deadlines_case_idx").on(table.caseId),
+    index("case_deadlines_due_idx").on(
+      table.organizationId,
+      table.status,
+      table.dueAt,
+    ),
+    uniqueIndex("case_deadlines_occurrence_idx").on(
+      table.caseId,
+      table.policyKey,
+      table.occurrence,
+    ),
+  ],
+);
+
+export const caseDeadlineHistory = pgTable(
+  "case_deadline_history",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    deadlineId: uuid("deadline_id")
+      .notNull()
+      .references(() => caseDeadlines.id, { onDelete: "cascade" }),
+    eventType: text("event_type").notNull(),
+    actorUserId: uuid("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    reason: text("reason"),
+    metadata: jsonb("metadata")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    occurredAt: timestamp("occurred_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("case_deadline_history_deadline_idx").on(
+      table.deadlineId,
+      table.occurredAt,
+    ),
+    index("case_deadline_history_organization_idx").on(table.organizationId),
+  ],
+);
