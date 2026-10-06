@@ -29,7 +29,12 @@ export const corePermissions = [
   "document:manage",
   "document:scan_manage",
   "document:view_private",
+  "note:view",
   "note:create_internal",
+  "note:create_participant",
+  "correspondence:view",
+  "correspondence:manage",
+  "communication:template_manage",
   "audit:view",
 ] as const;
 
@@ -55,6 +60,11 @@ export const defaultRoleTemplates: readonly RoleTemplate[] = [
     name: "Supervisor",
     description: "Operational supervision without organization security administration.",
     permissions: [
+      "communication:template_manage",
+      "correspondence:manage",
+      "correspondence:view",
+      "note:create_participant",
+      "note:view",
       "organization:view",
       "membership:view",
       "office:view",
@@ -87,6 +97,10 @@ export const defaultRoleTemplates: readonly RoleTemplate[] = [
     name: "Case Worker",
     description: "Standard case-processing access.",
     permissions: [
+      "correspondence:manage",
+      "correspondence:view",
+      "note:create_participant",
+      "note:view",
       "organization:view",
       "office:view",
       "form:view",
@@ -109,6 +123,8 @@ export const defaultRoleTemplates: readonly RoleTemplate[] = [
     name: "Intake Reviewer",
     description: "Intake and preliminary review access.",
     permissions: [
+      "correspondence:view",
+      "note:view",
       "organization:view",
       "office:view",
       "form:view",
@@ -130,6 +146,8 @@ export const defaultRoleTemplates: readonly RoleTemplate[] = [
     name: "Reviewer",
     description: "Independent review and appeal access.",
     permissions: [
+      "correspondence:view",
+      "note:view",
       "organization:view",
       "office:view",
       "form:view",
@@ -149,6 +167,8 @@ export const defaultRoleTemplates: readonly RoleTemplate[] = [
     name: "Auditor",
     description: "Read-only oversight and audit access.",
     permissions: [
+      "correspondence:view",
+      "note:view",
       "organization:view",
       "membership:view",
       "office:view",
