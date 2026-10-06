@@ -4,6 +4,7 @@ import { canViewDocumentVisibility } from "@/modules/documents/policy";
 import {
   apiJson,
   authorizeApiRequest,
+  isUuid,
 } from "@/modules/api/http";
 
 export async function GET(
@@ -14,6 +15,13 @@ export async function GET(
   if (!auth.ok) return auth.response;
 
   const { versionId } = await params;
+  if (!isUuid(versionId)) {
+    return apiJson(
+      auth.context,
+      { error: { code: "invalid_id", message: "versionId must be a UUID." } },
+      { status: 400 },
+    );
+  }
   const row = await findDocumentVersion(
     getRuntimeDatabase(),
     auth.context.tenantScope,
