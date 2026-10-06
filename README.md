@@ -14,11 +14,11 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 14 — public/private data separation and redaction**
+**PR 15 — search, queues, and operational dashboards**
 
-This milestone centralizes PUBLIC / PARTICIPANT / INTERNAL / RESTRICTED classification, adds immutable disclosure publication revisions, independent disclosure review, explicit publication/withdrawal, provenance-linked redacted document derivatives, and anonymous public routes that read only from approved publication records.
+This milestone adds tenant-scoped full-text case search, structured filters, derived operational work queues, personal saved views, exception counts, and queue/member workload dashboards over the existing authoritative case, deadline, review, assignment, and tag records.
 
-Public classification alone never exposes a source record. Anonymous users can see only a separately reviewed and published public-safe representation and explicitly linked scan-clean public derivatives.
+The operational layer deliberately does not index restricted evidence, notes, correspondence, or disclosure content into the general case search surface.
 
 See [docs/development.md](docs/development.md) for local setup and [docs/architecture](docs/architecture) for architectural decisions.
 
