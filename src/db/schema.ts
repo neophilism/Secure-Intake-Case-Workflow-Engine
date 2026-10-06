@@ -1206,3 +1206,197 @@ export const caseDeadlineHistory = pgTable(
     index("case_deadline_history_organization_idx").on(table.organizationId),
   ],
 );
+
+
+export const caseNotes = pgTable(
+  "case_notes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    visibility: text("visibility").notNull().default("internal"),
+    body: text("body").notNull(),
+    authorUserId: uuid("author_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    status: text("status").notNull().default("active"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("case_notes_organization_idx").on(table.organizationId),
+    index("case_notes_case_idx").on(table.caseId, table.createdAt),
+  ],
+);
+
+export const caseNoteDocumentLinks = pgTable(
+  "case_note_document_links",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    noteId: uuid("note_id")
+      .notNull()
+      .references(() => caseNotes.id, { onDelete: "cascade" }),
+    documentVersionId: uuid("document_version_id")
+      .notNull()
+      .references(() => documentVersions.id, { onDelete: "restrict" }),
+    attachedByUserId: uuid("attached_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    attachedAt: timestamp("attached_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("case_note_document_links_organization_idx").on(table.organizationId),
+    index("case_note_document_links_note_idx").on(table.noteId),
+    uniqueIndex("case_note_document_links_unique_idx").on(
+      table.noteId,
+      table.documentVersionId,
+    ),
+  ],
+);
+
+export const communicationTemplates = pgTable(
+  "communication_templates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    channel: text("channel").notNull().default("email"),
+    subjectTemplate: text("subject_template"),
+    bodyTemplate: text("body_template").notNull(),
+    defaultVisibility: text("default_visibility")
+      .notNull()
+      .default("case_participants"),
+    status: text("status").notNull().default("active"),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("communication_templates_organization_idx").on(table.organizationId),
+    uniqueIndex("communication_templates_org_key_idx").on(
+      table.organizationId,
+      table.key,
+    ),
+  ],
+);
+
+export const caseCommunicationThreads = pgTable(
+  "case_communication_threads",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    subject: text("subject"),
+    status: text("status").notNull().default("open"),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("case_communication_threads_organization_idx").on(table.organizationId),
+    index("case_communication_threads_case_idx").on(table.caseId, table.updatedAt),
+  ],
+);
+
+export const caseCorrespondenceMessages = pgTable(
+  "case_correspondence_messages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    threadId: uuid("thread_id")
+      .notNull()
+      .references(() => caseCommunicationThreads.id, { onDelete: "cascade" }),
+    direction: text("direction").notNull(),
+    channel: text("channel").notNull().default("email"),
+    visibility: text("visibility").notNull().default("case_participants"),
+    status: text("status").notNull(),
+    subject: text("subject"),
+    body: text("body").notNull(),
+    senderAddress: text("sender_address"),
+    recipients: jsonb("recipients")
+      .$type<Array<{ type: "to" | "cc" | "bcc"; address: string; name?: string }>>()
+      .notNull()
+      .default([]),
+    externalMessageId: text("external_message_id"),
+    inReplyToMessageId: uuid("in_reply_to_message_id"),
+    templateId: uuid("template_id").references(() => communicationTemplates.id, {
+      onDelete: "set null",
+    }),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    queuedAt: timestamp("queued_at", { withTimezone: true }),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    receivedAt: timestamp("received_at", { withTimezone: true }),
+    deliveryProvider: text("delivery_provider"),
+    deliveryMetadata: jsonb("delivery_metadata")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    failureMessage: text("failure_message"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("case_correspondence_messages_organization_idx").on(table.organizationId),
+    index("case_correspondence_messages_case_idx").on(table.caseId, table.createdAt),
+    index("case_correspondence_messages_thread_idx").on(table.threadId, table.createdAt),
+    index("case_correspondence_messages_external_idx").on(
+      table.organizationId,
+      table.externalMessageId,
+    ),
+  ],
+);
+
+export const correspondenceMessageDocumentLinks = pgTable(
+  "correspondence_message_document_links",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    messageId: uuid("message_id")
+      .notNull()
+      .references(() => caseCorrespondenceMessages.id, { onDelete: "cascade" }),
+    documentVersionId: uuid("document_version_id")
+      .notNull()
+      .references(() => documentVersions.id, { onDelete: "restrict" }),
+    attachedByUserId: uuid("attached_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    attachedAt: timestamp("attached_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("correspondence_message_document_links_organization_idx").on(
+      table.organizationId,
+    ),
+    index("correspondence_message_document_links_message_idx").on(table.messageId),
+    uniqueIndex("correspondence_message_document_links_unique_idx").on(
+      table.messageId,
+      table.documentVersionId,
+    ),
+  ],
+);
