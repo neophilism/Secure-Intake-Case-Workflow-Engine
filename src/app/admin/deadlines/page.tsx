@@ -69,6 +69,8 @@ export default async function DeadlinesPage({
         {" · "}
         <Link href="/admin/cases">Cases</Link>
         {" · "}
+        <Link href="/admin/communications">Communications</Link>
+        {" · "}
         <Link href="/admin/audit">Audit</Link>
       </nav>
 
