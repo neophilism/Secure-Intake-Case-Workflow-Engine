@@ -27,9 +27,17 @@ export function createCorrespondenceDeliveryJobHandler(
     });
 
     if (!transport) {
-      throw new Error(
+      const error = new Error(
         "No communication transport is registered for this queued message.",
       );
+      if (finalAttempt) {
+        await recordOutboundCorrespondenceFailure(db, scope, {
+          messageId: payload.messageId,
+          provider: "unavailable",
+          failureMessage: error.message,
+        });
+      }
+      throw error;
     }
 
     try {
