@@ -88,3 +88,25 @@ export async function listApplicationManagedResources(
       applicationManagedResources.resourceKey,
     );
 }
+
+
+export async function findActiveApplicationManifestRevision(
+  db: Database,
+  scope: TenantScope,
+) {
+  const [revision] = await db
+    .select()
+    .from(applicationManifestRevisions)
+    .where(
+      and(
+        eq(
+          applicationManifestRevisions.organizationId,
+          scope.organizationId,
+        ),
+        eq(applicationManifestRevisions.status, "active"),
+      ),
+    )
+    .limit(1);
+
+  return revision ?? null;
+}
