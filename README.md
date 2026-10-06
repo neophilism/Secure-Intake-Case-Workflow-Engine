@@ -14,11 +14,11 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 15 — search, queues, and operational dashboards**
+**PR 16 — API and webhooks**
 
-This milestone adds tenant-scoped full-text case search, structured filters, derived operational work queues, personal saved views, exception counts, and queue/member workload dashboards over the existing authoritative case, deadline, review, assignment, and tag records.
+This milestone adds scoped organization API clients, database-backed per-client rate limits, a versioned read API with OpenAPI 3.1 documentation, and durable signed webhooks fanned out from immutable audit events through the existing background-job engine.
 
-The operational layer deliberately does not index restricted evidence, notes, correspondence, or disclosure content into the general case search surface.
+API credentials are hashed at rest. Webhook signing secrets are AES-256-GCM encrypted, deliveries are HMAC-signed, redirects are disabled, and private/local webhook destinations are rejected at subscription creation and delivery.
 
 See [docs/development.md](docs/development.md) for local setup and [docs/architecture](docs/architecture) for architectural decisions.
 
