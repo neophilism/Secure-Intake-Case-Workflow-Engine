@@ -10,10 +10,22 @@
 cp .env.example .env
 docker compose up -d postgres
 npm install
+npm run db:migrate
 npm run dev
 ```
 
 Open http://localhost:3000. Health check: http://localhost:3000/api/health.
+
+## Database changes
+
+Update `src/db/schema.ts`, then generate and review a migration:
+
+```bash
+npm run db:generate
+npm run db:migrate
+```
+
+Tenant-owned tables must carry an explicit `organization_id` and application queries must obtain that value from a trusted server-side tenant scope.
 
 ## Verification
 
