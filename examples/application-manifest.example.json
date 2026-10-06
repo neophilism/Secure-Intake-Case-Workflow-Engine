@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
   "application": {
-    "key": "public-integrity-demo",
-    "name": "Public Integrity Demonstration Office",
-    "shortName": "Integrity Office",
-    "description": "Example thin application built on the Secure Intake & Case Workflow Engine.",
+    "key": "example_application",
+    "name": "Example Application",
+    "shortName": "Example",
+    "description": "Domain-neutral fixture for validating the reusable thin-application contract.",
     "branding": {
       "accentColor": "#334155",
-      "homeTitle": "Submit a public integrity matter",
-      "homeDescription": "Use this demonstration intake to exercise the reusable case-workflow engine."
+      "homeTitle": "Example Intake",
+      "homeDescription": "Submit an example value to exercise the generic engine contract."
     },
     "terminology": {
-      "case": { "singular": "Matter", "plural": "Matters" },
-      "submission": { "singular": "Report", "plural": "Reports" },
-      "submitter": { "singular": "Reporter", "plural": "Reporters" },
+      "case": { "singular": "Record", "plural": "Records" },
+      "submission": { "singular": "Submission", "plural": "Submissions" },
+      "submitter": { "singular": "Submitter", "plural": "Submitters" },
       "review": { "singular": "Review", "plural": "Reviews" },
       "deadline": { "singular": "Deadline", "plural": "Deadlines" },
       "document": { "singular": "Document", "plural": "Documents" },
@@ -22,111 +22,118 @@
   },
   "roles": [
     {
-      "key": "integrity_investigator",
-      "name": "Integrity Investigator",
-      "description": "Processes assigned demonstration matters.",
+      "key": "example_operator",
+      "name": "Example Operator",
+      "description": "Neutral role used only to validate manifest-defined RBAC.",
       "permissions": [
         "case:view",
         "case:update",
+        "case:close",
         "deadline:view",
         "deadline:operate",
         "document:view",
         "document:upload",
-        "note:view",
-        "note:create_internal"
+        "review:view",
+        "review:file"
       ]
     }
   ],
   "documentTypes": [
     {
-      "key": "supporting_record",
-      "name": "Supporting Record",
-      "acceptedMimeTypes": ["application/pdf", "image/png", "image/jpeg"],
-      "maxBytes": 25000000
+      "key": "example_document",
+      "name": "Example Document",
+      "acceptedMimeTypes": ["application/pdf"],
+      "maxBytes": 10000000
     }
   ],
   "deadlineCalendars": [
     {
-      "key": "standard_business",
-      "name": "Standard Business Calendar",
-      "timeZone": "America/New_York",
+      "key": "example_calendar",
+      "name": "Example Calendar",
+      "timeZone": "UTC",
       "weekendDays": [0, 6]
     }
   ],
-  "teams": [],
+  "teams": [
+    {
+      "slug": "example_team",
+      "name": "Example Team"
+    }
+  ],
   "queues": [
     {
-      "slug": "integrity_intake",
-      "name": "Integrity Intake",
-      "assignmentStrategy": "manual"
+      "slug": "example_queue",
+      "name": "Example Queue",
+      "teamSlug": "example_team",
+      "assignmentStrategy": "round_robin"
     }
   ],
   "communicationTemplates": [
     {
-      "key": "received",
-      "name": "Report received",
-      "channel": "email",
-      "subjectTemplate": "Report {{case_number}} received",
-      "bodyTemplate": "Your report {{case_number}} has been received.",
+      "key": "example_notice",
+      "name": "Example Notice",
+      "channel": "portal",
+      "subjectTemplate": "Record {{case_number}}",
+      "bodyTemplate": "Record {{case_number}} is currently {{case_status}}.",
       "defaultVisibility": "participant"
     }
   ],
   "workflows": [
     {
-      "slug": "integrity_matter",
-      "name": "Integrity Matter",
+      "slug": "example_workflow",
+      "name": "Example Workflow",
+      "description": "Neutral workflow used only by integration-contract tests.",
       "definition": {
         "schemaVersion": 1,
-        "initialState": "submitted",
+        "initialState": "state_a",
         "states": [
-          { "key": "submitted", "label": "Submitted" },
-          { "key": "screening", "label": "Screening" },
-          { "key": "investigation", "label": "Investigation" },
-          { "key": "resolved", "label": "Resolved" },
-          { "key": "closed", "label": "Closed" }
+          { "key": "state_a", "label": "State A" },
+          { "key": "state_b", "label": "State B" },
+          { "key": "state_c", "label": "State C" },
+          { "key": "state_d", "label": "State D" },
+          { "key": "state_closed", "label": "State Closed" }
         ],
         "transitions": [
           {
-            "key": "begin_screening",
-            "label": "Begin screening",
-            "from": "submitted",
-            "to": "screening",
-            "requiredPermissions": ["case:update"]
-          },
-          {
-            "key": "open_investigation",
-            "label": "Open investigation",
-            "from": "screening",
-            "to": "investigation",
+            "key": "advance_a_to_b",
+            "label": "Advance A to B",
+            "from": "state_a",
+            "to": "state_b",
             "requiredPermissions": ["case:update"],
+            "comment": "optional",
             "actions": [{ "type": "mark_open" }]
           },
           {
-            "key": "resolve",
-            "label": "Resolve",
-            "from": "investigation",
-            "to": "resolved",
+            "key": "advance_b_to_c",
+            "label": "Advance B to C",
+            "from": "state_b",
+            "to": "state_c",
             "requiredPermissions": ["case:update"],
+            "comment": "optional",
             "actions": [{ "type": "mark_resolved" }]
           },
           {
-            "key": "close",
-            "label": "Close",
-            "from": "resolved",
-            "to": "closed",
+            "key": "close_d",
+            "label": "Close D",
+            "from": "state_d",
+            "to": "state_closed",
             "requiredPermissions": ["case:close"],
+            "comment": "optional",
             "actions": [{ "type": "mark_closed" }]
           }
         ],
         "deadlinePolicies": [
           {
-            "key": "screening_due",
-            "label": "Screening due",
-            "trigger": { "type": "transition", "transitionKey": "begin_screening" },
-            "duration": { "value": 10, "unit": "business_days" },
-            "warningBefore": { "value": 2, "unit": "business_days" },
-            "calendarKey": "standard_business",
-            "completeOnTransitions": ["open_investigation"]
+            "key": "example_deadline",
+            "label": "Example Deadline",
+            "trigger": {
+              "type": "transition",
+              "transitionKey": "advance_a_to_b"
+            },
+            "duration": { "value": 2, "unit": "business_days" },
+            "warningBefore": { "value": 1, "unit": "business_days" },
+            "calendarKey": "example_calendar",
+            "completeOnTransitions": ["advance_b_to_c"]
           }
         ]
       }
@@ -134,27 +141,30 @@
   ],
   "forms": [
     {
-      "slug": "integrity-report",
-      "name": "Public Integrity Report",
-      "description": "Example public-facing intake.",
+      "slug": "example_form",
+      "name": "Example Form",
+      "description": "Neutral public form used by the generic integration contract.",
       "accessMode": "public",
-      "workflowSlug": "integrity_matter",
+      "workflowSlug": "example_workflow",
       "definition": {
         "schemaVersion": 1,
-        "intro": "Provide enough information for an intake reviewer to understand the matter.",
-        "submitLabel": "Submit report",
-        "confirmationMessage": "Your report has been received.",
+        "intro": "Provide an example value.",
+        "submitLabel": "Submit",
+        "confirmationMessage": "The example submission was received.",
         "sections": [
           {
-            "id": "matter",
-            "title": "Matter",
+            "id": "example_section",
+            "title": "Example Section",
             "fields": [
               {
-                "id": "summary",
+                "id": "example_value",
                 "type": "long_text",
-                "label": "Describe the matter",
+                "label": "Example value",
                 "required": true,
-                "validation": { "minLength": 20, "maxLength": 10000 }
+                "validation": {
+                  "minLength": 5,
+                  "maxLength": 1000
+                }
               }
             ]
           }
@@ -164,10 +174,10 @@
   ],
   "routingRules": [
     {
-      "key": "default_intake",
-      "name": "Default integrity intake",
+      "key": "example_route",
+      "name": "Example Route",
       "priority": 100,
-      "targetQueueSlug": "integrity_intake",
+      "targetQueueSlug": "example_queue",
       "definition": {
         "schemaVersion": 1,
         "match": "all",
@@ -175,11 +185,35 @@
           {
             "field": "case_type",
             "operator": "equals",
-            "value": "general"
+            "value": "example_form"
           }
         ]
       }
     }
   ],
-  "reviewPolicies": []
+  "reviewPolicies": [
+    {
+      "key": "example_review",
+      "name": "Example Review",
+      "description": "Neutral independent-review policy for contract testing.",
+      "level": 1,
+      "eligibleCaseStatuses": ["state_c"],
+      "filingWindow": {
+        "value": 10,
+        "unit": "business_days"
+      },
+      "decisionDeadline": {
+        "value": 5,
+        "unit": "business_days"
+      },
+      "decisionWarningBefore": {
+        "value": 1,
+        "unit": "business_days"
+      },
+      "calendarKey": "example_calendar",
+      "allowedOutcomes": ["outcome_a", "outcome_b"],
+      "requireIndependentReviewer": true,
+      "prerequisitePolicyKeys": []
+    }
+  ]
 }

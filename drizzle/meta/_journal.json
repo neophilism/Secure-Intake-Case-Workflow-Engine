@@ -92,6 +92,34 @@
       "when": 1791288000000,
       "tag": "0012_public_private_redaction",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791291600000,
+      "tag": "0013_search_queues_dashboards",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791295200000,
+      "tag": "0014_api_webhooks",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1791298800000,
+      "tag": "0015_application_manifests",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791302400000,
+      "tag": "0016_security_hardening",
+      "breakpoints": true
     }
   ]
 }
