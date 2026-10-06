@@ -43,7 +43,9 @@ export default async function DocumentAdministrationPage({
         {" · "}
         <Link href="/admin/cases">Cases</Link>
         {" · "}
-        <Link href="/admin/deadlines">Deadlines</Link>\n        {" · "}\n        <Link href="/admin/audit">Audit</Link>
+        <Link href="/admin/deadlines">Deadlines</Link>\n        {" · "}\n        <Link href="/admin/communications">Communications</Link>
+        {" · "}
+        <Link href="/admin/audit">Audit</Link>
       </nav>
 
       <h1>Documents & evidence</h1>
