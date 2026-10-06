@@ -144,7 +144,8 @@ export default async function CaseDetailPage({
       ? listCaseReviews(db, scope, record.id)
       : Promise.resolve([]),
     hasPermission(context, "review:view") ||
-    hasPermission(context, "review:file")
+    hasPermission(context, "review:file") ||
+    hasPermission(context, "case:appeal")
       ? listReviewPolicies(db, scope)
       : Promise.resolve([]),
     listCaseTimeline(db, scope, record.id, {
@@ -197,7 +198,9 @@ export default async function CaseDetailPage({
     "correspondence:manage",
   );
   const canViewReviews = hasPermission(context, "review:view");
-  const canFileReviews = hasPermission(context, "review:file");
+  const canFileReviews =
+    hasPermission(context, "review:file") ||
+    hasPermission(context, "case:appeal");
   const canAssignReviews = hasPermission(
     context,
     "review:assign",
