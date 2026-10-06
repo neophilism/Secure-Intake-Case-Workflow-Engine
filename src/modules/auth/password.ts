@@ -18,6 +18,10 @@ export function validatePassword(password: string): void {
   }
 }
 
+export function passwordExceedsBcryptLimit(password: string): boolean {
+  return Buffer.byteLength(password, "utf8") > MAXIMUM_PASSWORD_BYTES;
+}
+
 export async function hashPassword(password: string): Promise<string> {
   validatePassword(password);
   return hash(password, BCRYPT_COST);
