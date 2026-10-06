@@ -1331,7 +1331,7 @@ export const caseCorrespondenceMessages = pgTable(
       .references(() => caseCommunicationThreads.id, { onDelete: "cascade" }),
     direction: text("direction").notNull(),
     channel: text("channel").notNull().default("email"),
-    visibility: text("visibility").notNull().default("case_participants"),
+    visibility: text("visibility").notNull().default("participant"),
     status: text("status").notNull(),
     subject: text("subject"),
     body: text("body").notNull(),
