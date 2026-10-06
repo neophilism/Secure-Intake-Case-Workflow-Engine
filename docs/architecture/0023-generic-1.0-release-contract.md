@@ -56,12 +56,10 @@ test.
 
 ## Downstream boundary
 
-The engine repository must not contain a Public Integrity application, National
-Secure Ideas application, Goldwater application, or any other specific
-implementation.
+The engine repository must not contain any domain-specific implementation.
 
-Those applications consume released engine artifacts from their own
-repositories.
+Every specific application consumes released engine artifacts from its own
+repository.
 
 Neutral fixtures may use names such as:
 
@@ -110,14 +108,11 @@ The 1.0 contract includes:
 A future incompatible manifest or API contract requires explicit versioning
 rather than silent reinterpretation.
 
-## Rollback of prior reference application
+## Repository cleanliness
 
-PR 20 was merged and remains visible in Git history.
+The 1.0 tree contains only neutral integration fixtures.
 
-A later rollback commit restored the exact PR 19 file tree. PR 21 begins from
-that restored tree.
-
-PR 21 also removes the older Public Integrity example manifest that predated PR
-20 and replaces it with the neutral fixture. This ensures the final 1.0 engine
-tree is domain-neutral even where earlier milestones used a domain-flavored
-example.
+A previously bundled domain-specific reference application was removed before
+this release contract, and an older domain-flavored example manifest was
+replaced with the neutral fixture. Historical Git commits remain historical
+records and do not define the current engine contract.
