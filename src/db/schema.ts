@@ -256,6 +256,26 @@ export const authSessions = pgTable(
 );
 
 
+export const authLoginThrottles = pgTable(
+  "auth_login_throttles",
+  {
+    keyHash: text("key_hash").primaryKey(),
+    windowStartedAt: timestamp("window_started_at", { withTimezone: true })
+      .notNull(),
+    failureCount: integer("failure_count").notNull().default(0),
+    blockedUntil: timestamp("blocked_until", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("auth_login_throttles_blocked_until_idx").on(
+      table.blockedUntil,
+    ),
+  ],
+);
+
+
 export const apiClients = pgTable(
   "api_clients",
   {
