@@ -117,8 +117,8 @@ export default async function ReviewsPage({
                       : ""}
                   </td>
                   <td>
-                    {reviewer.displayName ??
-                      reviewer.email ??
+                    {reviewer?.displayName ??
+                      reviewer?.email ??
                       "—"}
                   </td>
                   <td>{review.filedAt.toISOString()}</td>
