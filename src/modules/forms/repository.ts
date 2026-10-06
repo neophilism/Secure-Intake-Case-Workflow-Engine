@@ -171,7 +171,17 @@ export async function publishFormVersion(
       throw new Error("Only draft form versions may be published.");
     }
 
-    const form = await findFormById(tx as Database, scope, version.formId);
+    const [form] = await tx
+      .select()
+      .from(intakeForms)
+      .where(
+        and(
+          eq(intakeForms.id, version.formId),
+          eq(intakeForms.organizationId, scope.organizationId),
+        ),
+      )
+      .limit(1);
+
     if (!form || form.status !== "active") {
       throw new Error("The parent form is not active.");
     }
