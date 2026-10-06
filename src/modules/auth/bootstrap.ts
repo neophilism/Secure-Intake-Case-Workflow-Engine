@@ -36,6 +36,19 @@ export async function bootstrapOrganizationAdministrator(
         slug: input.organizationSlug,
       })
       .returning();
+  } else if (
+    organization.status !== "active" ||
+    organization.name !== input.organizationName
+  ) {
+    [organization] = await db
+      .update(organizations)
+      .set({
+        name: input.organizationName,
+        status: "active",
+        updatedAt: new Date(),
+      })
+      .where(eq(organizations.id, organization.id))
+      .returning();
   }
 
   let [user] = await db
@@ -51,6 +64,23 @@ export async function bootstrapOrganizationAdministrator(
         email: normalizedEmail,
         displayName: input.displayName ?? null,
       })
+      .returning();
+  } else if (
+    user.status !== "active" ||
+    (input.displayName !== undefined &&
+      user.displayName !== input.displayName)
+  ) {
+    [user] = await db
+      .update(users)
+      .set({
+        status: "active",
+        displayName:
+          input.displayName !== undefined
+            ? input.displayName
+            : user.displayName,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, user.id))
       .returning();
   }
 
@@ -89,6 +119,19 @@ export async function bootstrapOrganizationAdministrator(
         status: "active",
         title: "Administrator",
       })
+      .returning();
+  } else if (
+    membership.status !== "active" ||
+    membership.title !== "Administrator"
+  ) {
+    [membership] = await db
+      .update(organizationMemberships)
+      .set({
+        status: "active",
+        title: "Administrator",
+        updatedAt: new Date(),
+      })
+      .where(eq(organizationMemberships.id, membership.id))
       .returning();
   }
 
