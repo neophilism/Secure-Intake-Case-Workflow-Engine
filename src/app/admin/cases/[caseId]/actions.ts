@@ -161,6 +161,7 @@ export async function manualAssignCaseAction(
 
 export async function applyRoutingRulesAction(
   caseId: string,
+  _formData: FormData,
 ) {
   const context = await requireCaseContext();
   if (
