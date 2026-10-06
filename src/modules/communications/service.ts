@@ -17,7 +17,10 @@ import {
   documents,
 } from "@/db/schema";
 import type { TenantScope } from "@/lib/tenancy";
-import { auditEventValues } from "@/modules/audit/event";
+import {
+  auditEventValues,
+  type AuditActorType,
+} from "@/modules/audit/event";
 import { enqueueBackgroundJobInTransaction } from "@/modules/jobs/service";
 import { createNotificationForUserInTransaction } from "@/modules/notifications/service";
 import {
@@ -216,7 +219,7 @@ export async function createOutboundCorrespondenceDraft(
     ? parseCommunicationVisibility(input.visibility)
     : null;
   const recipients = normalizeRecipients(channel, input.recipients);
-  requireOutboundRecipients(recipients);
+  requireOutboundRecipients(channel, recipients);
 
   return db.transaction(async (tx) => {
     const caseRecord = await requireCase(tx, scope, input.caseId);
@@ -284,6 +287,19 @@ export async function createOutboundCorrespondenceDraft(
     }
     if (!visibility) {
       visibility = "participant";
+    }
+    if (channel === "portal" && visibility === "internal") {
+      throw new CommunicationStateError(
+        "Portal correspondence must be participant or public visibility.",
+      );
+    }
+    if (
+      channel === "portal" &&
+      (input.documentVersionIds?.length ?? 0) > 0
+    ) {
+      throw new CommunicationStateError(
+        "Portal correspondence attachments are unavailable until participant-safe document delivery is configured.",
+      );
     }
 
     const thread = await resolveThread(
@@ -392,6 +408,64 @@ export async function queueOutboundCorrespondence(
       throw new CommunicationStateError(
         "Only outbound draft or failed correspondence can be queued.",
       );
+    }
+
+    if (message.channel === "portal") {
+      if (
+        message.visibility !== "participant" &&
+        message.visibility !== "public"
+      ) {
+        throw new CommunicationStateError(
+          "Portal correspondence must be participant or public visibility.",
+        );
+      }
+
+      const [published] = await tx
+        .update(caseCorrespondenceMessages)
+        .set({
+          status: "sent",
+          sentAt: now,
+          deliveryProvider: "participant-portal",
+          deliveryMetadata: { publishedToPortal: true },
+          failureMessage: null,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(caseCorrespondenceMessages.id, message.id),
+            eq(
+              caseCorrespondenceMessages.organizationId,
+              scope.organizationId,
+            ),
+          ),
+        )
+        .returning();
+
+      await tx.insert(auditEvents).values(
+        auditEventValues({
+          organizationId: scope.organizationId,
+          actorType: "user",
+          actorUserId: input.actorUserId,
+          action: "correspondence.sent",
+          resourceType: "correspondence_message",
+          resourceId: message.id,
+          parentResourceType: "case",
+          parentResourceId: message.caseId,
+          previousState: { status: message.status },
+          newState: {
+            status: published.status,
+            sentAt: published.sentAt?.toISOString() ?? null,
+          },
+          metadata: {
+            provider: "participant-portal",
+            channel: message.channel,
+            recipientCount: message.recipients.length,
+          },
+          occurredAt: now,
+        }),
+      );
+
+      return published;
     }
 
     const [updated] = await tx
@@ -503,7 +577,10 @@ export async function recordOutboundCorrespondenceSent(
     await tx.insert(auditEvents).values(
       auditEventValues({
         organizationId: scope.organizationId,
-        actorType: input.actorUserId ? "user" : "system",
+        actorType:
+          input.actorUserId
+            ? "user"
+            : input.actorType ?? "system",
         actorUserId: input.actorUserId ?? null,
         action: "correspondence.sent",
         resourceType: "correspondence_message",
@@ -690,6 +767,8 @@ export async function recordInboundCorrespondence(
     provider?: string | null;
     documentVersionIds?: readonly string[];
     actorUserId?: string | null;
+    actorType?: AuditActorType;
+    auditSource?: string;
     receivedAt?: Date;
   },
 ) {
@@ -845,6 +924,7 @@ export async function recordInboundCorrespondence(
           bodyLength: body.length,
           provider: message.deliveryProvider,
         },
+        source: input.auditSource ?? "application",
         occurredAt: receivedAt,
       }),
     );
