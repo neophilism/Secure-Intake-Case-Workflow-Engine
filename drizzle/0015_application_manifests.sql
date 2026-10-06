@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS "application_manifest_revisions" (
 CREATE INDEX IF NOT EXISTS "application_manifest_revisions_organization_idx"
   ON "application_manifest_revisions" ("organization_id", "applied_at");
 --> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "application_manifest_revisions_org_hash_idx"
+CREATE INDEX IF NOT EXISTS "application_manifest_revisions_org_hash_idx"
   ON "application_manifest_revisions" ("organization_id", "manifest_hash");
 --> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "application_manifest_revisions_one_active_idx"
