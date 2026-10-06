@@ -8,6 +8,7 @@ import {
   consumeProtectedReveal,
   ProtectedRevealConflictError,
 } from "@/modules/protected-data/service";
+import { rejectUntrustedBrowserMutation } from "@/lib/request-security";
 
 function jsonResponse(body: unknown, status: number) {
   return new Response(JSON.stringify(body, null, 2) + "\n", {
@@ -24,9 +25,12 @@ function jsonResponse(body: unknown, status: number) {
 }
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ requestId: string }> },
 ) {
+  const originRejection = rejectUntrustedBrowserMutation(request);
+  if (originRejection) return originRejection;
+
   const context = await getCurrentAuthorizationContext();
   if (!context || !context.tenantScope) {
     return jsonResponse(
