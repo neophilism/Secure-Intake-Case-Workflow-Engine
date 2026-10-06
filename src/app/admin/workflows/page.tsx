@@ -53,6 +53,11 @@ export default async function WorkflowAdministrationPage({
   );
   const { error } = await searchParams;
   const canManage = hasPermission(context, "workflow:manage");
+  const bindableWorkflows = workflowsWithVersions
+    .filter(({ versions }) =>
+      versions.some((version) => version.status === "published"),
+    )
+    .map(({ workflow }) => workflow);
   const bindingByForm = new Map(
     bindings.map((binding) => [
       binding.formId,
@@ -194,7 +199,7 @@ export default async function WorkflowAdministrationPage({
                     </td>
                     {canManage ? (
                       <td>
-                        {workflows.length === 0 ? (
+                        {bindableWorkflows.length === 0 ? (
                           "Publish a custom workflow first."
                         ) : (
                           <form action={bindWorkflowToFormAction}>
@@ -211,7 +216,7 @@ export default async function WorkflowAdministrationPage({
                               <option value="" disabled>
                                 Select workflow
                               </option>
-                              {workflows.map((workflow) => (
+                              {bindableWorkflows.map((workflow) => (
                                 <option
                                   key={workflow.id}
                                   value={workflow.id}
