@@ -1,4 +1,9 @@
-import type { FieldCondition, FormField } from "./definition";
+import type {
+  FieldCondition,
+  FormDefinition,
+  FormField,
+} from "./definition";
+import { fieldsInDefinition } from "./definition";
 
 export type AnswerMap = Record<string, unknown>;
 
@@ -8,6 +13,25 @@ export function isFieldVisible(
 ): boolean {
   if (!field.condition) return true;
   return evaluateCondition(field.condition, answers);
+}
+
+export function visibleFieldIdsForDefinition(
+  definition: FormDefinition,
+  answers: AnswerMap,
+): ReadonlySet<string> {
+  const visible = new Set<string>();
+  const visibleAnswers: AnswerMap = {};
+
+  for (const field of fieldsInDefinition(definition)) {
+    if (isFieldVisible(field, visibleAnswers)) {
+      visible.add(field.id);
+      if (Object.prototype.hasOwnProperty.call(answers, field.id)) {
+        visibleAnswers[field.id] = answers[field.id];
+      }
+    }
+  }
+
+  return visible;
 }
 
 export function evaluateCondition(
