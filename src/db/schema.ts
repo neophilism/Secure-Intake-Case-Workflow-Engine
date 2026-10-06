@@ -298,6 +298,12 @@ export const intakeFormVersions = pgTable(
       .$type<Record<string, unknown>>()
       .notNull(),
     status: text("status").notNull().default("draft"),
+    withdrawnAt: timestamp("withdrawn_at", { withTimezone: true }),
+    withdrawnByUserId: uuid("withdrawn_by_user_id").references(
+      () => users.id,
+      { onDelete: "set null" },
+    ),
+    withdrawalReason: text("withdrawal_reason"),
     createdByUserId: uuid("created_by_user_id").references(() => users.id, {
       onDelete: "set null",
     }),
