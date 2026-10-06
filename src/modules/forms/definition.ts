@@ -138,6 +138,8 @@ export const formDefinitionSchema = z
   .superRefine((definition, ctx) => {
     const sectionIds = new Set<string>();
     const fieldIds = new Set<string>();
+    const fieldOrder = new Map<string, number>();
+    let nextFieldIndex = 0;
 
     definition.sections.forEach((section, sectionIndex) => {
       if (sectionIds.has(section.id)) {
@@ -158,6 +160,7 @@ export const formDefinitionSchema = z
           });
         }
         fieldIds.add(field.id);
+        fieldOrder.set(field.id, nextFieldIndex++);
       });
     });
 
@@ -173,10 +176,17 @@ export const formDefinitionSchema = z
           });
         }
 
-        if (field.condition.fieldId === field.id) {
+        const controllerIndex = fieldOrder.get(field.condition.fieldId);
+        const dependentIndex = fieldOrder.get(field.id);
+
+        if (
+          controllerIndex !== undefined &&
+          dependentIndex !== undefined &&
+          controllerIndex >= dependentIndex
+        ) {
           ctx.addIssue({
             code: "custom",
-            message: "A field cannot conditionally depend on itself.",
+            message: "Conditions may reference only fields that appear earlier in the form.",
             path: ["sections", sectionIndex, "fields", fieldIndex, "condition"],
           });
         }
