@@ -14,11 +14,11 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 3 — authentication and role-based access control**
+**PR 4 — configurable intake and form engine**
 
-This milestone adds opaque server-side sessions, local credential authentication, provider-neutral identity records, organization-scoped roles and permissions, default role templates, trusted authorization contexts, login/logout, organization selection, and protected organization administration.
+This milestone adds schema-driven intake definitions, immutable published versions, conditional fields, validation, public form rendering, anonymous resumable drafts, confirmation codes, form administration, and submission persistence pinned to the exact form version used.
 
-Authentication proves user identity. Active membership selects tenant scope. Roles assigned inside that membership grant permissions. A client-supplied organization ID never creates authority.
+Form behavior now lives primarily in validated configuration rather than statute-specific application code.
 
 See [docs/development.md](docs/development.md) for local setup and [docs/architecture](docs/architecture) for architectural decisions.
 

@@ -60,6 +60,20 @@ authenticated user
   -> permissions
 ```
 
+## Form definitions
+
+Intake forms are stored as versioned JSON definitions. The first implementation supports sections, common field types, validation rules, conditional visibility, attestations, and attachment references.
+
+Use the protected `/admin/forms` screen to create a form and draft definition. Publishing a draft makes it the active public/authenticated version and supersedes the prior published version without altering historical submissions.
+
+Public forms are rendered at:
+
+```text
+/intake/<organization-slug>/<form-slug>
+```
+
+Binary attachment storage is intentionally not implemented by the generic PR 4 renderer. File fields represent document references and are completed by the later document/evidence subsystem.
+
 ## Verification
 
 ```bash

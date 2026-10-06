@@ -52,6 +52,10 @@ export default async function OrganizationAdministrationPage({
         </form>
       </header>
 
+      <nav>
+        <a href="/admin/forms">Manage intake forms</a>
+      </nav>
+
       <section>
         <h2>Office hierarchy</h2>
         <OrganizationTree offices={officeTree} />
