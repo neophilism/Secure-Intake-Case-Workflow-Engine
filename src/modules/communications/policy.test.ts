@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   canExposeDocumentInCommunication,
+  parseCommunicationVisibility,
   parseRecipientText,
 } from "./policy";
 
@@ -25,16 +26,22 @@ describe("communication policy", () => {
     ).toThrow();
   });
 
-  it("prevents internal or restricted documents from external-visible communications", () => {
+  it("normalizes legacy case participant visibility", () => {
+    expect(
+      parseCommunicationVisibility("case_participants"),
+    ).toBe("participant");
+  });
+
+  it("prevents higher-classification documents from lower-audience communications", () => {
     expect(
       canExposeDocumentInCommunication(
-        "case_participants",
+        "participant",
         "participant",
       ),
     ).toBe(true);
     expect(
       canExposeDocumentInCommunication(
-        "case_participants",
+        "participant",
         "internal",
       ),
     ).toBe(false);
@@ -49,6 +56,6 @@ describe("communication policy", () => {
         "internal",
         "restricted",
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 });
