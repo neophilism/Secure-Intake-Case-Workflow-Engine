@@ -5,7 +5,7 @@ import type {
   FormDefinition,
   FormField,
 } from "@/modules/forms/definition";
-import { isFieldVisible } from "@/modules/forms/visibility";
+import { visibleFieldIdsForDefinition } from "@/modules/forms/visibility";
 
 export function FormRenderer({
   definition,
@@ -19,6 +19,10 @@ export function FormRenderer({
   const record = (fieldId: string, value: unknown) => {
     setAnswers((current) => ({ ...current, [fieldId]: value }));
   };
+  const visibleFieldIds = visibleFieldIdsForDefinition(
+    definition,
+    answers,
+  );
 
   return (
     <form action={action}>
@@ -30,7 +34,7 @@ export function FormRenderer({
           {section.description ? <p>{section.description}</p> : null}
 
           {section.fields.map((field) =>
-            isFieldVisible(field, answers) ? (
+            visibleFieldIds.has(field.id) ? (
               <FormFieldControl
                 key={field.id}
                 field={field}
