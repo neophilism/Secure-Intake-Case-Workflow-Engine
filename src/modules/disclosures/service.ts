@@ -458,6 +458,9 @@ export async function publishDisclosureVersion(
       .update(disclosurePublications)
       .set({
         status: "published",
+        withdrawnAt: null,
+        withdrawnByUserId: null,
+        withdrawalReason: null,
         updatedAt: now,
       })
       .where(
@@ -529,6 +532,9 @@ export async function withdrawDisclosurePublication(
       .update(disclosurePublications)
       .set({
         status: "withdrawn",
+        withdrawnAt: now,
+        withdrawnByUserId: input.actorUserId,
+        withdrawalReason: reason.slice(0, 5000),
         updatedAt: now,
       })
       .where(
@@ -558,7 +564,11 @@ export async function withdrawDisclosurePublication(
         resourceType: "disclosure_publication",
         resourceId: publication.id,
         previousState: { status: publication.status },
-        newState: { status: updated.status },
+        newState: {
+          status: updated.status,
+          withdrawnAt:
+            updated.withdrawnAt?.toISOString() ?? null,
+        },
         metadata: {
           reasonLength: reason.length,
         },
