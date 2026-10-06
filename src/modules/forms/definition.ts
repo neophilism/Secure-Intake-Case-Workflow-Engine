@@ -142,12 +142,18 @@ export const formSectionSchema = z.object({
 
 export type FormSection = z.infer<typeof formSectionSchema>;
 
+const participantPortalSchema = z.object({
+  enabled: z.boolean().default(false),
+  allowMessaging: z.boolean().default(true),
+});
+
 export const formDefinitionSchema = z
   .object({
     schemaVersion: z.literal(1),
     intro: z.string().max(10000).optional(),
     submitLabel: z.string().min(1).max(100).default("Submit"),
     confirmationMessage: z.string().max(5000).optional(),
+    participantPortal: participantPortalSchema.optional(),
     sections: z.array(formSectionSchema).min(1).max(100),
   })
   .superRefine((definition, ctx) => {
