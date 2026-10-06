@@ -121,7 +121,7 @@ export async function createCaseNote(
   scope: TenantScope,
   input: {
     caseId: string;
-    visibility: CommunicationVisibility;
+    visibility?: CommunicationVisibility | null;
     body: string;
     documentVersionIds?: readonly string[];
     actorUserId: string;
@@ -210,7 +210,9 @@ export async function createOutboundCorrespondenceDraft(
   },
 ) {
   const channel = parseCommunicationChannel(input.channel);
-  const visibility = parseCommunicationVisibility(input.visibility);
+  let visibility: CommunicationVisibility | null = input.visibility
+    ? parseCommunicationVisibility(input.visibility)
+    : null;
   const recipients = normalizeRecipients(channel, input.recipients);
   requireOutboundRecipients(recipients);
 
@@ -247,6 +249,11 @@ export async function createOutboundCorrespondenceDraft(
           "Template channel does not match correspondence channel.",
         );
       }
+      if (!visibility) {
+        visibility = parseCommunicationVisibility(
+          template.defaultVisibility,
+        );
+      }
 
       const values = {
         case_number: caseRecord.caseNumber,
@@ -272,6 +279,9 @@ export async function createOutboundCorrespondenceDraft(
 
     if (!body) {
       throw new Error("Correspondence body is required.");
+    }
+    if (!visibility) {
+      visibility = "case_participants";
     }
 
     const thread = await resolveThread(
@@ -591,8 +601,9 @@ export async function deliverQueuedCorrespondence(
     message.id,
   );
 
+  let result;
   try {
-    const result = await transport.send({
+    result = await transport.send({
       idempotencyKey: message.id,
       channel,
       senderAddress: message.senderAddress,
@@ -600,14 +611,6 @@ export async function deliverQueuedCorrespondence(
       subject: message.subject,
       body: message.body,
       attachments,
-    });
-
-    return recordOutboundCorrespondenceSent(db, scope, {
-      messageId: message.id,
-      actorUserId: null,
-      provider: transport.provider,
-      externalMessageId: result.externalMessageId,
-      deliveryMetadata: result.metadata,
     });
   } catch (error) {
     await recordOutboundCorrespondenceFailure(db, scope, {
@@ -620,6 +623,14 @@ export async function deliverQueuedCorrespondence(
     });
     throw error;
   }
+
+  return recordOutboundCorrespondenceSent(db, scope, {
+    messageId: message.id,
+    actorUserId: null,
+    provider: transport.provider,
+    externalMessageId: result.externalMessageId,
+    deliveryMetadata: result.metadata,
+  });
 }
 
 export async function recordInboundCorrespondence(
@@ -649,6 +660,7 @@ export async function recordInboundCorrespondence(
     input.recipients ?? [],
   );
   const body = input.body.trim();
+  const provider = input.provider?.trim() || "manual-record";
   if (!body) throw new Error("Inbound correspondence body is required.");
 
   return db.transaction(async (tx) => {
@@ -667,6 +679,10 @@ export async function recordInboundCorrespondence(
             eq(
               caseCorrespondenceMessages.externalMessageId,
               input.externalMessageId.trim(),
+            ),
+            eq(
+              caseCorrespondenceMessages.deliveryProvider,
+              provider,
             ),
           ),
         )
@@ -747,7 +763,7 @@ export async function recordInboundCorrespondence(
         inReplyToMessageId: replyTo?.id ?? null,
         createdByUserId: input.actorUserId ?? null,
         receivedAt,
-        deliveryProvider: input.provider?.trim() || null,
+        deliveryProvider: provider,
       })
       .returning();
 
