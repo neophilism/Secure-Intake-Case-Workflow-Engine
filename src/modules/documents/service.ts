@@ -262,33 +262,6 @@ export async function uploadDocumentToCase(
         }),
       );
 
-      await tx.insert(auditEvents).values(
-        auditEventValues({
-          organizationId: scope.organizationId,
-          actorType: input.actorUserId ? "user" : "anonymous",
-          actorUserId: input.actorUserId ?? null,
-          action: "document.uploaded",
-          resourceType: "document_version",
-          resourceId: version.id,
-          parentResourceType: "submission",
-          parentResourceId: input.submissionId,
-          newState: {
-            contentStatus: version.contentStatus,
-            malwareScanStatus: version.malwareScanStatus,
-          },
-          metadata: {
-            documentId: document.id,
-            documentTypeId: document.documentTypeId,
-            versionNumber: version.versionNumber,
-            sha256: version.sha256,
-            mimeType: version.mimeType,
-            sizeBytes: version.sizeBytes,
-            visibility: document.visibility,
-            formFieldId: link.formFieldId,
-          },
-        }),
-      );
-
       return { document, version, link };
     });
   } catch (error) {
@@ -421,6 +394,34 @@ export async function uploadDocumentToSubmission(
           storageDriver: storage.driver,
         },
       });
+
+
+      await tx.insert(auditEvents).values(
+        auditEventValues({
+          organizationId: scope.organizationId,
+          actorType: input.actorUserId ? "user" : "anonymous",
+          actorUserId: input.actorUserId ?? null,
+          action: "document.uploaded",
+          resourceType: "document_version",
+          resourceId: version.id,
+          parentResourceType: "submission",
+          parentResourceId: input.submissionId,
+          newState: {
+            contentStatus: version.contentStatus,
+            malwareScanStatus: version.malwareScanStatus,
+          },
+          metadata: {
+            documentId: document.id,
+            documentTypeId: document.documentTypeId,
+            versionNumber: version.versionNumber,
+            sha256: version.sha256,
+            mimeType: version.mimeType,
+            sizeBytes: version.sizeBytes,
+            visibility: document.visibility,
+            formFieldId: link.formFieldId,
+          },
+        }),
+      );
 
       return { document, version, link };
     });
