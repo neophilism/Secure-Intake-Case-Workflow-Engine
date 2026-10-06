@@ -87,10 +87,17 @@ const deadlineCalendarSchema = z.object({
     .default([0, 6]),
 });
 
+const teamSchema = z.object({
+  slug: identifier,
+  name: z.string().min(1).max(200),
+  description: z.string().max(2000).optional(),
+});
+
 const queueSchema = z.object({
   slug: identifier,
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
+  teamSlug: identifier.optional(),
   assignmentStrategy: z.enum(["manual", "round_robin"]).default("manual"),
 });
 
@@ -179,6 +186,7 @@ export const applicationManifestSchema = z
     roles: z.array(roleSchema).max(100).default([]),
     documentTypes: z.array(documentTypeSchema).max(200).default([]),
     deadlineCalendars: z.array(deadlineCalendarSchema).max(50).default([]),
+    teams: z.array(teamSchema).max(100).default([]),
     queues: z.array(queueSchema).max(100).default([]),
     communicationTemplates: z
       .array(communicationTemplateSchema)
@@ -235,10 +243,34 @@ export const applicationManifestSchema = z
       manifest.deadlineCalendars.map((item) => item.key),
       "deadlineCalendars",
     );
+    const teamKeys = unique(
+      manifest.teams.map((item) => item.slug),
+      "teams",
+    );
     const queueKeys = unique(
       manifest.queues.map((item) => item.slug),
       "queues",
     );
+    manifest.queues.forEach((queue, index) => {
+      if (queue.teamSlug && !teamKeys.has(queue.teamSlug)) {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            `Queue references undeclared team: ${queue.teamSlug}`,
+          path: ["queues", index, "teamSlug"],
+        });
+      }
+      if (
+        queue.assignmentStrategy === "round_robin" &&
+        !queue.teamSlug
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Round-robin queues require teamSlug.",
+          path: ["queues", index, "teamSlug"],
+        });
+      }
+    });
     unique(
       manifest.communicationTemplates.map((item) => item.key),
       "communicationTemplates",
