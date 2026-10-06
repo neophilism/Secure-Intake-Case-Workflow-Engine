@@ -21,4 +21,8 @@ describe("password credentials", () => {
       /at least/,
     );
   });
+  it("rejects passwords beyond bcrypt's effective input bound", () => {
+    expect(() => validatePassword("a".repeat(MAXIMUM_PASSWORD_BYTES + 1))).toThrow();
+    expect(() => validatePassword("é".repeat(37))).toThrow();
+  });
 });
