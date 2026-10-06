@@ -53,7 +53,9 @@ ghcr.io/neophilism/secure-intake-case-workflow-engine:<version>
 ```
 
 Downstream deployments should pin an explicit release tag or immutable digest.
-Do not deploy from a moving branch.
+Do not deploy from a moving branch, copy the upstream source tree into the
+downstream repository, or maintain a long-lived application fork when the
+manifest/configuration boundary is sufficient.
 
 The downstream repository should keep its manifest under source control and
 apply it through the engine's manifest interface during deployment.
