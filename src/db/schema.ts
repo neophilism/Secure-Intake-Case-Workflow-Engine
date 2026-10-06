@@ -1364,11 +1364,13 @@ export const caseCorrespondenceMessages = pgTable(
     index("case_correspondence_messages_organization_idx").on(table.organizationId),
     index("case_correspondence_messages_case_idx").on(table.caseId, table.createdAt),
     index("case_correspondence_messages_thread_idx").on(table.threadId, table.createdAt),
-    index("case_correspondence_messages_external_idx").on(
-      table.organizationId,
-      table.deliveryProvider,
-      table.externalMessageId,
-    ),
+    uniqueIndex("case_correspondence_messages_external_idx")
+      .on(
+        table.organizationId,
+        table.deliveryProvider,
+        table.externalMessageId,
+      )
+      .where(sql`${table.externalMessageId} is not null`),
   ],
 );
 
