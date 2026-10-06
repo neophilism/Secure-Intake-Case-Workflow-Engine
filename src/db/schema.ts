@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   foreignKey,
@@ -311,6 +312,9 @@ export const intakeFormVersions = pgTable(
       table.formId,
       table.versionNumber,
     ),
+    uniqueIndex("intake_form_versions_one_published_idx")
+      .on(table.formId)
+      .where(sql`${table.status} = 'published'`),
   ],
 );
 
