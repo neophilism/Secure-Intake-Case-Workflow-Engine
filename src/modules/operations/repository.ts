@@ -55,39 +55,42 @@ function searchConditions(
   }
 
   for (const tag of definition.tags) {
-    conditions.push(sql\`exists (
+    conditions.push(sql`exists (
       select 1
-      from \${caseTags}
-      where \${caseTags.organizationId} = \${cases.organizationId}
-        and \${caseTags.caseId} = \${cases.id}
-        and \${caseTags.tag} = \${tag}
-    )\`);
+      from ${caseTags}
+      where ${caseTags.organizationId} = ${cases.organizationId}
+        and ${caseTags.caseId} = ${cases.id}
+        and ${caseTags.tag} = ${tag}
+    )`);
   }
 
   if (definition.q) {
-    const fuzzy = \`%\${definition.q}%\`;
-    conditions.push(sql\`(
+    const fuzzy = `%${definition.q}%`;
+    conditions.push(sql`(
       to_tsvector(
         'simple',
         concat_ws(
           ' ',
-          \${cases.caseNumber},
-          \${cases.title},
-          coalesce(\${cases.summary}, ''),
-          \${cases.caseType}
+          ${cases.caseNumber},
+          ${cases.title},
+          coalesce(${cases.summary}, ''),
+          ${cases.caseType}
         )
-      ) @@ websearch_to_tsquery('simple', \${definition.q})
+      ) @@ websearch_to_tsquery('simple', ${definition.q})
       or exists (
         select 1
-        from \${caseTags}
-        where \${caseTags.organizationId} = \${cases.organizationId}
-          and \${caseTags.caseId} = \${cases.id}
-          and \${caseTags.tag} ilike \${fuzzy}
+        from ${caseTags}
+        where ${caseTags.organizationId} = ${cases.organizationId}
+          and ${caseTags.caseId} = ${cases.id}
+          and ${caseTags.tag} ilike ${fuzzy}
       )
-    )\`);
+    )`);
   }
 
   switch (definition.focus) {
+    case "open":
+      conditions.push(isNull(cases.closedAt));
+      break;
     case "mine":
       conditions.push(eq(cases.assignedMembershipId, currentMembershipId));
       conditions.push(isNull(cases.closedAt));
@@ -98,13 +101,13 @@ function searchConditions(
       break;
     case "overdue":
       conditions.push(isNull(cases.closedAt));
-      conditions.push(sql\`exists (
+      conditions.push(sql`exists (
         select 1
-        from \${caseDeadlines}
-        where \${caseDeadlines.organizationId} = \${cases.organizationId}
-          and \${caseDeadlines.caseId} = \${cases.id}
-          and \${caseDeadlines.status} = 'overdue'
-      )\`);
+        from ${caseDeadlines}
+        where ${caseDeadlines.organizationId} = ${cases.organizationId}
+          and ${caseDeadlines.caseId} = ${cases.id}
+          and ${caseDeadlines.status} = 'overdue'
+      )`);
       break;
     case "escalated":
       conditions.push(isNull(cases.closedAt));
@@ -112,13 +115,13 @@ function searchConditions(
       break;
     case "open_review":
       conditions.push(isNull(cases.closedAt));
-      conditions.push(sql\`exists (
+      conditions.push(sql`exists (
         select 1
-        from \${caseReviews}
-        where \${caseReviews.organizationId} = \${cases.organizationId}
-          and \${caseReviews.caseId} = \${cases.id}
-          and \${caseReviews.status} in ('filed', 'assigned', 'under_review')
-      )\`);
+        from ${caseReviews}
+        where ${caseReviews.organizationId} = ${cases.organizationId}
+          and ${caseReviews.caseId} = ${cases.id}
+          and ${caseReviews.status} in ('filed', 'assigned', 'under_review')
+      )`);
       break;
     case "recently_closed":
       conditions.push(
@@ -148,13 +151,13 @@ export async function searchCases(
     definition,
     currentMembershipId,
   );
-  const priorityWeight = sql<number>\`case lower(\${cases.priority})
+  const priorityWeight = sql<number>`case lower(${cases.priority})
     when 'critical' then 5
     when 'urgent' then 4
     when 'high' then 3
     when 'normal' then 2
     when 'low' then 1
-    else 0 end\`;
+    else 0 end`;
 
   const order =
     definition.sort === "created_desc"
@@ -181,20 +184,20 @@ export async function searchCases(
       queueName: caseQueues.name,
       assigneeDisplayName: users.displayName,
       assigneeEmail: users.email,
-      hasOverdueDeadline: sql<boolean>\`exists (
+      hasOverdueDeadline: sql<boolean>`exists (
         select 1
-        from \${caseDeadlines}
-        where \${caseDeadlines.organizationId} = \${cases.organizationId}
-          and \${caseDeadlines.caseId} = \${cases.id}
-          and \${caseDeadlines.status} = 'overdue'
-      )\`,
-      hasOpenReview: sql<boolean>\`exists (
+        from ${caseDeadlines}
+        where ${caseDeadlines.organizationId} = ${cases.organizationId}
+          and ${caseDeadlines.caseId} = ${cases.id}
+          and ${caseDeadlines.status} = 'overdue'
+      )`,
+      hasOpenReview: sql<boolean>`exists (
         select 1
-        from \${caseReviews}
-        where \${caseReviews.organizationId} = \${cases.organizationId}
-          and \${caseReviews.caseId} = \${cases.id}
-          and \${caseReviews.status} in ('filed', 'assigned', 'under_review')
-      )\`,
+        from ${caseReviews}
+        where ${caseReviews.organizationId} = ${cases.organizationId}
+          and ${caseReviews.caseId} = ${cases.id}
+          and ${caseReviews.status} in ('filed', 'assigned', 'under_review')
+      )`,
     })
     .from(cases)
     .leftJoin(
