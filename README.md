@@ -14,9 +14,11 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 2 — organizations, offices, memberships, and tenant isolation**
+**PR 3 — authentication and role-based access control**
 
-This milestone introduces the organization hierarchy, user/membership lifecycle, organization invitations, office assignments, tenant-scoped repository boundaries, and cross-tenant isolation tests. Authentication and RBAC are intentionally deferred to PR 3 so untrusted request data is never treated as authorization context.
+This milestone adds opaque server-side sessions, local credential authentication, provider-neutral identity records, organization-scoped roles and permissions, default role templates, trusted authorization contexts, login/logout, organization selection, and protected organization administration.
+
+Authentication proves user identity. Active membership selects tenant scope. Roles assigned inside that membership grant permissions. A client-supplied organization ID never creates authority.
 
 See [docs/development.md](docs/development.md) for local setup and [docs/architecture](docs/architecture) for architectural decisions.
 
