@@ -27,7 +27,18 @@ import {
   transitionCase,
 } from "../src/modules/cases/service";
 import { listCaseDeadlines } from "../src/modules/deadlines/repository";
-import { submitPublicForm } from "../src/modules/forms/service";
+import {
+  createPublicDraftSubmission,
+  submitDraftSubmissionByToken,
+} from "../src/modules/forms/service";
+import {
+  listProtectedCompartmentsForSubmission,
+} from "../src/modules/protected-data/repository";
+import {
+  consumeProtectedReveal,
+  decideProtectedReveal,
+  requestProtectedReveal,
+} from "../src/modules/protected-data/service";
 import {
   addTeamMember,
   applyRoutingRules,
@@ -168,13 +179,122 @@ async function main() {
     assert.ok(workflowVersionV1);
     assert.equal(workflowVersionV1.versionNumber, 1);
 
-    const submission = await submitPublicForm(
+    const draft = await createPublicDraftSubmission(
       db,
       organizationSlug,
       "example_form",
-      { example_value: "example value" },
+      {
+        example_value: "example value",
+        example_secret: "protected draft value",
+      },
+    );
+
+    const [persistedDraft] = await db
+      .select()
+      .from(intakeSubmissions)
+      .where(eq(intakeSubmissions.id, draft.submissionId))
+      .limit(1);
+    assert.ok(persistedDraft);
+    assert.deepEqual(persistedDraft.answers, {
+      example_value: "example value",
+    });
+    assert.equal(
+      Object.prototype.hasOwnProperty.call(
+        persistedDraft.answers,
+        "example_secret",
+      ),
+      false,
+    );
+
+    let protectedCompartments =
+      await listProtectedCompartmentsForSubmission(
+        db,
+        scope,
+        draft.submissionId,
+      );
+    assert.equal(protectedCompartments.length, 1);
+    assert.equal(
+      protectedCompartments[0].compartmentKey,
+      "example_secret",
+    );
+    assert.deepEqual(protectedCompartments[0].fieldIds, [
+      "example_secret",
+    ]);
+
+    const submission = await submitDraftSubmissionByToken(
+      db,
+      draft.resumeToken,
+      {
+        example_value: "example value",
+        example_secret: "protected submitted value",
+      },
     );
     assert.equal(submission.formVersionId, formVersionV1.id);
+    assert.deepEqual(submission.answers, {
+      example_value: "example value",
+    });
+
+    protectedCompartments =
+      await listProtectedCompartmentsForSubmission(
+        db,
+        scope,
+        submission.id,
+      );
+    assert.equal(protectedCompartments.length, 1);
+
+    const revealRequest = await requestProtectedReveal(
+      db,
+      scope,
+      {
+        compartmentId: protectedCompartments[0].id,
+        actorUserId: actor.userId,
+        reason: "neutral protected-data integration test",
+      },
+    );
+
+    await assert.rejects(
+      () =>
+        decideProtectedReveal(db, scope, {
+          requestId: revealRequest.id,
+          actorUserId: actor.userId,
+          decision: "approved",
+          decisionReason: "self approval must fail",
+        }),
+      /requester cannot approve or reject their own/i,
+    );
+
+    const approvedReveal = await decideProtectedReveal(
+      db,
+      scope,
+      {
+        requestId: revealRequest.id,
+        actorUserId: reviewer.userId,
+        decision: "approved",
+        decisionReason: "neutral second-person approval",
+      },
+    );
+    assert.equal(approvedReveal.status, "approved");
+
+    const revealed = await consumeProtectedReveal(
+      db,
+      scope,
+      {
+        requestId: revealRequest.id,
+        actorUserId: actor.userId,
+      },
+    );
+    assert.deepEqual(revealed.payload, {
+      example_secret: "protected submitted value",
+    });
+
+    await assert.rejects(
+      () =>
+        consumeProtectedReveal(db, scope, {
+          requestId: revealRequest.id,
+          actorUserId: actor.userId,
+        }),
+      /not available/i,
+    );
 
     let record = await createCaseFromSubmission(db, scope, {
       submissionId: submission.id,
