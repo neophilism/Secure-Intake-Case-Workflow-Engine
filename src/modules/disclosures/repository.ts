@@ -7,6 +7,7 @@ import {
   documentDerivatives,
   documents,
   documentVersions,
+  organizations,
 } from "@/db/schema";
 import type { TenantScope } from "@/lib/tenancy";
 
@@ -64,9 +65,6 @@ export async function listDocumentDerivatives(
   return db
     .select({
       derivative: documentDerivatives,
-      sourceVersion: {
-        id: documentVersions.id,
-      },
       derivedDocument: {
         id: documents.id,
         title: documents.title,
@@ -186,4 +184,27 @@ export async function listDisclosurePublicationDocuments(
       asc(disclosurePublicationDocuments.sortOrder),
       asc(disclosurePublicationDocuments.attachedAt),
     );
+}
+
+
+export async function getDisclosureOrganization(
+  db: Database,
+  scope: TenantScope,
+) {
+  const [organization] = await db
+    .select({
+      id: organizations.id,
+      slug: organizations.slug,
+      name: organizations.name,
+    })
+    .from(organizations)
+    .where(
+      and(
+        eq(organizations.id, scope.organizationId),
+        eq(organizations.status, "active"),
+      ),
+    )
+    .limit(1);
+
+  return organization ?? null;
 }
