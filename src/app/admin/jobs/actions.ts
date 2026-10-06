@@ -68,6 +68,7 @@ export async function retryJobAction(
     getRuntimeDatabase(),
     requireTenantScope(context),
     jobId,
+    context.user.id,
   );
   redirect("/admin/jobs?result=job_retried");
 }
@@ -83,6 +84,7 @@ export async function setScheduleStatusAction(
     requireTenantScope(context),
     scheduleId,
     status,
+    context.user.id,
   );
   redirect("/admin/jobs?result=schedule_updated");
 }
