@@ -1,13 +1,31 @@
 import { z } from "zod";
 
+const applicationBaseUrlSchema = z
+  .string()
+  .url()
+  .refine((value) => {
+    const url = new URL(value);
+    return (
+      (url.protocol === "http:" || url.protocol === "https:") &&
+      !url.username &&
+      !url.password &&
+      (url.pathname === "/" || url.pathname === "") &&
+      !url.search &&
+      !url.hash
+    );
+  }, "APP_BASE_URL must be an HTTP(S) origin without credentials, path, query, or fragment.");
+
 const schema = z.object({
   DATABASE_URL: z
     .string()
     .url()
     .or(z.string().startsWith("postgres://"))
     .optional(),
-  APP_BASE_URL: z.string().url().default("http://localhost:3000"),
-  AUTH_SESSION_COOKIE_NAME: z.string().min(1).default("sicwe_session"),
+  APP_BASE_URL: applicationBaseUrlSchema.default("http://localhost:3000"),
+  AUTH_SESSION_COOKIE_NAME: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{1,100}$/)
+    .default("sicwe_session"),
   AUTH_SESSION_TTL_HOURS: z.coerce.number().int().positive().default(12),
   AUTH_LOGIN_FAILURE_LIMIT: z.coerce.number().int().min(2).max(100).default(5),
   AUTH_LOGIN_WINDOW_MINUTES: z.coerce.number().int().positive().max(1440).default(15),
