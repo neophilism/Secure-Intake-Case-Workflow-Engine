@@ -63,8 +63,6 @@ async function main() {
       error.code === "ENOENT"
     ) {
       // Expected: downstream applications live in separate repositories.
-    } else if (error instanceof assert.AssertionError) {
-      throw error;
     } else {
       throw error;
     }
