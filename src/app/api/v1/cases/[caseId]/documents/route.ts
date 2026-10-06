@@ -5,6 +5,7 @@ import { canViewDocumentVisibility } from "@/modules/documents/policy";
 import {
   apiJson,
   authorizeApiRequest,
+  isUuid,
 } from "@/modules/api/http";
 
 export async function GET(
@@ -18,6 +19,13 @@ export async function GET(
   if (!auth.ok) return auth.response;
 
   const { caseId } = await params;
+  if (!isUuid(caseId)) {
+    return apiJson(
+      auth.context,
+      { error: { code: "invalid_id", message: "caseId must be a UUID." } },
+      { status: 400 },
+    );
+  }
   const db = getRuntimeDatabase();
   const record = await findCaseById(
     db,
