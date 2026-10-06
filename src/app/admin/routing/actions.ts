@@ -75,7 +75,7 @@ export async function addTeamMemberAction(formData: FormData) {
     await addTeamMember(
       getRuntimeDatabase(),
       requireTenantScope(context),
-      { teamId, membershipId },
+      { teamId, membershipId, actorUserId: context.user.id },
     );
   } catch {
     redirect("/admin/routing?error=team_member_failed");
@@ -102,7 +102,7 @@ export async function setTeamMemberAvailabilityAction(
     await setTeamMemberAvailability(
       getRuntimeDatabase(),
       requireTenantScope(context),
-      { teamMembershipId, isAvailable },
+      { teamMembershipId, isAvailable, actorUserId: context.user.id },
     );
   } catch {
     redirect("/admin/routing?error=availability_failed");
