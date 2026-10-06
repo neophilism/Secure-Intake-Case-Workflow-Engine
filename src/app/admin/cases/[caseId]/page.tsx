@@ -12,11 +12,12 @@ import {
   listCaseStatusHistory,
   listCaseTags,
 } from "@/modules/cases/repository";
+import { casePriorities } from "@/modules/cases/lifecycle";
 import {
-  allowedDefaultTransitions,
-  casePriorities,
-  isCaseStatus,
-} from "@/modules/cases/lifecycle";
+  findWorkflowState,
+  parseWorkflowDefinition,
+  transitionsFromState,
+} from "@/modules/workflows/definition";
 import {
   transitionCaseAction,
   updateCaseMetadataAction,
@@ -52,19 +53,24 @@ export default async function CaseDetailPage({
       : Promise.resolve(null),
   ]);
 
+  const workflow = parseWorkflowDefinition(record.workflowDefinition);
+  const state = findWorkflowState(workflow, record.status);
   const canUpdate = hasPermission(context, "case:update");
-  const canClose = hasPermission(context, "case:close");
-  const transitions = isCaseStatus(record.status)
-    ? allowedDefaultTransitions(record.status).filter((status) =>
-        status === "closed" ? canClose : canUpdate,
-      )
-    : [];
-  const canTransition = transitions.length > 0;
+  const transitions = transitionsFromState(
+    workflow,
+    record.status,
+  ).filter((transition) =>
+    transition.requiredPermissions.every((permission) =>
+      context.permissions.has(permission),
+    ),
+  );
 
   return (
     <main>
       <nav>
         <Link href="/admin/cases">← Cases</Link>
+        {" · "}
+        <Link href="/admin/workflows">Workflows</Link>
       </nav>
 
       <h1>
@@ -73,13 +79,21 @@ export default async function CaseDetailPage({
 
       {error ? (
         <p role="alert">
-          The requested case operation could not be completed ({error}).
+          {error === "transition_requirements"
+            ? "The workflow requirements for that transition were not satisfied."
+            : `The requested case operation could not be completed (${error}).`}
         </p>
       ) : null}
 
       <dl>
         <dt>Status</dt>
-        <dd>{record.status}</dd>
+        <dd>{state?.label ?? record.status}</dd>
+        <dt>Workflow</dt>
+        <dd>
+          {record.workflowVersionId
+            ? "Pinned published workflow version"
+            : "Built-in default workflow snapshot"}
+        </dd>
         <dt>Type</dt>
         <dd>{record.caseType}</dd>
         <dt>Priority</dt>
@@ -155,31 +169,41 @@ export default async function CaseDetailPage({
         </section>
       ) : null}
 
-      {canTransition ? (
+      {transitions.length > 0 ? (
         <section>
-          <h2>Change status</h2>
+          <h2>Workflow transition</h2>
           <form action={transitionCaseAction.bind(null, record.id)}>
             <label>
-              Next status
-              <select name="toStatus" required defaultValue="">
+              Transition
+              <select name="transitionKey" required defaultValue="">
                 <option value="" disabled>
                   Select transition
                 </option>
-                {transitions.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
+                {transitions.map((transition) => {
+                  const target = findWorkflowState(
+                    workflow,
+                    transition.to,
+                  );
+                  return (
+                    <option
+                      key={transition.key}
+                      value={transition.key}
+                    >
+                      {transition.label} →{" "}
+                      {target?.label ?? transition.to}
+                    </option>
+                  );
+                })}
               </select>
             </label>
 
             <label>
-              Transition note
-              <textarea name="note" rows={3} />
+              Transition comment
+              <textarea name="comment" rows={3} />
             </label>
 
             <label>
-              Disposition (optional)
+              Proposed disposition (optional)
               <input
                 name="disposition"
                 defaultValue={record.disposition ?? ""}
@@ -188,6 +212,42 @@ export default async function CaseDetailPage({
 
             <button type="submit">Apply transition</button>
           </form>
+
+          <details>
+            <summary>Transition requirements</summary>
+            {transitions.map((transition) => (
+              <article key={transition.key}>
+                <h3>{transition.label}</h3>
+                <p>
+                  Comment: {transition.comment}. Required permissions:{" "}
+                  {transition.requiredPermissions.join(", ")}.
+                </p>
+                {transition.guards.requiredCaseFields.length > 0 ? (
+                  <p>
+                    Required case fields:{" "}
+                    {transition.guards.requiredCaseFields.join(", ")}.
+                  </p>
+                ) : null}
+                {transition.guards.requiredSubmissionFields.length > 0 ? (
+                  <p>
+                    Required submission fields:{" "}
+                    {transition.guards.requiredSubmissionFields.join(", ")}.
+                  </p>
+                ) : null}
+                {transition.guards.requiredDocuments.length > 0 ? (
+                  <p>
+                    Required documents:{" "}
+                    {transition.guards.requiredDocuments
+                      .map(
+                        (document) =>
+                          `${document.type} × ${document.minCount}`,
+                      )
+                      .join(", ")}.
+                  </p>
+                ) : null}
+              </article>
+            ))}
+          </details>
         </section>
       ) : null}
 
@@ -198,6 +258,9 @@ export default async function CaseDetailPage({
             <li key={entry.id}>
               {entry.createdAt.toISOString()}:{" "}
               {entry.fromStatus ?? "created"} → {entry.toStatus}
+              {entry.transitionKey
+                ? ` [${entry.transitionKey}]`
+                : ""}
               {entry.note ? ` — ${entry.note}` : ""}
             </li>
           ))}
