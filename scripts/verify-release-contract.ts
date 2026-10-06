@@ -41,6 +41,14 @@ async function main() {
     manifest.forms.some((form) => form.slug === "example_form"),
     true,
   );
+  const exampleForm = manifest.forms.find(
+    (form) => form.slug === "example_form",
+  );
+  assert.equal(
+    exampleForm?.definition.participantPortal?.enabled,
+    true,
+    "Neutral release fixture must exercise participant portal access.",
+  );
   assert.equal(
     manifest.workflows.some(
       (workflow) => workflow.slug === "example_workflow",
