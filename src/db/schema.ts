@@ -2,6 +2,8 @@ import {
   boolean,
   foreignKey,
   index,
+  integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -249,5 +251,104 @@ export const authSessions = pgTable(
   (table) => [
     index("auth_sessions_user_idx").on(table.userId),
     uniqueIndex("auth_sessions_token_hash_idx").on(table.tokenHash),
+  ],
+);
+
+
+export const intakeForms = pgTable(
+  "intake_forms",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    slug: text("slug").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    accessMode: text("access_mode").notNull().default("public"),
+    status: text("status").notNull().default("active"),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("intake_forms_organization_idx").on(table.organizationId),
+    uniqueIndex("intake_forms_org_slug_idx").on(
+      table.organizationId,
+      table.slug,
+    ),
+  ],
+);
+
+export const intakeFormVersions = pgTable(
+  "intake_form_versions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    formId: uuid("form_id")
+      .notNull()
+      .references(() => intakeForms.id, { onDelete: "cascade" }),
+    versionNumber: integer("version_number").notNull(),
+    definition: jsonb("definition")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    status: text("status").notNull().default("draft"),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("intake_form_versions_organization_idx").on(table.organizationId),
+    index("intake_form_versions_form_idx").on(table.formId),
+    uniqueIndex("intake_form_versions_form_number_idx").on(
+      table.formId,
+      table.versionNumber,
+    ),
+  ],
+);
+
+export const intakeSubmissions = pgTable(
+  "intake_submissions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    formId: uuid("form_id")
+      .notNull()
+      .references(() => intakeForms.id, { onDelete: "restrict" }),
+    formVersionId: uuid("form_version_id")
+      .notNull()
+      .references(() => intakeFormVersions.id, { onDelete: "restrict" }),
+    submitterUserId: uuid("submitter_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    status: text("status").notNull().default("draft"),
+    answers: jsonb("answers")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    draftTokenHash: text("draft_token_hash"),
+    confirmationCode: text("confirmation_code"),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("intake_submissions_organization_idx").on(table.organizationId),
+    index("intake_submissions_form_idx").on(table.formId),
+    uniqueIndex("intake_submissions_draft_token_hash_idx").on(
+      table.draftTokenHash,
+    ),
+    uniqueIndex("intake_submissions_confirmation_code_idx").on(
+      table.confirmationCode,
+    ),
   ],
 );
