@@ -51,6 +51,10 @@ export async function createCaseFromSubmission(
     priority?: CasePriority;
   },
 ) {
+  if (input.priority !== undefined && !isCasePriority(input.priority)) {
+    throw new Error("Case priority is invalid.");
+  }
+
   return db.transaction(async (tx) => {
     const [source] = await tx
       .select({
