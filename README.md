@@ -14,11 +14,11 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 7 — assignment and routing**
+**PR 8 — document and evidence subsystem**
 
-This milestone adds operational teams, work queues, manual assignment, ordered routing rules, round-robin distribution, availability controls, reassignment history, and explicit escalation.
+This milestone adds immutable document versions, SHA-256 integrity metadata, provider-neutral storage, malware quarantine/scan state, case and submission attachment links, evidence descriptions, custody history, verified downloads, and access history.
 
-Case creation now immediately runs the routing engine, while routing failures leave the durable case intact for staff review and manual assignment.
+Workflow required-document guards now derive their trusted document context directly from clean, available case evidence in the database.
 
 See [docs/development.md](docs/development.md) for local setup and [docs/architecture](docs/architecture) for architectural decisions.
 

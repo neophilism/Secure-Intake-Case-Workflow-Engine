@@ -767,3 +767,227 @@ export const caseAssignmentHistory = pgTable(
     ),
   ],
 );
+
+
+export const documentTypes = pgTable(
+  "document_types",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    acceptedMimeTypes: jsonb("accepted_mime_types")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    maxBytes: integer("max_bytes"),
+    status: text("status").notNull().default("active"),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("document_types_organization_idx").on(table.organizationId),
+    uniqueIndex("document_types_org_key_idx").on(
+      table.organizationId,
+      table.key,
+    ),
+  ],
+);
+
+export const documents = pgTable(
+  "documents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    documentTypeId: uuid("document_type_id")
+      .notNull()
+      .references(() => documentTypes.id, { onDelete: "restrict" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    visibility: text("visibility").notNull().default("internal"),
+    status: text("status").notNull().default("active"),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("documents_organization_idx").on(table.organizationId),
+    index("documents_type_idx").on(table.organizationId, table.documentTypeId),
+  ],
+);
+
+export const documentVersions = pgTable(
+  "document_versions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => documents.id, { onDelete: "cascade" }),
+    versionNumber: integer("version_number").notNull(),
+    originalFilename: text("original_filename").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    sha256: text("sha256").notNull(),
+    storageDriver: text("storage_driver").notNull(),
+    storageKey: text("storage_key").notNull(),
+    contentStatus: text("content_status").notNull().default("quarantined"),
+    malwareScanStatus: text("malware_scan_status").notNull().default("pending"),
+    malwareScanProvider: text("malware_scan_provider"),
+    malwareScanDetails: jsonb("malware_scan_details")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    malwareScannedAt: timestamp("malware_scanned_at", { withTimezone: true }),
+    uploadedByUserId: uuid("uploaded_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    uploadedAt: timestamp("uploaded_at", { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("document_versions_organization_idx").on(table.organizationId),
+    index("document_versions_document_idx").on(table.documentId),
+    uniqueIndex("document_versions_document_number_idx").on(
+      table.documentId,
+      table.versionNumber,
+    ),
+    uniqueIndex("document_versions_storage_idx").on(
+      table.storageDriver,
+      table.storageKey,
+    ),
+  ],
+);
+
+export const documentCaseLinks = pgTable(
+  "document_case_links",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    documentVersionId: uuid("document_version_id")
+      .notNull()
+      .references(() => documentVersions.id, { onDelete: "restrict" }),
+    relationship: text("relationship").notNull().default("evidence"),
+    evidenceDescription: text("evidence_description"),
+    sourceDescription: text("source_description"),
+    exhibitLabel: text("exhibit_label"),
+    attachedByUserId: uuid("attached_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    attachedAt: timestamp("attached_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("document_case_links_organization_idx").on(table.organizationId),
+    index("document_case_links_case_idx").on(table.caseId),
+    uniqueIndex("document_case_links_case_version_idx").on(
+      table.caseId,
+      table.documentVersionId,
+    ),
+  ],
+);
+
+export const documentSubmissionLinks = pgTable(
+  "document_submission_links",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    submissionId: uuid("submission_id")
+      .notNull()
+      .references(() => intakeSubmissions.id, { onDelete: "cascade" }),
+    documentVersionId: uuid("document_version_id")
+      .notNull()
+      .references(() => documentVersions.id, { onDelete: "restrict" }),
+    formFieldId: text("form_field_id"),
+    attachedByUserId: uuid("attached_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    attachedAt: timestamp("attached_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("document_submission_links_organization_idx").on(table.organizationId),
+    index("document_submission_links_submission_idx").on(table.submissionId),
+    uniqueIndex("document_submission_links_submission_version_idx").on(
+      table.submissionId,
+      table.documentVersionId,
+    ),
+  ],
+);
+
+export const documentCustodyEvents = pgTable(
+  "document_custody_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    documentVersionId: uuid("document_version_id")
+      .notNull()
+      .references(() => documentVersions.id, { onDelete: "cascade" }),
+    action: text("action").notNull(),
+    fromCustodian: text("from_custodian"),
+    toCustodian: text("to_custodian"),
+    location: text("location"),
+    note: text("note"),
+    actorUserId: uuid("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("document_custody_events_organization_idx").on(table.organizationId),
+    index("document_custody_events_version_idx").on(
+      table.documentVersionId,
+      table.occurredAt,
+    ),
+  ],
+);
+
+export const documentAccessEvents = pgTable(
+  "document_access_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    documentVersionId: uuid("document_version_id")
+      .notNull()
+      .references(() => documentVersions.id, { onDelete: "cascade" }),
+    action: text("action").notNull(),
+    actorUserId: uuid("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    metadata: jsonb("metadata")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("document_access_events_organization_idx").on(table.organizationId),
+    index("document_access_events_version_idx").on(
+      table.documentVersionId,
+      table.createdAt,
+    ),
+  ],
+);
+

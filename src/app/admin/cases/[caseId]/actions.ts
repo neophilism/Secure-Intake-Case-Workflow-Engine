@@ -18,6 +18,10 @@ import {
   escalateCase,
   manualAssignCase,
 } from "@/modules/routing/service";
+import {
+  recordCustodyEvent,
+  recordMalwareScanResult,
+} from "@/modules/documents/service";
 
 async function requireCaseContext() {
   const context = await getCurrentAuthorizationContext();
@@ -99,7 +103,6 @@ export async function transitionCaseAction(
         actorPermissions: [...context.permissions],
         comment: comment || null,
         disposition: disposition || undefined,
-        documentTypes: [],
       },
     );
   } catch (error) {
@@ -236,6 +239,99 @@ export async function escalateCaseAction(
     );
   } catch {
     redirect(`/admin/cases/${caseId}?error=escalation_failed`);
+  }
+
+  redirect(`/admin/cases/${caseId}`);
+}
+
+
+export async function recordDocumentScanAction(
+  caseId: string,
+  versionId: string,
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (!hasPermission(context, "document:scan_manage")) {
+    redirect("/forbidden");
+  }
+
+  const status = String(formData.get("status") ?? "").trim();
+  const provider = String(
+    formData.get("provider") ?? "manual-record",
+  ).trim();
+
+  if (
+    status !== "pending" &&
+    status !== "clean" &&
+    status !== "infected" &&
+    status !== "failed"
+  ) {
+    redirect(`/admin/cases/${caseId}?error=invalid_scan_status`);
+  }
+
+  try {
+    await recordMalwareScanResult(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        versionId,
+        status,
+        provider: provider || "manual-record",
+        actorUserId: context.user.id,
+        details: {
+          recordedThrough: "case_admin",
+        },
+      },
+    );
+  } catch {
+    redirect(`/admin/cases/${caseId}?error=scan_update_failed`);
+  }
+
+  redirect(`/admin/cases/${caseId}`);
+}
+
+export async function recordDocumentCustodyAction(
+  caseId: string,
+  versionId: string,
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (!hasPermission(context, "document:manage")) {
+    redirect("/forbidden");
+  }
+
+  const action = String(formData.get("action") ?? "").trim();
+  const fromCustodian = String(
+    formData.get("fromCustodian") ?? "",
+  ).trim();
+  const toCustodian = String(
+    formData.get("toCustodian") ?? "",
+  ).trim();
+  const location = String(
+    formData.get("location") ?? "",
+  ).trim();
+  const note = String(formData.get("note") ?? "").trim();
+
+  if (!action) {
+    redirect(`/admin/cases/${caseId}?error=invalid_custody_event`);
+  }
+
+  try {
+    await recordCustodyEvent(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        versionId,
+        action,
+        fromCustodian: fromCustodian || null,
+        toCustodian: toCustodian || null,
+        location: location || null,
+        note: note || null,
+        actorUserId: context.user.id,
+      },
+    );
+  } catch {
+    redirect(`/admin/cases/${caseId}?error=custody_update_failed`);
   }
 
   redirect(`/admin/cases/${caseId}`);

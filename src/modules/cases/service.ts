@@ -5,6 +5,10 @@ import {
   caseStatusHistory,
   cases,
   caseTags,
+  documentCaseLinks,
+  documents,
+  documentTypes,
+  documentVersions,
   caseWorkflowVersions,
   intakeForms,
   intakeFormWorkflowBindings,
@@ -266,7 +270,6 @@ export async function transitionCase(
     actorPermissions: readonly string[];
     comment?: string | null;
     disposition?: string | null;
-    documentTypes?: readonly string[];
   },
 ) {
   return db.transaction(async (tx) => {
@@ -333,6 +336,66 @@ export async function transitionCase(
         ),
       );
 
+    let trustedDocumentTypes: string[] = [];
+    if (transition.guards.requiredDocuments.length > 0) {
+      const rows = await tx
+        .select({
+          type: documentTypes.key,
+          sha256: documentVersions.sha256,
+        })
+        .from(documentCaseLinks)
+        .innerJoin(
+          documentVersions,
+          and(
+            eq(
+              documentVersions.id,
+              documentCaseLinks.documentVersionId,
+            ),
+            eq(
+              documentVersions.organizationId,
+              documentCaseLinks.organizationId,
+            ),
+            eq(documentVersions.contentStatus, "available"),
+            eq(documentVersions.malwareScanStatus, "clean"),
+          ),
+        )
+        .innerJoin(
+          documents,
+          and(
+            eq(documents.id, documentVersions.documentId),
+            eq(
+              documents.organizationId,
+              documentCaseLinks.organizationId,
+            ),
+            eq(documents.status, "active"),
+          ),
+        )
+        .innerJoin(
+          documentTypes,
+          and(
+            eq(documentTypes.id, documents.documentTypeId),
+            eq(
+              documentTypes.organizationId,
+              documentCaseLinks.organizationId,
+            ),
+            eq(documentTypes.status, "active"),
+          ),
+        )
+        .where(
+          and(
+            eq(
+              documentCaseLinks.organizationId,
+              scope.organizationId,
+            ),
+            eq(documentCaseLinks.caseId, current.id),
+          ),
+        );
+
+      trustedDocumentTypes = rows
+        .filter((row) => /^[a-f0-9]{64}$/i.test(row.sha256))
+        .map((row) => row.type);
+    }
+
     if (!isCasePriority(current.priority)) {
       throw new Error(`Unsupported case priority: ${current.priority}`);
     }
@@ -352,7 +415,7 @@ export async function transitionCase(
         sourceSubmissionId: current.sourceSubmissionId,
       },
       submissionAnswers,
-      documentTypes: input.documentTypes ?? [],
+      documentTypes: trustedDocumentTypes,
     });
 
     if (failures.length > 0) {

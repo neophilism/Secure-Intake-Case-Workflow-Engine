@@ -211,9 +211,10 @@ function FormFieldControl({
           <legend>{field.label}</legend>
           <input type="file" disabled multiple={(field.maxFiles ?? 1) > 1} />
           <small>
-            The core definition supports attachment-reference fields. Binary upload
-            storage is intentionally deferred to the document/evidence subsystem so
-            sensitive files are not persisted through an ad hoc intake path.
+            The document subsystem supports immutable submission attachments, but
+            the generic anonymous browser renderer does not enable binary upload by
+            default. Deployments may connect a vetted public-upload transport to the
+            submission attachment service.
           </small>
           {help}
         </fieldset>

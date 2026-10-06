@@ -127,6 +127,36 @@ Existing installations should synchronize the new routing permissions:
 npm run auth:sync-roles
 ```
 
+## Documents and evidence
+
+Configure document storage:
+
+```env
+DOCUMENT_STORAGE_DRIVER=local
+DOCUMENT_STORAGE_ROOT=.data/documents
+DOCUMENT_MAX_BYTES=26214400
+```
+
+The bundled local adapter writes immutable content beneath the configured root. Use a persistent volume if this adapter is used outside local development; production object storage should implement the same `DocumentStorageAdapter` contract.
+
+Manage stable document types at:
+
+```text
+/admin/documents
+```
+
+Case staff can upload evidence from the case detail page. Every upload starts quarantined with a pending malware-scan status. The engine intentionally has no implicit scanner that calls unknown content clean.
+
+Authorized staff with `document:scan_manage` can record a trusted external scanner result. Only exact versions that are `available` and scan `clean` can be downloaded or satisfy workflow required-document guards.
+
+Downloads recompute SHA-256 against the stored bytes and fail on mismatch. Custody events and access/download events are retained per immutable version.
+
+Existing installations should synchronize the new document permissions:
+
+```bash
+npm run auth:sync-roles
+```
+
 ## Verification
 
 ```bash
