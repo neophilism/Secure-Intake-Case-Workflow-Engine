@@ -266,9 +266,11 @@ export function CaseCommunicationsPanel({
                         )}
                       >
                         <button type="submit">
-                          {message.status === "failed"
-                            ? "Requeue delivery"
-                            : "Queue for delivery"}
+                          {message.channel === "portal"
+                            ? "Publish to participant portal"
+                            : message.status === "failed"
+                              ? "Requeue delivery"
+                              : "Queue for delivery"}
                         </button>
                       </form>
                     ) : null}
@@ -367,8 +369,8 @@ export function CaseCommunicationsPanel({
                   <input name="senderAddress" />
                 </label>
                 <label>
-                  To (comma-separated)
-                  <input name="to" required />
+                  To (comma-separated; not required for portal)
+                  <input name="to" />
                 </label>
                 <label>
                   Cc (comma-separated)
