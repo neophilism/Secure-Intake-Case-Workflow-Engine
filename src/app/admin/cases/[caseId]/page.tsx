@@ -14,6 +14,15 @@ import {
 } from "@/modules/cases/repository";
 import { casePriorities } from "@/modules/cases/lifecycle";
 import {
+  canViewDocumentVisibility,
+} from "@/modules/documents/policy";
+import {
+  listCaseDocuments,
+  listDocumentAccessEvents,
+  listDocumentCustodyEvents,
+  listDocumentTypes,
+} from "@/modules/documents/repository";
+import {
   listCaseAssignmentHistory,
   listOrganizationMembers,
   listQueues,
@@ -27,6 +36,8 @@ import {
   applyRoutingRulesAction,
   escalateCaseAction,
   manualAssignCaseAction,
+  recordDocumentCustodyAction,
+  recordDocumentScanAction,
   transitionCaseAction,
   updateCaseMetadataAction,
 } from "./actions";
@@ -38,7 +49,7 @@ export default async function CaseDetailPage({
   searchParams,
 }: {
   params: Promise<{ caseId: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; document?: string }>;
 }) {
   const context = await getCurrentAuthorizationContext();
   if (!context) redirect("/login");
@@ -46,7 +57,7 @@ export default async function CaseDetailPage({
   if (!hasPermission(context, "case:view")) redirect("/forbidden");
 
   const { caseId } = await params;
-  const { error } = await searchParams;
+  const { error, document: documentResult } = await searchParams;
   const scope = requireTenantScope(context);
   const db = getRuntimeDatabase();
 
@@ -60,6 +71,8 @@ export default async function CaseDetailPage({
     queues,
     members,
     assignmentHistory,
+    caseDocuments,
+    documentTypes,
   ] = await Promise.all([
     listCaseStatusHistory(db, scope, record.id),
     listCaseTags(db, scope, record.id),
@@ -69,14 +82,55 @@ export default async function CaseDetailPage({
     listQueues(db, scope),
     listOrganizationMembers(db, scope),
     listCaseAssignmentHistory(db, scope, record.id),
+    hasPermission(context, "document:view") ||
+    hasPermission(context, "document:view_private")
+      ? listCaseDocuments(db, scope, record.id)
+      : Promise.resolve([]),
+    hasPermission(context, "document:upload")
+      ? listDocumentTypes(db, scope)
+      : Promise.resolve([]),
   ]);
 
   const workflow = parseWorkflowDefinition(record.workflowDefinition);
   const state = findWorkflowState(workflow, record.status);
   const canUpdate = hasPermission(context, "case:update");
   const canAssign = hasPermission(context, "case:assign");
+  const canUploadDocuments = hasPermission(context, "document:upload");
+  const canManageScan = hasPermission(context, "document:scan_manage");
+  const canManageCustody = hasPermission(context, "document:manage");
+  const canViewAccessHistory =
+    hasPermission(context, "audit:view") ||
+    hasPermission(context, "document:manage");
   const canApplyRouting =
     canAssign && hasPermission(context, "routing:view");
+  const visibleDocuments = caseDocuments.filter(({ document }) =>
+    canViewDocumentVisibility(
+      document.visibility,
+      context.permissions,
+    ),
+  );
+  const documentHistory = new Map(
+    await Promise.all(
+      visibleDocuments.map(async ({ version }) => [
+        version.id,
+        {
+          custody: await listDocumentCustodyEvents(
+            db,
+            scope,
+            version.id,
+          ),
+          access: canViewAccessHistory
+            ? await listDocumentAccessEvents(
+                db,
+                scope,
+                version.id,
+              )
+            : [],
+        },
+      ] as const),
+    ),
+  );
+
   const transitions = transitionsFromState(
     workflow,
     record.status,
@@ -120,11 +174,19 @@ export default async function CaseDetailPage({
         <Link href="/admin/workflows">Workflows</Link>
         {" · "}
         <Link href="/admin/routing">Routing</Link>
+        {" · "}
+        <Link href="/admin/documents">Documents</Link>
       </nav>
 
       <h1>
         {record.caseNumber}: {record.title}
       </h1>
+
+      {documentResult === "uploaded" ? (
+        <p role="status">
+          Document uploaded and quarantined pending malware-scan clearance.
+        </p>
+      ) : null}
 
       {error ? (
         <p role="alert">
@@ -304,6 +366,263 @@ export default async function CaseDetailPage({
             ))}
           </ol>
         )}
+      </section>
+
+      <section>
+        <h2>Documents & evidence</h2>
+        {visibleDocuments.length === 0 ? (
+          <p>No visible documents are attached to this case.</p>
+        ) : (
+          visibleDocuments.map(({ link, document, version, type }) => {
+            const historyForVersion =
+              documentHistory.get(version.id);
+            const downloadable =
+              version.contentStatus === "available" &&
+              version.malwareScanStatus === "clean";
+
+            return (
+              <article key={link.id}>
+                <h3>
+                  {document.title} — version {version.versionNumber}
+                </h3>
+                <dl>
+                  <dt>Type</dt>
+                  <dd>
+                    {type.name} (<code>{type.key}</code>)
+                  </dd>
+                  <dt>Filename</dt>
+                  <dd>{version.originalFilename}</dd>
+                  <dt>MIME type</dt>
+                  <dd>{version.mimeType}</dd>
+                  <dt>Size</dt>
+                  <dd>{version.sizeBytes} bytes</dd>
+                  <dt>SHA-256</dt>
+                  <dd><code>{version.sha256}</code></dd>
+                  <dt>Visibility</dt>
+                  <dd>{document.visibility}</dd>
+                  <dt>Content status</dt>
+                  <dd>{version.contentStatus}</dd>
+                  <dt>Malware scan</dt>
+                  <dd>
+                    {version.malwareScanStatus}
+                    {version.malwareScanProvider
+                      ? ` — ${version.malwareScanProvider}`
+                      : ""}
+                  </dd>
+                  <dt>Evidence description</dt>
+                  <dd>{link.evidenceDescription ?? "—"}</dd>
+                  <dt>Source</dt>
+                  <dd>{link.sourceDescription ?? "—"}</dd>
+                  <dt>Exhibit</dt>
+                  <dd>{link.exhibitLabel ?? "—"}</dd>
+                </dl>
+
+                {downloadable ? (
+                  <p>
+                    <a
+                      href={`/api/documents/${version.id}/download`}
+                    >
+                      Download verified content
+                    </a>
+                  </p>
+                ) : (
+                  <p>
+                    Content is not downloadable until the exact version is
+                    malware-scan clean and available.
+                  </p>
+                )}
+
+                {canManageScan ? (
+                  <details>
+                    <summary>Record malware-scan result</summary>
+                    <form
+                      action={recordDocumentScanAction.bind(
+                        null,
+                        record.id,
+                        version.id,
+                      )}
+                    >
+                      <label>
+                        Status
+                        <select
+                          name="status"
+                          defaultValue={version.malwareScanStatus}
+                        >
+                          <option value="pending">pending</option>
+                          <option value="clean">clean</option>
+                          <option value="infected">infected</option>
+                          <option value="failed">failed</option>
+                        </select>
+                      </label>
+                      <label>
+                        Scanner/provider
+                        <input
+                          name="provider"
+                          defaultValue={
+                            version.malwareScanProvider ??
+                            "manual-record"
+                          }
+                          required
+                        />
+                      </label>
+                      <button type="submit">Record scan result</button>
+                    </form>
+                  </details>
+                ) : null}
+
+                {canManageCustody ? (
+                  <details>
+                    <summary>Record custody event</summary>
+                    <form
+                      action={recordDocumentCustodyAction.bind(
+                        null,
+                        record.id,
+                        version.id,
+                      )}
+                    >
+                      <label>
+                        Action
+                        <input name="action" required />
+                      </label>
+                      <label>
+                        From custodian
+                        <input name="fromCustodian" />
+                      </label>
+                      <label>
+                        To custodian
+                        <input name="toCustodian" />
+                      </label>
+                      <label>
+                        Location
+                        <input name="location" />
+                      </label>
+                      <label>
+                        Note
+                        <textarea name="note" rows={2} />
+                      </label>
+                      <button type="submit">Record custody event</button>
+                    </form>
+                  </details>
+                ) : null}
+
+                <details>
+                  <summary>Custody history</summary>
+                  {historyForVersion?.custody.length ? (
+                    <ol>
+                      {historyForVersion.custody.map((event) => (
+                        <li key={event.id}>
+                          {event.occurredAt.toISOString()}:{" "}
+                          {event.action}
+                          {event.fromCustodian
+                            ? ` from ${event.fromCustodian}`
+                            : ""}
+                          {event.toCustodian
+                            ? ` to ${event.toCustodian}`
+                            : ""}
+                          {event.location
+                            ? ` at ${event.location}`
+                            : ""}
+                          {event.note ? ` — ${event.note}` : ""}
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p>No custody events recorded.</p>
+                  )}
+                </details>
+
+                {canViewAccessHistory ? (
+                  <details>
+                    <summary>Access history</summary>
+                    {historyForVersion?.access.length ? (
+                      <ol>
+                        {historyForVersion.access.map((event) => (
+                          <li key={event.id}>
+                            {event.createdAt.toISOString()}:{" "}
+                            {event.action}
+                          </li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <p>No access events recorded.</p>
+                    )}
+                  </details>
+                ) : null}
+              </article>
+            );
+          })
+        )}
+
+        {canUploadDocuments ? (
+          documentTypes.filter((type) => type.status === "active").length >
+          0 ? (
+            <details>
+              <summary>Upload case document</summary>
+              <form
+                action={`/api/cases/${record.id}/documents`}
+                method="post"
+                encType="multipart/form-data"
+              >
+                <label>
+                  Document type
+                  <select
+                    name="documentTypeId"
+                    defaultValue=""
+                    required
+                  >
+                    <option value="" disabled>
+                      Select type
+                    </option>
+                    {documentTypes
+                      .filter((type) => type.status === "active")
+                      .map((type) => (
+                        <option key={type.id} value={type.id}>
+                          {type.name} ({type.key})
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label>
+                  File
+                  <input name="file" type="file" required />
+                </label>
+                <label>
+                  Title
+                  <input name="title" />
+                </label>
+                <label>
+                  Description
+                  <textarea name="description" rows={2} />
+                </label>
+                <label>
+                  Visibility
+                  <select name="visibility" defaultValue="internal">
+                    <option value="participant">participant</option>
+                    <option value="internal">internal</option>
+                    <option value="restricted">restricted</option>
+                  </select>
+                </label>
+                <label>
+                  Evidence description
+                  <textarea name="evidenceDescription" rows={2} />
+                </label>
+                <label>
+                  Source description
+                  <textarea name="sourceDescription" rows={2} />
+                </label>
+                <label>
+                  Exhibit label
+                  <input name="exhibitLabel" />
+                </label>
+                <button type="submit">Upload and quarantine</button>
+              </form>
+            </details>
+          ) : (
+            <p>
+              Create an active document type before uploading evidence.
+            </p>
+          )
+        ) : null}
       </section>
 
       {canUpdate ? (
