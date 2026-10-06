@@ -87,7 +87,7 @@ export async function getPublishedDisclosure(
 
   if (!row) return null;
 
-  const documents = await db
+  const publicDocuments = await db
     .select({
       derivativeId: documentDerivatives.id,
       label: disclosurePublicationDocuments.label,
@@ -166,7 +166,7 @@ export async function getPublishedDisclosure(
     summary: row.version.publicSummary,
     data: parsePublicData(row.version.publicData),
     publishedAt: row.version.publishedAt,
-    documents,
+    documents: publicDocuments,
   };
 }
 
