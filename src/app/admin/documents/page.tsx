@@ -67,6 +67,8 @@ export default async function DocumentAdministrationPage({
               <tr>
                 <th>Key</th>
                 <th>Name</th>
+                <th>MIME restrictions</th>
+                <th>Max bytes</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -75,6 +77,12 @@ export default async function DocumentAdministrationPage({
                 <tr key={type.id}>
                   <td><code>{type.key}</code></td>
                   <td>{type.name}</td>
+                  <td>
+                    {type.acceptedMimeTypes.length
+                      ? type.acceptedMimeTypes.join(", ")
+                      : "Any"}
+                  </td>
+                  <td>{type.maxBytes ?? "Global limit"}</td>
                   <td>{type.status}</td>
                 </tr>
               ))}
@@ -102,6 +110,17 @@ export default async function DocumentAdministrationPage({
             <label>
               Description
               <textarea name="description" rows={3} />
+            </label>
+            <label>
+              Allowed MIME types (comma-separated; blank = any)
+              <input
+                name="acceptedMimeTypes"
+                placeholder="application/pdf,image/png"
+              />
+            </label>
+            <label>
+              Type-specific maximum bytes (optional)
+              <input name="maxBytes" type="number" min="1" step="1" />
             </label>
             <button type="submit">Create document type</button>
           </form>
