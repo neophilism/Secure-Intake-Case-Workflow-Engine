@@ -14,11 +14,11 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 10 — deadlines, statutory clocks, and escalation**
+**PR 11 — notes, correspondence, and communication**
 
-This milestone adds versioned workflow deadline policies, timezone-aware business-day calendars, concurrent case clocks, warnings, pause/resume, overdue evaluation, deadline history, supervisory dashboards, and configured escalation.
+This milestone adds visibility-scoped case notes, threaded inbound/outbound correspondence, deterministic templates, document-version attachments, provider-neutral delivery adapters, manual delivery recording, inbound reply linkage, delivery queue visibility, and a unified case timeline.
 
-Clock creation/completion is transactional with the case event that triggers it. Time-dependent warnings/overdue states are evaluated through the reusable deadline sweep service.
+Internal communication access is permission-separated from ordinary case access, and externally visible communications cannot expose internal/restricted document versions.
 
 See [docs/development.md](docs/development.md) for local setup and [docs/architecture](docs/architecture) for architectural decisions.
 
