@@ -53,6 +53,7 @@ import {
   parseWorkflowDefinition,
   transitionsFromState,
 } from "@/modules/workflows/definition";
+import { PrintPageButton } from "@/components/print-page-button";
 import {
   applyRoutingRulesAction,
   cancelDeadlineAction,
@@ -344,6 +345,12 @@ export default async function CaseDetailPage({
       <h1>
         {record.caseNumber}: {record.title}
       </h1>
+      <div className="no-print">
+        <PrintPageButton label="Print case summary" />
+      </div>
+      <p className="print-only">
+        Printed case summary — {record.caseNumber}
+      </p>
 
       {documentResult === "uploaded" ? (
         <p role="status">
