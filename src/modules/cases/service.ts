@@ -339,7 +339,10 @@ export async function transitionCase(
     let trustedDocumentTypes: string[] = [];
     if (transition.guards.requiredDocuments.length > 0) {
       const rows = await tx
-        .select({ type: documentTypes.key })
+        .select({
+          type: documentTypes.key,
+          sha256: documentVersions.sha256,
+        })
         .from(documentCaseLinks)
         .innerJoin(
           documentVersions,
@@ -388,7 +391,9 @@ export async function transitionCase(
           ),
         );
 
-      trustedDocumentTypes = rows.map((row) => row.type);
+      trustedDocumentTypes = rows
+        .filter((row) => /^[a-f0-9]{64}$/i.test(row.sha256))
+        .map((row) => row.type);
     }
 
     if (!isCasePriority(current.priority)) {
