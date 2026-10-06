@@ -39,6 +39,7 @@ import {
   isTrustedDocumentContent,
 } from "@/modules/documents/policy";
 import {
+  canStaffViewInformationClass,
   disclosureSourceTypes,
   type DisclosureSourceType,
 } from "./policy";
@@ -86,6 +87,7 @@ export async function createDisclosurePublication(
     publicData: unknown;
     redactionSummary?: string | null;
     actorUserId: string;
+    actorPermissions: readonly string[];
   },
 ) {
   const slug = normalizeSlug(input.slug);
@@ -98,6 +100,7 @@ export async function createDisclosurePublication(
       scope,
       input.sourceType,
       input.sourceId,
+      new Set(input.actorPermissions),
     );
 
     const [publication] = await tx
@@ -167,6 +170,7 @@ export async function createDisclosureRevision(
     publicData: unknown;
     redactionSummary?: string | null;
     actorUserId: string;
+    actorPermissions: readonly string[];
   },
 ) {
   const publicTitle = normalizePublicTitle(input.publicTitle);
@@ -183,6 +187,7 @@ export async function createDisclosureRevision(
       scope,
       parseDisclosureSourceType(publication.sourceType),
       publication.sourceId,
+      new Set(input.actorPermissions),
     );
 
     const [latest] = await tx
@@ -577,6 +582,7 @@ export async function createRedactedDocumentDerivative(
     data: Uint8Array;
     redactionSummary?: string | null;
     actorUserId: string;
+    actorPermissions: readonly string[];
   },
   storage: DocumentStorageAdapter =
     getDocumentStorageAdapter(),
@@ -585,6 +591,7 @@ export async function createRedactedDocumentDerivative(
     db,
     scope,
     input.sourceDocumentVersionId,
+    new Set(input.actorPermissions),
   );
 
   const prepared = prepareDerivativeContent(
@@ -964,11 +971,13 @@ async function requireDisclosureSource(
   scope: TenantScope,
   sourceType: DisclosureSourceType,
   sourceId: string,
+  permissions: ReadonlySet<string>,
 ) {
   let found = false;
 
   switch (sourceType) {
     case "case": {
+      requirePermissions(permissions, ["case:view"]);
       const [row] = await tx
         .select({ id: cases.id })
         .from(cases)
@@ -983,6 +992,7 @@ async function requireDisclosureSource(
       break;
     }
     case "submission": {
+      requirePermissions(permissions, ["submission:view"]);
       const [row] = await tx
         .select({ id: intakeSubmissions.id })
         .from(intakeSubmissions)
@@ -1001,7 +1011,10 @@ async function requireDisclosureSource(
     }
     case "document": {
       const [row] = await tx
-        .select({ id: documents.id })
+        .select({
+          id: documents.id,
+          visibility: documents.visibility,
+        })
         .from(documents)
         .where(
           and(
@@ -1013,10 +1026,22 @@ async function requireDisclosureSource(
           ),
         )
         .limit(1);
+      if (
+        row &&
+        !canStaffViewInformationClass(
+          row.visibility,
+          permissions,
+        )
+      ) {
+        throw new DisclosureNotFoundError(
+          "Disclosure source is unavailable to the acting user.",
+        );
+      }
       found = Boolean(row);
       break;
     }
     case "note": {
+      requirePermissions(permissions, ["case:view", "note:view"]);
       const [row] = await tx
         .select({ id: caseNotes.id })
         .from(caseNotes)
@@ -1031,6 +1056,10 @@ async function requireDisclosureSource(
       break;
     }
     case "correspondence": {
+      requirePermissions(permissions, [
+        "case:view",
+        "correspondence:view",
+      ]);
       const [row] = await tx
         .select({ id: caseCorrespondenceMessages.id })
         .from(caseCorrespondenceMessages)
@@ -1048,6 +1077,7 @@ async function requireDisclosureSource(
       break;
     }
     case "review": {
+      requirePermissions(permissions, ["case:view", "review:view"]);
       const [row] = await tx
         .select({ id: caseReviews.id })
         .from(caseReviews)
@@ -1152,6 +1182,7 @@ async function loadTrustedSourceDocument(
   db: Database,
   scope: TenantScope,
   sourceVersionId: string,
+  permissions: ReadonlySet<string>,
 ) {
   const [row] = await db
     .select({
@@ -1193,12 +1224,34 @@ async function loadTrustedSourceDocument(
     )
     .limit(1);
 
-  if (!row || !isTrustedDocumentContent(row.version)) {
+  if (
+    !row ||
+    !canStaffViewInformationClass(
+      row.document.visibility,
+      permissions,
+    ) ||
+    !isTrustedDocumentContent(row.version)
+  ) {
     throw new DisclosureStateError(
       "Redacted derivatives require an active, trusted source document version.",
     );
   }
   return row;
+}
+
+function requirePermissions(
+  permissions: ReadonlySet<string>,
+  required: readonly string[],
+) {
+  if (
+    required.some(
+      (permission) => !permissions.has(permission),
+    )
+  ) {
+    throw new DisclosureNotFoundError(
+      "Disclosure source is unavailable to the acting user.",
+    );
+  }
 }
 
 function prepareDerivativeContent(
