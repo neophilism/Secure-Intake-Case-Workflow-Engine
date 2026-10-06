@@ -14,9 +14,9 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 1 — Foundation and architectural contract**
+**PR 2 — organizations, offices, memberships, and tenant isolation**
 
-This milestone establishes the TypeScript/Next.js application, PostgreSQL/Drizzle baseline, Docker local environment, CI verification, health endpoint, shared contracts, and architecture decisions.
+This milestone introduces the organization hierarchy, user/membership lifecycle, organization invitations, office assignments, tenant-scoped repository boundaries, and cross-tenant isolation tests. Authentication and RBAC are intentionally deferred to PR 3 so untrusted request data is never treated as authorization context.
 
 See [docs/development.md](docs/development.md) for local setup and [docs/architecture](docs/architecture) for architectural decisions.
 
