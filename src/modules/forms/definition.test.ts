@@ -91,6 +91,37 @@ describe("form definition", () => {
     ).toThrow(/unknown field/);
   });
 
+  it("rejects conditions that reference later fields", () => {
+    expect(() =>
+      parseFormDefinition({
+        schemaVersion: 1,
+        sections: [
+          {
+            id: "details",
+            title: "Details",
+            fields: [
+              {
+                id: "dependent",
+                type: "short_text",
+                label: "Dependent",
+                condition: {
+                  fieldId: "controller",
+                  operator: "equals",
+                  value: "yes",
+                },
+              },
+              {
+                id: "controller",
+                type: "short_text",
+                label: "Controller",
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(/earlier/);
+  });
+
   it("requires options for select fields", () => {
     expect(() =>
       parseFormDefinition({
