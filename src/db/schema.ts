@@ -718,6 +718,49 @@ export const caseTags = pgTable(
 );
 
 
+export const caseSavedViews = pgTable(
+  "case_saved_views",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    ownerMembershipId: uuid("owner_membership_id")
+      .notNull()
+      .references(() => organizationMemberships.id, {
+        onDelete: "cascade",
+      }),
+    name: text("name").notNull(),
+    definition: jsonb("definition")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    isDefault: boolean("is_default").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("case_saved_views_owner_idx").on(
+      table.organizationId,
+      table.ownerMembershipId,
+      table.name,
+    ),
+    uniqueIndex("case_saved_views_owner_name_idx").on(
+      table.organizationId,
+      table.ownerMembershipId,
+      table.name,
+    ),
+    uniqueIndex("case_saved_views_one_default_idx")
+      .on(table.organizationId, table.ownerMembershipId)
+      .where(sql`${table.isDefault} = true`),
+  ],
+);
+
+
 export const caseAssignmentHistory = pgTable(
   "case_assignment_history",
   {
