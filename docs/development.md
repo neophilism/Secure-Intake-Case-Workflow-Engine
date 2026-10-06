@@ -74,6 +74,29 @@ Public forms are rendered at:
 
 Binary attachment storage is intentionally not implemented by the generic PR 4 renderer. File fields represent document references and are completed by the later document/evidence subsystem.
 
+## Case lifecycle
+
+Staff with case access can work from the protected case console:
+
+```text
+/admin/cases
+```
+
+Submitted intake appears in the review queue for users with both `submission:view` and `case:create`. Starting review allocates a tenant/year case number and creates an `intake_review` case linked to the immutable source submission.
+
+The PR 5 default lifecycle is:
+
+```text
+intake_review -> accepted | rejected
+accepted      -> open | intake_review
+rejected      -> intake_review
+open          -> resolved | closed
+resolved      -> open | closed
+closed        -> open
+```
+
+This transition map is temporary platform behavior. PR 6 replaces it with configurable workflows.
+
 ## Verification
 
 ```bash
