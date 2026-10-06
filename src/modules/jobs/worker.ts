@@ -2,6 +2,7 @@ import type { Database } from "@/db/client";
 import type { TenantScope } from "@/lib/tenancy";
 import { createTrustedTenantScope } from "@/lib/tenancy";
 import { sweepOrganizationDeadlines } from "@/modules/deadlines/service";
+import { sweepReviewDeadlines } from "@/modules/reviews/service";
 import {
   claimBackgroundJobs,
   completeBackgroundJob,
@@ -36,6 +37,12 @@ export function createCoreBackgroundJobHandlers(): Map<
       "deadline.sweep",
       async ({ db, scope }) => {
         await sweepOrganizationDeadlines(db, scope);
+      },
+    ],
+    [
+      "review.sweep",
+      async ({ db, scope }) => {
+        await sweepReviewDeadlines(db, scope);
       },
     ],
   ]);
