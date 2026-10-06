@@ -17,9 +17,11 @@ import {
   backgroundJobs,
   backgroundSchedules,
   organizations,
+  auditEvents,
 } from "@/db/schema";
 import type { TenantScope } from "@/lib/tenancy";
 import { createTrustedTenantScope } from "@/lib/tenancy";
+import { auditEventValues } from "@/modules/audit/event";
 import { retryDelaySeconds, nextScheduleRunAt } from "./backoff";
 
 const jobTypePattern = /^[a-z][a-z0-9_.:-]*$/;
@@ -221,6 +223,37 @@ export async function claimBackgroundJobs(
   return claimed;
 }
 
+export async function renewBackgroundJobLease(
+  db: Database,
+  jobId: string,
+  workerId: string,
+  leaseSeconds: number,
+  now = new Date(),
+) {
+  if (!Number.isInteger(leaseSeconds) || leaseSeconds < 1) {
+    throw new Error("Background job lease duration is invalid.");
+  }
+
+  const [updated] = await db
+    .update(backgroundJobs)
+    .set({
+      leaseUntil: new Date(
+        now.getTime() + leaseSeconds * 1000,
+      ),
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(backgroundJobs.id, jobId),
+        eq(backgroundJobs.status, "running"),
+        eq(backgroundJobs.lockedBy, workerId),
+      ),
+    )
+    .returning({ id: backgroundJobs.id });
+
+  return Boolean(updated);
+}
+
 export async function completeBackgroundJob(
   db: Database,
   job: ClaimedJob,
@@ -346,35 +379,72 @@ export async function retryDeadBackgroundJob(
   db: Database,
   scope: TenantScope,
   jobId: string,
+  actorUserId?: string | null,
   additionalAttempts = 5,
 ) {
   if (!Number.isInteger(additionalAttempts) || additionalAttempts < 1) {
     throw new Error("Additional attempts must be positive.");
   }
 
-  const [updated] = await db
-    .update(backgroundJobs)
-    .set({
-      status: "pending",
-      maxAttempts: sql`${backgroundJobs.attempts} + ${additionalAttempts}`,
-      availableAt: new Date(),
-      completedAt: null,
-      lastError: null,
-      lockedBy: null,
-      lockedAt: null,
-      leaseUntil: null,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(backgroundJobs.id, jobId),
-        eq(backgroundJobs.organizationId, scope.organizationId),
-        eq(backgroundJobs.status, "dead"),
-      ),
-    )
-    .returning();
+  return db.transaction(async (tx) => {
+    const [current] = await tx
+      .select()
+      .from(backgroundJobs)
+      .where(
+        and(
+          eq(backgroundJobs.id, jobId),
+          eq(
+            backgroundJobs.organizationId,
+            scope.organizationId,
+          ),
+          eq(backgroundJobs.status, "dead"),
+        ),
+      )
+      .limit(1);
 
-  return updated ?? null;
+    if (!current) return null;
+
+    const now = new Date();
+    const [updated] = await tx
+      .update(backgroundJobs)
+      .set({
+        status: "pending",
+        maxAttempts:
+          sql`${backgroundJobs.attempts} + ${additionalAttempts}`,
+        availableAt: now,
+        completedAt: null,
+        lastError: null,
+        lockedBy: null,
+        lockedAt: null,
+        leaseUntil: null,
+        updatedAt: now,
+      })
+      .where(eq(backgroundJobs.id, current.id))
+      .returning();
+
+    await tx.insert(auditEvents).values(
+      auditEventValues({
+        organizationId: scope.organizationId,
+        actorType: actorUserId ? "user" : "system",
+        actorUserId: actorUserId ?? null,
+        action: "job.retried",
+        resourceType: "background_job",
+        resourceId: current.id,
+        previousState: {
+          status: current.status,
+          attempts: current.attempts,
+          maxAttempts: current.maxAttempts,
+        },
+        newState: {
+          status: updated.status,
+          attempts: updated.attempts,
+          maxAttempts: updated.maxAttempts,
+        },
+      }),
+    );
+
+    return updated;
+  });
 }
 
 export async function setBackgroundScheduleStatus(
@@ -382,28 +452,56 @@ export async function setBackgroundScheduleStatus(
   scope: TenantScope,
   scheduleId: string,
   status: "active" | "paused",
+  actorUserId?: string | null,
 ) {
-  const [updated] = await db
-    .update(backgroundSchedules)
-    .set({
-      status,
-      ...(status === "active"
-        ? { nextRunAt: new Date() }
-        : {}),
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(backgroundSchedules.id, scheduleId),
-        eq(
-          backgroundSchedules.organizationId,
-          scope.organizationId,
+  return db.transaction(async (tx) => {
+    const [current] = await tx
+      .select()
+      .from(backgroundSchedules)
+      .where(
+        and(
+          eq(backgroundSchedules.id, scheduleId),
+          eq(
+            backgroundSchedules.organizationId,
+            scope.organizationId,
+          ),
         ),
-      ),
-    )
-    .returning();
+      )
+      .limit(1);
 
-  return updated ?? null;
+    if (!current) return null;
+
+    const now = new Date();
+    const [updated] = await tx
+      .update(backgroundSchedules)
+      .set({
+        status,
+        ...(status === "active"
+          ? { nextRunAt: now }
+          : {}),
+        updatedAt: now,
+      })
+      .where(eq(backgroundSchedules.id, current.id))
+      .returning();
+
+    await tx.insert(auditEvents).values(
+      auditEventValues({
+        organizationId: scope.organizationId,
+        actorType: actorUserId ? "user" : "system",
+        actorUserId: actorUserId ?? null,
+        action: "job.schedule_status_changed",
+        resourceType: "background_schedule",
+        resourceId: current.id,
+        previousState: { status: current.status },
+        newState: {
+          status: updated.status,
+          nextRunAt: updated.nextRunAt.toISOString(),
+        },
+      }),
+    );
+
+    return updated;
+  });
 }
 
 export async function ensureBuiltinSchedules(
