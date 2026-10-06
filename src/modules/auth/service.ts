@@ -16,12 +16,14 @@ import {
 } from "./repository";
 import {
   consumePasswordVerificationWork,
+  passwordExceedsBcryptLimit,
   verifyPassword,
 } from "./password";
 import {
   assertLoginAllowed,
   clearAccountLoginFailures,
   loginThrottleKeys,
+  normalizeLoginIdentifier,
   recordLoginFailure,
 } from "./throttle";
 import {
@@ -51,7 +53,18 @@ export async function authenticateWithLocalPassword(
   const throttle = loginThrottleKeys(email, source);
   await assertLoginAllowed(db, throttle.all);
 
-  const user = await findActiveUserByEmail(db, email);
+  const normalizedEmail = normalizeLoginIdentifier(email);
+  if (
+    normalizedEmail.length < 3 ||
+    normalizedEmail.length > 320 ||
+    passwordExceedsBcryptLimit(password)
+  ) {
+    await consumePasswordVerificationWork("invalid-login-candidate");
+    await recordLoginFailure(db, throttle.all);
+    throw new InvalidCredentialsError();
+  }
+
+  const user = await findActiveUserByEmail(db, normalizedEmail);
   if (!user) {
     await consumePasswordVerificationWork(password);
     await recordLoginFailure(db, throttle.all);
