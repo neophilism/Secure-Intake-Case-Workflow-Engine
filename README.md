@@ -14,13 +14,15 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 21 — generic 1.0 release contract and integration testing**
+**PR 22 — protected form compartments and dual-control reveal**
 
-This milestone completes the upstream engine as a domain-neutral release candidate. CI now boots an empty PostgreSQL database, runs every migration, applies a neutral thin-application manifest, and verifies intake, case creation, routing, deadlines, workflow transitions, independent review, closure, manifest idempotency, historical version pinning, and ownership-collision protection.
+This milestone adds a domain-neutral privacy primitive discovered by the first real downstream application. Form fields may opt into an encrypted protected compartment. Protected values are removed from ordinary submission JSON before persistence—including resumable drafts—and are stored separately using AES-256-GCM with tenant/submission/compartment authenticated context.
 
-The package version is **1.0.0-rc.1**. Tagged releases publish a verified container image to GitHub Container Registry for use by separate downstream application repositories.
+Authorized staff can see only protected-compartment metadata. Plaintext requires an explicit access request, approval by a different authorized user, and a one-time reveal by the original requester. Reveal approvals expire after 15 minutes and every request, decision, and reveal is recorded in the immutable audit stream without copying plaintext into audit metadata.
 
-See [docs/development.md](docs/development.md), [docs/downstream-application-contract.md](docs/downstream-application-contract.md), and [docs/architecture](docs/architecture) for the release and downstream contracts.
+The package version is **1.0.0-rc.2**.
+
+See [docs/development.md](docs/development.md), [docs/downstream-application-contract.md](docs/downstream-application-contract.md), and [docs/architecture/0024-protected-compartments.md](docs/architecture/0024-protected-compartments.md).
 
 ## Security status
 
