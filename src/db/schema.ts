@@ -356,3 +356,104 @@ export const intakeSubmissions = pgTable(
     ),
   ],
 );
+
+
+export const caseNumberSequences = pgTable(
+  "case_number_sequences",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    calendarYear: integer("calendar_year").notNull(),
+    lastValue: integer("last_value").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("case_number_sequences_org_year_idx").on(
+      table.organizationId,
+      table.calendarYear,
+    ),
+  ],
+);
+
+export const cases = pgTable(
+  "cases",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    caseNumber: text("case_number").notNull(),
+    sourceSubmissionId: uuid("source_submission_id").references(
+      () => intakeSubmissions.id,
+      { onDelete: "restrict" },
+    ),
+    caseType: text("case_type").notNull().default("general"),
+    title: text("title").notNull(),
+    summary: text("summary"),
+    status: text("status").notNull().default("intake_review"),
+    priority: text("priority").notNull().default("normal"),
+    disposition: text("disposition"),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    openedAt: timestamp("opened_at", { withTimezone: true }),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("cases_organization_idx").on(table.organizationId),
+    index("cases_status_idx").on(table.organizationId, table.status),
+    uniqueIndex("cases_org_number_idx").on(
+      table.organizationId,
+      table.caseNumber,
+    ),
+    uniqueIndex("cases_source_submission_idx").on(table.sourceSubmissionId),
+  ],
+);
+
+export const caseStatusHistory = pgTable(
+  "case_status_history",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    fromStatus: text("from_status"),
+    toStatus: text("to_status").notNull(),
+    actorUserId: uuid("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("case_status_history_organization_idx").on(table.organizationId),
+    index("case_status_history_case_idx").on(table.caseId, table.createdAt),
+  ],
+);
+
+export const caseTags = pgTable(
+  "case_tags",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    tag: text("tag").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("case_tags_organization_idx").on(table.organizationId),
+    uniqueIndex("case_tags_case_tag_idx").on(table.caseId, table.tag),
+  ],
+);
