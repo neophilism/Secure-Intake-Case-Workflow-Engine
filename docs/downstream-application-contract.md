@@ -11,6 +11,7 @@ The upstream engine owns reusable behavior:
 - authentication and organization tenancy;
 - role/permission primitives;
 - intake/form processing;
+- encrypted protected form compartments and dual-control reveal;
 - case lifecycle and workflow execution;
 - routing and assignment;
 - documents and evidence metadata;
@@ -30,7 +31,7 @@ A downstream repository owns its application policy:
 - application name and branding;
 - terminology;
 - application-specific roles composed from core permissions;
-- form schemas;
+- form schemas, including which fields belong to protected compartments;
 - workflow states/transitions;
 - deadlines;
 - teams/queues and routing rules;
@@ -125,3 +126,14 @@ For the 1.0 release line:
 
 The engine repository may contain neutral fixtures used to test these contracts,
 but not a real or fictional domain-specific application.
+
+
+## Protected-data deployment contract
+
+Downstream forms may mark individual non-file fields with a `protection` object. The engine then removes those values from ordinary submission JSON and stores them in a separately encrypted compartment.
+
+A downstream deployment using protected fields must supply `PROTECTED_DATA_ENCRYPTION_KEY` through deployment secrets. The key is not portable application policy and must never be placed in the application manifest.
+
+The current 1.0 contract supports `revealPolicy: "dual_control"` only. A different authorized user must approve a reveal request, approvals expire, and the requester's reveal is one-time.
+
+This primitive protects structured form values. It does not make the engine a classified-information system and does not extend to binary documents.
