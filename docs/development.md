@@ -212,7 +212,7 @@ npm run deadline:sweep
 
 The sweep processes all active organizations, issues warnings, marks clocks overdue, and applies configured priority/queue escalation through the existing case escalation service. A protected manual sweep control is also available at `/admin/deadlines`.
 
-PR 10 deliberately does not run a permanent scheduler process. The background-job milestone can invoke this same sweep service on a recurring cadence.
+PR 12 provides a durable scheduler and worker for this sweep. The built-in `deadline-sweep` schedule invokes the same service on the cadence configured by `BACKGROUND_DEADLINE_SWEEP_SECONDS`.
 
 Existing installations should synchronize the new deadline permissions:
 
@@ -273,6 +273,80 @@ Case notes may attach existing case documents. External-visible notes apply the 
 Immutable audit events deliberately record message status/metadata but do not duplicate message bodies, sender/recipient addresses, or attachment content.
 
 The case detail page includes a unified timeline combining workflow status, assignments, deadline activity, document attachments, notes, and correspondence.
+
+## Notifications and background jobs
+
+PR 12 adds a PostgreSQL-backed durable queue with leases, retries, dead-letter state, attempt history, and recurring interval schedules.
+
+Worker configuration:
+
+```env
+BACKGROUND_JOB_LEASE_SECONDS=60
+BACKGROUND_JOB_POLL_MS=1000
+BACKGROUND_JOB_BATCH_SIZE=10
+BACKGROUND_DEADLINE_SWEEP_SECONDS=60
+```
+
+Synchronize built-in schedules:
+
+```bash
+npm run jobs:seed-schedules
+```
+
+Run one worker iteration:
+
+```bash
+npm run worker:once
+```
+
+Run the long-lived worker:
+
+```bash
+npm run worker
+```
+
+The bundled worker handles `deadline.sweep`. It does not claim external-delivery job types unless a deployment explicitly registers the relevant transport handler.
+
+This is intentional. A missing email/webhook provider should leave those jobs visibly pending rather than falsely converting them into delivery failures.
+
+Provider-enabled workers can extend the core registry with:
+
+- `createNotificationDeliveryJobHandler(...)` for `notification.deliver`;
+- `createCorrespondenceDeliveryJobHandler(...)` for `correspondence.deliver`.
+
+Both delivery contracts use stable resource IDs as idempotency keys.
+
+In-app notifications require no external provider and are available at:
+
+```text
+/notifications
+```
+
+Default delivery behavior:
+
+- in-app: enabled;
+- email: disabled;
+- webhook: disabled.
+
+Ordinary users may enable email only for their authenticated account address. Arbitrary email destinations and HTTPS webhooks require `notification:manage`.
+
+The engine currently emits notifications for case assignment, routing assignment, escalation, deadline warnings, overdue deadlines, and terminal correspondence delivery failures.
+
+The protected operations surface is:
+
+```text
+/admin/jobs
+```
+
+It shows recurring schedules, recent jobs, leases, retry/dead state, and—when authorized—notification-delivery state. Interactive controls are always restricted to the active organization, even though the standalone worker may process all organizations.
+
+Queued correspondence now creates a durable `correspondence.deliver` job. Transient automatic delivery failures leave the message queued while the job retries; only the final attempt marks the correspondence failed. Staff may still record an external/manual send, and a later stale delivery job treats an already-sent message as an idempotent success.
+
+Existing installations should synchronize the new notification/job permissions:
+
+```bash
+npm run auth:sync-roles
+```
 
 ## Verification
 
