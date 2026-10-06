@@ -50,6 +50,10 @@ import {
   fileCaseReview,
   withdrawReview,
 } from "@/modules/reviews/service";
+import {
+  decideProtectedReveal,
+  requestProtectedReveal,
+} from "@/modules/protected-data/service";
 
 async function requireCaseContext() {
   const context = await getCurrentAuthorizationContext();
@@ -1017,6 +1021,84 @@ export async function applyReviewDecisionAction(
   } catch {
     redirect(
       `/admin/cases/${caseId}?error=review_effect_failed`,
+    );
+  }
+
+  redirect(`/admin/cases/${caseId}`);
+}
+
+
+export async function requestProtectedRevealAction(
+  caseId: string,
+  compartmentId: string,
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (
+    !hasPermission(context, "case:view") ||
+    !hasPermission(context, "protected_data:request_reveal")
+  ) {
+    redirect("/forbidden");
+  }
+
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!reason) {
+    redirect(
+      `/admin/cases/${caseId}?error=protected_reveal_reason_required`,
+    );
+  }
+
+  try {
+    await requestProtectedReveal(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        compartmentId,
+        actorUserId: context.user.id,
+        reason,
+      },
+    );
+  } catch {
+    redirect(
+      `/admin/cases/${caseId}?error=protected_reveal_request_failed`,
+    );
+  }
+
+  redirect(`/admin/cases/${caseId}`);
+}
+
+export async function decideProtectedRevealAction(
+  caseId: string,
+  requestId: string,
+  decision: "approved" | "rejected",
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (
+    !hasPermission(context, "case:view") ||
+    !hasPermission(context, "protected_data:approve_reveal")
+  ) {
+    redirect("/forbidden");
+  }
+
+  const decisionReason = String(
+    formData.get("decisionReason") ?? "",
+  ).trim();
+
+  try {
+    await decideProtectedReveal(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        requestId,
+        actorUserId: context.user.id,
+        decision,
+        decisionReason: decisionReason || null,
+      },
+    );
+  } catch {
+    redirect(
+      `/admin/cases/${caseId}?error=protected_reveal_decision_failed`,
     );
   }
 
