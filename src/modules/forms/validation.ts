@@ -47,9 +47,17 @@ export function filterKnownAnswers(
   definition: FormDefinition,
   rawAnswers: AnswerMap,
 ): AnswerMap {
-  const known = new Set(fieldsInDefinition(definition).map((field) => field.id));
-  return Object.fromEntries(
+  const fields = fieldsInDefinition(definition);
+  const known = new Set(fields.map((field) => field.id));
+  const declaredAnswers = Object.fromEntries(
     Object.entries(rawAnswers).filter(([fieldId]) => known.has(fieldId)),
+  );
+
+  return Object.fromEntries(
+    Object.entries(declaredAnswers).filter(([fieldId]) => {
+      const field = fields.find((candidate) => candidate.id === fieldId);
+      return field ? isFieldVisible(field, declaredAnswers) : false;
+    }),
   );
 }
 
@@ -140,6 +148,16 @@ function validateField(
     case "address": {
       if (!isAddress(value)) {
         fail("Enter a valid address.");
+        return;
+      }
+
+      if (
+        field.required &&
+        ["line1", "city", "region", "postalCode", "country"].some(
+          (part) => !value[part]?.trim(),
+        )
+      ) {
+        fail("Complete all required address fields.");
       }
       return;
     }
