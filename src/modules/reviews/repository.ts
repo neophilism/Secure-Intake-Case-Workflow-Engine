@@ -76,6 +76,28 @@ export async function listCaseReviews(
     .orderBy(desc(caseReviews.filedAt));
 }
 
+export async function listCaseReviewHistory(
+  db: Database,
+  scope: TenantScope,
+  reviewIds: readonly string[],
+) {
+  if (reviewIds.length === 0) return [];
+
+  const rows = [];
+  for (const reviewId of reviewIds) {
+    const history = await listReviewHistory(
+      db,
+      scope,
+      reviewId,
+    );
+    rows.push(...history);
+  }
+  return rows.sort(
+    (a, b) =>
+      a.occurredAt.getTime() - b.occurredAt.getTime(),
+  );
+}
+
 export async function listReviewHistory(
   db: Database,
   scope: TenantScope,
