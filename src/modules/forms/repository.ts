@@ -108,7 +108,6 @@ export async function findFormVersionById(
   db: Database,
   scope: TenantScope,
   versionId: string,
-  actorUserId: string,
 ) {
   const [version] = await db
     .select()
@@ -189,6 +188,7 @@ export async function publishFormVersion(
   db: Database,
   scope: TenantScope,
   versionId: string,
+  actorUserId: string,
 ) {
   return db.transaction(async (tx) => {
     const [version] = await tx
