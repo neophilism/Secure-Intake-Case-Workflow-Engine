@@ -56,6 +56,8 @@ export default async function FormAdministrationPage({
         <a href="/admin/documents">Documents</a>
         {" · "}
         <a href="/admin/cases">Cases</a>
+        {" · "}
+        <a href="/admin/audit">Audit</a>
       </nav>
 
       <h1>Intake form administration</h1>
