@@ -48,10 +48,15 @@ export async function runBackgroundWorkerIteration(
     batchSize: number;
     leaseSeconds: number;
     now?: Date;
+    organizationId?: string;
   },
 ) {
   const now = input.now ?? new Date();
-  const scheduled = await enqueueDueSchedules(db, now);
+  const scheduled = await enqueueDueSchedules(
+    db,
+    now,
+    input.organizationId,
+  );
   const acceptedTypes = [...handlers.keys()];
 
   const jobs = await claimBackgroundJobs(db, {
@@ -60,6 +65,7 @@ export async function runBackgroundWorkerIteration(
     limit: input.batchSize,
     leaseSeconds: input.leaseSeconds,
     now,
+    organizationId: input.organizationId,
   });
 
   let succeeded = 0;
