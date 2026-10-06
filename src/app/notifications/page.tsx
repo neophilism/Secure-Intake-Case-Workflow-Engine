@@ -47,6 +47,11 @@ export default async function NotificationsPage({
     ),
   ]);
 
+  const canManageExternal = hasPermission(
+    context,
+    "notification:manage",
+  );
+
   const preference = (channel: string) =>
     preferences.find(
       (row) =>
@@ -104,7 +109,13 @@ export default async function NotificationsPage({
           preferences can override them through the service API later.
         </p>
 
-        {channels.map((channel) => {
+        {channels
+          .filter(
+            (channel) =>
+              channel.key !== "webhook" ||
+              canManageExternal,
+          )
+          .map((channel) => {
           const saved = preference(channel.key);
           const enabled =
             saved?.enabled ?? channel.defaultEnabled;
@@ -135,17 +146,28 @@ export default async function NotificationsPage({
                     <option value="false">disabled</option>
                   </select>
                 </label>
-                {channel.key !== "in_app" ? (
+                {channel.key === "email" ? (
                   <label>
                     Destination
                     <input
                       name="destination"
-                      defaultValue={destination}
-                      placeholder={
-                        channel.key === "email"
-                          ? context.user.email
-                          : "https://example.gov/hooks/notifications"
+                      defaultValue={
+                        canManageExternal
+                          ? destination
+                          : context.user.email
                       }
+                      readOnly={!canManageExternal}
+                    />
+                  </label>
+                ) : null}
+                {channel.key === "webhook" &&
+                canManageExternal ? (
+                  <label>
+                    HTTPS destination
+                    <input
+                      name="destination"
+                      defaultValue={destination}
+                      placeholder="https://example.gov/hooks/notifications"
                     />
                   </label>
                 ) : null}
