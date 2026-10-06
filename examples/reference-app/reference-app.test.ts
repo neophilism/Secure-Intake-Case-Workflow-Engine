@@ -36,20 +36,18 @@ describe("Public Integrity reference application", () => {
     const states = new Set(
       workflow!.definition.states.map((state) => state.key),
     );
-    expect(states).toEqual(
-      expect.objectContaining(
-        new Set([
-          "submitted",
-          "intake_screening",
-          "investigation",
-          "information_requested",
-          "supervisor_review",
-          "decided",
-          "appeal_decided",
-          "closed",
-        ]),
-      ),
-    );
+    for (const state of [
+      "submitted",
+      "intake_screening",
+      "investigation",
+      "information_requested",
+      "supervisor_review",
+      "decided",
+      "appeal_decided",
+      "closed",
+    ]) {
+      expect(states.has(state)).toBe(true);
+    }
 
     const transitions = new Map(
       workflow!.definition.transitions.map((transition) => [
