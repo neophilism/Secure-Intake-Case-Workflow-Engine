@@ -751,7 +751,12 @@ export async function assignReview(
             scope.organizationId,
           ),
           eq(caseReviews.status, review.status),
-          eq(caseReviews.updatedAt, review.updatedAt),
+          review.reviewerMembershipId
+            ? eq(
+                caseReviews.reviewerMembershipId,
+                review.reviewerMembershipId,
+              )
+            : isNull(caseReviews.reviewerMembershipId),
         ),
       )
       .returning();
