@@ -178,9 +178,9 @@ export default async function CommunicationsPage({
               Default visibility
               <select
                 name="defaultVisibility"
-                defaultValue="case_participants"
+                defaultValue="participant"
               >
-                <option value="case_participants">
+                <option value="participant">
                   case participants
                 </option>
                 <option value="internal">internal</option>
