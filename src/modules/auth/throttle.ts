@@ -106,47 +106,50 @@ export async function recordLoginFailure(
     .where(lt(authLoginThrottles.updatedAt, staleBefore));
 
   for (const keyHash of keys) {
-    await db.execute(sql`
-      insert into auth_login_throttles (
-        key_hash,
-        window_started_at,
-        failure_count,
-        blocked_until,
-        updated_at
-      )
-      values (
-        ${keyHash},
-        ${now},
-        1,
-        null,
-        ${now}
-      )
-      on conflict (key_hash) do update set
-        window_started_at = case
-          when auth_login_throttles.window_started_at < ${cutoff}
-            then ${now}
-          else auth_login_throttles.window_started_at
-        end,
-        failure_count = case
-          when auth_login_throttles.window_started_at < ${cutoff}
-            then 1
-          else auth_login_throttles.failure_count + 1
-        end,
-        blocked_until = case
-          when auth_login_throttles.blocked_until > ${now}
-            then auth_login_throttles.blocked_until
-          when (
+    await db
+      .insert(authLoginThrottles)
+      .values({
+        keyHash,
+        windowStartedAt: now,
+        failureCount: 1,
+        blockedUntil: null,
+        updatedAt: now,
+      })
+      .onConflictDoUpdate({
+        target: authLoginThrottles.keyHash,
+        set: {
+          windowStartedAt: sql`
             case
-              when auth_login_throttles.window_started_at < ${cutoff}
-                then 1
-              else auth_login_throttles.failure_count + 1
+              when ${authLoginThrottles.windowStartedAt} < ${cutoff}::timestamptz
+                then ${now}::timestamptz
+              else ${authLoginThrottles.windowStartedAt}
             end
-          ) >= ${env.AUTH_LOGIN_FAILURE_LIMIT}
-            then ${blockedUntil}
-          else null
-        end,
-        updated_at = ${now}
-    `);
+          `,
+          failureCount: sql`
+            case
+              when ${authLoginThrottles.windowStartedAt} < ${cutoff}::timestamptz
+                then 1
+              else ${authLoginThrottles.failureCount} + 1
+            end
+          `,
+          blockedUntil: sql`
+            case
+              when ${authLoginThrottles.blockedUntil} > ${now}::timestamptz
+                then ${authLoginThrottles.blockedUntil}
+              when (
+                case
+                  when ${authLoginThrottles.windowStartedAt} < ${cutoff}::timestamptz
+                    then 1
+                  else ${authLoginThrottles.failureCount} + 1
+                end
+              ) >= ${env.AUTH_LOGIN_FAILURE_LIMIT}
+                then ${blockedUntil}::timestamptz
+              else null
+            end
+          `,
+          updatedAt: now,
+        },
+      });
   }
 }
 
