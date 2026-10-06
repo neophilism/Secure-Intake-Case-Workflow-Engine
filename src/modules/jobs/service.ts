@@ -159,20 +159,6 @@ export async function claimBackgroundJobs(
     if (claimed.length >= input.limit) break;
 
     const result = await db.transaction(async (tx) => {
-      await tx
-        .update(backgroundJobAttempts)
-        .set({
-          outcome: "lease_expired",
-          errorMessage: "Worker lease expired before completion.",
-          completedAt: now,
-        })
-        .where(
-          and(
-            eq(backgroundJobAttempts.jobId, candidate.id),
-            isNull(backgroundJobAttempts.completedAt),
-          ),
-        );
-
       const leaseUntil = new Date(
         now.getTime() + input.leaseSeconds * 1000,
       );
@@ -202,6 +188,20 @@ export async function claimBackgroundJobs(
         .returning();
 
       if (!job) return null;
+
+      await tx
+        .update(backgroundJobAttempts)
+        .set({
+          outcome: "lease_expired",
+          errorMessage: "Worker lease expired before completion.",
+          completedAt: now,
+        })
+        .where(
+          and(
+            eq(backgroundJobAttempts.jobId, job.id),
+            isNull(backgroundJobAttempts.completedAt),
+          ),
+        );
 
       await tx.insert(backgroundJobAttempts).values({
         organizationId: job.organizationId,
