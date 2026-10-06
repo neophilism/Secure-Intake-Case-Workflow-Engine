@@ -14,11 +14,11 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 5 — submission-to-case lifecycle**
+**PR 6 — configurable workflow and transition engine**
 
-This milestone converts completed intake into durable tenant-scoped cases with human-readable case numbers, priority and tags, controlled intake review and disposition states, source-submission linkage, and status history.
+This milestone replaces the hard-coded case state machine with versioned workflow definitions, workflow-to-form bindings, pinned case workflow snapshots, configurable transition permissions/comments/guards, and safe automatic case actions.
 
-The lifecycle is intentionally a small default state machine. PR 6 will make workflows and transition rules fully configurable.
+Existing cases are backfilled with the prior lifecycle snapshot so upgrades preserve historical behavior.
 
 See [docs/development.md](docs/development.md) for local setup and [docs/architecture](docs/architecture) for architectural decisions.
 
