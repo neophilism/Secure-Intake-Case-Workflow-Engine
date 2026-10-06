@@ -1773,6 +1773,25 @@ export const caseReviews = pgTable(
       table.reviewerMembershipId,
       table.status,
     ),
+    uniqueIndex("case_reviews_open_root_unique_idx")
+      .on(
+        table.organizationId,
+        table.caseId,
+        table.policyId,
+      )
+      .where(
+        sql`${table.parentReviewId} is null and ${table.status} in ('filed','assigned','under_review')`,
+      ),
+    uniqueIndex("case_reviews_open_parent_unique_idx")
+      .on(
+        table.organizationId,
+        table.caseId,
+        table.policyId,
+        table.parentReviewId,
+      )
+      .where(
+        sql`${table.parentReviewId} is not null and ${table.status} in ('filed','assigned','under_review')`,
+      ),
     foreignKey({
       columns: [table.parentReviewId],
       foreignColumns: [table.id],
