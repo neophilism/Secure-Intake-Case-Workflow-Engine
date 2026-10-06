@@ -9,6 +9,7 @@ import {
   cases,
   caseTags,
   intakeSubmissions,
+  offices,
   organizationMemberships,
   queueAssignmentCursors,
   users,
@@ -46,6 +47,26 @@ export async function createTeam(
     actorUserId?: string | null;
   },
 ) {
+  if (input.officeId) {
+    const [office] = await db
+      .select({ id: offices.id })
+      .from(offices)
+      .where(
+        and(
+          eq(offices.id, input.officeId),
+          eq(offices.organizationId, scope.organizationId),
+          eq(offices.status, "active"),
+        ),
+      )
+      .limit(1);
+
+    if (!office) {
+      throw new RoutingTargetUnavailableError(
+        "Team office was not found in the active organization.",
+      );
+    }
+  }
+
   const [team] = await db
     .insert(caseTeams)
     .values({
@@ -82,8 +103,15 @@ export async function addTeamMember(
       )
       .limit(1),
     db
-      .select()
+      .select({ id: organizationMemberships.id })
       .from(organizationMemberships)
+      .innerJoin(
+        users,
+        and(
+          eq(users.id, organizationMemberships.userId),
+          eq(users.status, "active"),
+        ),
+      )
       .where(
         and(
           eq(organizationMemberships.id, input.membershipId),
@@ -303,8 +331,15 @@ export async function manualAssignCase(
 
     if (input.membershipId) {
       const [membership] = await tx
-        .select()
+        .select({ id: organizationMemberships.id })
         .from(organizationMemberships)
+        .innerJoin(
+          users,
+          and(
+            eq(users.id, organizationMemberships.userId),
+            eq(users.status, "active"),
+          ),
+        )
         .where(
           and(
             eq(organizationMemberships.id, input.membershipId),
@@ -708,6 +743,13 @@ export async function escalateCase(
                 scope.organizationId,
               ),
               eq(organizationMemberships.status, "active"),
+            ),
+          )
+          .innerJoin(
+            users,
+            and(
+              eq(users.id, organizationMemberships.userId),
+              eq(users.status, "active"),
             ),
           )
           .where(
