@@ -31,6 +31,7 @@ export const starterFormDefinition: FormDefinition = {
           id: "urgent",
           type: "boolean",
           label: "Does this require urgent review?",
+          required: false,
         },
         {
           id: "urgent_reason",
