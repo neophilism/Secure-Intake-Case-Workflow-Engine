@@ -34,6 +34,23 @@ export function FormRenderer({
   );
   const errorSummaryRef = useRef<HTMLDivElement>(null);
 
+  const record = (fieldId: string, value: unknown) => {
+    setAnswers((current) => ({ ...current, [fieldId]: value }));
+  };
+  const visibleFieldIds = visibleFieldIdsForDefinition(
+    definition,
+    answers,
+  );
+  const errorsByField = new Map(
+    state.errors.map((error) => [error.fieldId, error.message]),
+  );
+
+  useEffect(() => {
+    if (state.status === "validation_error") {
+      errorSummaryRef.current?.focus();
+    }
+  }, [state]);
+
   if (state.status === "submitted") {
     return (
       <section role="status" aria-live="polite">
@@ -75,22 +92,6 @@ export function FormRenderer({
     );
   }
 
-  const record = (fieldId: string, value: unknown) => {
-    setAnswers((current) => ({ ...current, [fieldId]: value }));
-  };
-  const visibleFieldIds = visibleFieldIdsForDefinition(
-    definition,
-    answers,
-  );
-  const errorsByField = new Map(
-    state.errors.map((error) => [error.fieldId, error.message]),
-  );
-
-  useEffect(() => {
-    if (state.status === "validation_error") {
-      errorSummaryRef.current?.focus();
-    }
-  }, [state]);
 
   return (
     <form action={formAction}>
