@@ -14,7 +14,16 @@ import {
   revokeSession,
   setSessionActiveOrganization,
 } from "./repository";
-import { verifyPassword } from "./password";
+import {
+  consumePasswordVerificationWork,
+  verifyPassword,
+} from "./password";
+import {
+  assertLoginAllowed,
+  clearAccountLoginFailures,
+  loginThrottleKeys,
+  recordLoginFailure,
+} from "./throttle";
 import {
   createSessionToken,
   hashSessionToken,
@@ -37,22 +46,32 @@ export async function authenticateWithLocalPassword(
   db: Database,
   email: string,
   password: string,
+  source?: string | null,
 ): Promise<NewSession> {
+  const throttle = loginThrottleKeys(email, source);
+  await assertLoginAllowed(db, throttle.all);
+
   const user = await findActiveUserByEmail(db, email);
   if (!user) {
+    await consumePasswordVerificationWork(password);
+    await recordLoginFailure(db, throttle.all);
     throw new InvalidCredentialsError();
   }
 
   const credential = await findCredentialForUser(db, user.id);
   if (!credential) {
+    await consumePasswordVerificationWork(password);
+    await recordLoginFailure(db, throttle.all);
     throw new InvalidCredentialsError();
   }
 
   const valid = await verifyPassword(password, credential.passwordHash);
   if (!valid) {
+    await recordLoginFailure(db, throttle.all);
     throw new InvalidCredentialsError();
   }
 
+  await clearAccountLoginFailures(db, throttle.account);
   return createSessionForUser(db, user.id);
 }
 
