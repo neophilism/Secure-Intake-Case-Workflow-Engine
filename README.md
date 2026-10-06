@@ -14,9 +14,9 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 18 — security hardening**
+**PR 19 — accessibility, usability, and public-sector quality**
 
-This milestone hardens authentication, browser/session boundaries, integration responses, webhook egress validation, dependency checks, and the production container. It adds database-backed login throttling with enumeration-resistant bcrypt work, strict session cookies, same-origin guards for cookie-authenticated POST routes, baseline security headers, non-cacheable authenticated responses, stronger IPv4/IPv6 SSRF filtering, a non-root runtime image, and a high-severity production dependency audit gate.
+This milestone adds an accessible responsive presentation baseline, skip navigation and visible keyboard focus, structured form validation with field-linked error summaries, plain-language public intake copy, responsive tables, printable case summaries, reduced-motion support, and an Axe-based WCAG A/AA regression gate in CI.
 
 See [docs/development.md](docs/development.md) for local setup and [docs/architecture](docs/architecture) for architectural decisions.
 
