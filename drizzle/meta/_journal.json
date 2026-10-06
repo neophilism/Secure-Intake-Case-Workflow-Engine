@@ -78,6 +78,13 @@
       "when": 1791280800000,
       "tag": "0010_notifications_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791284400000,
+      "tag": "0011_reviews_appeals",
+      "breakpoints": true
     }
   ]
 }

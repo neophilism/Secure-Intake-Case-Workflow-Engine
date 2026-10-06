@@ -57,7 +57,9 @@ export default async function FormAdministrationPage({
         {" · "}
         <a href="/admin/cases">Cases</a>
         {" · "}
-        <a href="/admin/deadlines">Deadlines</a>\n        {" · "}\n        <a href="/admin/communications">Communications</a>
+        <a href="/admin/deadlines">Deadlines</a>
+        {" · "}
+        <a href="/admin/reviews">Reviews</a>\n        {" · "}\n        <a href="/admin/communications">Communications</a>
         {" · "}
         <a href="/notifications">Notifications</a>
         {" · "}

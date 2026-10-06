@@ -305,7 +305,7 @@ Run the long-lived worker:
 npm run worker
 ```
 
-The bundled worker handles `deadline.sweep`. It does not claim external-delivery job types unless a deployment explicitly registers the relevant transport handler.
+The bundled worker handles `deadline.sweep` and `review.sweep`. It does not claim external-delivery job types unless a deployment explicitly registers the relevant transport handler.
 
 This is intentional. A missing email/webhook provider should leave those jobs visibly pending rather than falsely converting them into delivery failures.
 
@@ -343,6 +343,73 @@ It shows recurring schedules, recent jobs, leases, retry/dead state, and—when 
 Queued correspondence now creates a durable `correspondence.deliver` job. Transient automatic delivery failures leave the message queued while the job retries; only the final attempt marks the correspondence failed. Staff may still record an external/manual send, and a later stale delivery job treats an already-sent message as an idempotent success.
 
 Existing installations should synchronize the new notification/job permissions:
+
+```bash
+npm run auth:sync-roles
+```
+
+## Review, reconsideration, and appeals
+
+Review policy administration and the organization review queue are available at:
+
+```text
+/admin/reviews
+```
+
+Review policies configure:
+
+- hierarchy level;
+- eligible current case states;
+- optional filing windows;
+- optional decision deadlines and warnings;
+- optional business-day/calendar behavior;
+- configurable outcome keys;
+- reviewer-independence requirements;
+- prerequisite lower-level review policies.
+
+A policy with no prerequisites reviews the current case decision. A policy with prerequisites requires a decided parent review under one of those prerequisite policies.
+
+No default review policy is installed. A downstream application must explicitly configure the review rights and hierarchy granted by its governing authority.
+
+Each filing stores an immutable snapshot of both the review policy and the challenged decision. Later policy edits or case changes do not rewrite what was actually under review.
+
+Review lifecycle:
+
+```text
+filed -> assigned -> under_review -> decided
+   \-> withdrawn
+assigned/under_review -> withdrawn
+```
+
+The assigned reviewer must issue a written decision. Outcome keys are validated against the filed policy snapshot but otherwise remain semantically configurable.
+
+When reviewer independence is required, the assigned reviewer cannot be the filer or the user responsible for the challenged decision.
+
+Decision clocks are swept by the core background worker through:
+
+```text
+review-sweep -> review.sweep
+```
+
+The review sweep uses the existing background-worker cadence and emits warning/overdue notifications to the assigned reviewer without duplicating events under concurrent workers.
+
+A decided review does not silently alter the original case. Authorized staff can explicitly apply it to a declared workflow state from the case page. This operation records the review effect, case status history, and immutable audit event while preserving the challenged decision snapshot.
+
+The engine intentionally does not infer that a particular configurable outcome key must reopen a case, nor does it infer which statutory workflow deadlines restart after review. Downstream workflow configuration remains authoritative for those substantive effects.
+
+Permissions introduced by this milestone:
+
+```text
+review:view
+review:file
+review:assign
+review:decide
+review:manage
+```
+
+For compatibility, legacy `case:appeal` permission also authorizes filing. New configurations should use `review:file`.
+
+Existing installations should synchronize default roles:
 
 ```bash
 npm run auth:sync-roles

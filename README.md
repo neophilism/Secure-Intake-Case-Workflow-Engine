@@ -14,11 +14,11 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 12 — notifications and background jobs**
+**PR 13 — review, reconsideration, and appeals**
 
-This milestone adds a durable PostgreSQL-backed job queue, expiring worker leases, retry/backoff and dead-letter handling, recurring deadline schedules, in-app notifications, user delivery preferences, provider-neutral email/webhook delivery jobs, correspondence delivery jobs, and operational job controls.
+This milestone adds configurable review hierarchies, filing-window enforcement, immutable challenged-decision and policy snapshots, independent reviewer assignment, written decisions and configurable outcomes, review decision clocks, withdrawal, explicit remand/reopen-style case effects, review notifications, organization-wide review operations, and review history in the unified case timeline.
 
-The bundled worker only claims job types it can actually execute. External-delivery jobs remain pending until a deployment registers the corresponding transport adapters.
+The engine deliberately does not assign hidden semantics to labels such as appeal, reconsideration, or remand; downstream applications define their lawful hierarchy, outcomes, and terminology.
 
 See [docs/development.md](docs/development.md) for local setup and [docs/architecture](docs/architecture) for architectural decisions.
 

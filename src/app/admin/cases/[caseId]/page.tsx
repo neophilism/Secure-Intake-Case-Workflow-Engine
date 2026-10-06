@@ -39,7 +39,14 @@ import {
   listCommunicationTemplates,
 } from "@/modules/communications/repository";
 import { listCaseTimeline } from "@/modules/timeline/repository";
+import {
+  listCaseReviewHistory,
+  listCaseReviews,
+  listEligibleReviewers,
+  listReviewPolicies,
+} from "@/modules/reviews/repository";
 import { CaseCommunicationsPanel } from "./communications-panel";
+import { CaseReviewsPanel } from "./reviews-panel";
 import { CaseTimelinePanel } from "./timeline-panel";
 import {
   findWorkflowState,
@@ -97,6 +104,9 @@ export default async function CaseDetailPage({
     correspondence,
     correspondenceAttachments,
     communicationTemplates,
+    reviews,
+    reviewPolicies,
+    eligibleReviewers,
     timeline,
   ] = await Promise.all([
     listCaseStatusHistory(db, scope, record.id),
@@ -132,12 +142,24 @@ export default async function CaseDetailPage({
     hasPermission(context, "correspondence:view")
       ? listCommunicationTemplates(db, scope)
       : Promise.resolve([]),
+    hasPermission(context, "review:view")
+      ? listCaseReviews(db, scope, record.id)
+      : Promise.resolve([]),
+    hasPermission(context, "review:view") ||
+    hasPermission(context, "review:file") ||
+    hasPermission(context, "case:appeal")
+      ? listReviewPolicies(db, scope)
+      : Promise.resolve([]),
+    hasPermission(context, "review:assign")
+      ? listEligibleReviewers(db, scope)
+      : Promise.resolve([]),
     listCaseTimeline(db, scope, record.id, {
       includeNotes: hasPermission(context, "note:view"),
       includeCorrespondence: hasPermission(
         context,
         "correspondence:view",
       ),
+      includeReviews: hasPermission(context, "review:view"),
       canViewDocuments: hasPermission(context, "document:view"),
       canViewPrivateDocuments: hasPermission(
         context,
@@ -180,6 +202,24 @@ export default async function CaseDetailPage({
     context,
     "correspondence:manage",
   );
+  const canViewReviews = hasPermission(context, "review:view");
+  const canFileReviews =
+    hasPermission(context, "review:file") ||
+    hasPermission(context, "case:appeal");
+  const canAssignReviews = hasPermission(
+    context,
+    "review:assign",
+  );
+  const canDecideReviews = hasPermission(
+    context,
+    "review:decide",
+  );
+  const canManageReviews = hasPermission(
+    context,
+    "review:manage",
+  );
+  const canApplyReviewEffect =
+    canDecideReviews && canUpdate;
   const visibleDocuments = caseDocuments.filter(({ document }) =>
     canViewDocumentVisibility(
       document.visibility,
@@ -222,6 +262,14 @@ export default async function CaseDetailPage({
       ] as const),
     ),
   );
+
+  const reviewHistory = canViewReviews
+    ? await listCaseReviewHistory(
+        db,
+        scope,
+        reviews.map((review) => review.id),
+      )
+    : [];
 
   const deadlineHistory = new Map(
     await Promise.all(
@@ -279,6 +327,8 @@ export default async function CaseDetailPage({
         <Link href="/admin/documents">Documents</Link>
         {" · "}
         <Link href="/admin/deadlines">Deadlines</Link>
+        {" · "}
+        <Link href="/admin/reviews">Reviews</Link>
         {" · "}
         <Link href="/admin/communications">Communications</Link>
         {" · "}
@@ -1060,6 +1110,26 @@ export default async function CaseDetailPage({
             ))}
           </details>
         </section>
+      ) : null}
+
+      {canViewReviews || canFileReviews ? (
+        <CaseReviewsPanel
+          caseId={record.id}
+          currentCaseStatus={record.status}
+          reviews={reviews}
+          history={reviewHistory}
+          policies={reviewPolicies}
+          members={members}
+          eligibleReviewers={eligibleReviewers}
+          workflowStates={workflow.states}
+          currentMembershipId={context.membership?.id ?? null}
+          currentUserId={context.user.id}
+          canFile={canFileReviews}
+          canAssign={canAssignReviews}
+          canDecide={canDecideReviews}
+          canManage={canManageReviews}
+          canApplyCaseEffect={canApplyReviewEffect}
+        />
       ) : null}
 
       <CaseTimelinePanel items={timeline} />
