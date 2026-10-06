@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   hashPassword,
+  MAXIMUM_PASSWORD_BYTES,
   MINIMUM_PASSWORD_LENGTH,
   validatePassword,
   verifyPassword,
