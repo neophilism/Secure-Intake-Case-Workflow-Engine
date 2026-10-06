@@ -113,6 +113,7 @@ export async function publishVersionAction(formData: FormData) {
       getRuntimeDatabase(),
       requireTenantScope(context),
       versionId,
+      context.user.id,
     );
   } catch {
     redirect("/admin/forms?error=publish_failed");
