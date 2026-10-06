@@ -35,6 +35,8 @@ export async function listCaseTimeline(
   options: {
     includeNotes: boolean;
     includeCorrespondence: boolean;
+    canViewDocuments: boolean;
+    canViewPrivateDocuments: boolean;
   },
 ): Promise<CaseTimelineItem[]> {
   const [
@@ -191,6 +193,12 @@ export async function listCaseTimeline(
   }
 
   for (const { link, version, document } of documentsAttached) {
+    const canViewDocument =
+      document.visibility === "restricted"
+        ? options.canViewPrivateDocuments
+        : options.canViewDocuments;
+    if (!canViewDocument) continue;
+
     items.push({
       id: `document:${link.id}`,
       kind: "document",
