@@ -53,6 +53,8 @@ export default async function FormAdministrationPage({
         {" · "}
         <a href="/admin/routing">Routing</a>
         {" · "}
+        <a href="/admin/documents">Documents</a>
+        {" · "}
         <a href="/admin/cases">Cases</a>
       </nav>
 
