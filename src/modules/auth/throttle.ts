@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { isIP } from "node:net";
-import { and, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import type { Database } from "@/db/client";
 import { authLoginThrottles } from "@/db/schema";
 import { env } from "@/lib/env";
@@ -92,6 +92,18 @@ export async function recordLoginFailure(
   const blockedUntil = new Date(
     now.getTime() + env.AUTH_LOGIN_BLOCK_MINUTES * 60_000,
   );
+
+  const staleBefore = new Date(
+    now.getTime() -
+      (env.AUTH_LOGIN_WINDOW_MINUTES +
+        env.AUTH_LOGIN_BLOCK_MINUTES) *
+        60_000 *
+        2,
+  );
+
+  await db
+    .delete(authLoginThrottles)
+    .where(lt(authLoginThrottles.updatedAt, staleBefore));
 
   for (const keyHash of keys) {
     await db.execute(sql`
