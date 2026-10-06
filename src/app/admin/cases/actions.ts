@@ -31,29 +31,34 @@ export async function createCaseFromSubmissionAction(
     redirect("/admin/cases?error=invalid_submission");
   }
 
+  const db = getRuntimeDatabase();
+  const scope = requireTenantScope(context);
+  let record: Awaited<
+    ReturnType<typeof createCaseFromSubmission>
+  >;
+
   try {
-    const db = getRuntimeDatabase();
-    const scope = requireTenantScope(context);
-    const record = await createCaseFromSubmission(
-      db,
-      scope,
-      {
-        submissionId,
-        actorUserId: context.user.id,
-      },
-    );
-
-    try {
-      await applyRoutingRules(db, scope, {
-        caseId: record.id,
-        actorUserId: context.user.id,
-      });
-    } catch {
-      redirect(`/admin/cases/${record.id}?error=routing_failed`);
-    }
-
-    redirect(`/admin/cases/${record.id}`);
+    record = await createCaseFromSubmission(db, scope, {
+      submissionId,
+      actorUserId: context.user.id,
+    });
   } catch {
     redirect("/admin/cases?error=create_failed");
   }
+
+  let routingFailed = false;
+  try {
+    await applyRoutingRules(db, scope, {
+      caseId: record.id,
+      actorUserId: context.user.id,
+    });
+  } catch {
+    routingFailed = true;
+  }
+
+  redirect(
+    routingFailed
+      ? `/admin/cases/${record.id}?error=routing_failed`
+      : `/admin/cases/${record.id}`,
+  );
 }
