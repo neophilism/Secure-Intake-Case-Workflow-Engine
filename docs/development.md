@@ -72,7 +72,7 @@ Public forms are rendered at:
 /intake/<organization-slug>/<form-slug>
 ```
 
-Binary attachment storage is intentionally not implemented by the generic PR 4 renderer. File fields represent document references and are completed by the later document/evidence subsystem.
+The document/evidence subsystem supports immutable submission-linked files. The generic anonymous browser renderer still does not enable binary upload by default; deployments may connect a vetted public-upload transport to the submission attachment service.
 
 ## Case lifecycle
 
@@ -100,7 +100,7 @@ Existing installations should synchronize newly introduced default-role permissi
 npm run auth:sync-roles
 ```
 
-Document guards are modeled now but intentionally fail closed until the document/evidence subsystem is connected in PR 8.
+Document guards are enforced from trusted case evidence. Only active case-linked versions that are scan-clean, available, and carry valid SHA-256 metadata count toward required-document guards.
 
 ## Assignment and routing
 
@@ -156,6 +156,22 @@ Existing installations should synchronize the new document permissions:
 ```bash
 npm run auth:sync-roles
 ```
+
+## Immutable audit log
+
+Material operational events are projected into the tenant-scoped append-only audit stream and can be reviewed at:
+
+```text
+/admin/audit
+```
+
+The audit viewer requires `audit:view`.
+
+The database migration installs a trigger that rejects `UPDATE` and `DELETE` against `audit_events`. Feature-specific histories such as case status, assignment history, document custody, and document access remain in place; the audit stream provides one uniform oversight envelope across them.
+
+Audit state is intentionally data-minimized. Do not place passwords, session/resume tokens, binary document content, malware samples, full intake answers, or other secret material in audit metadata. Use resource identifiers, statuses, hashes, version numbers, and bounded operational deltas instead.
+
+Where the domain operation is already transactional, its audit insert occurs in the same transaction so a failed audit write rolls back the state mutation.
 
 ## Verification
 
