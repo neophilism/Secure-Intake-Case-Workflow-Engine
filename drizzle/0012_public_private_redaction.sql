@@ -203,46 +203,96 @@ EXECUTE FUNCTION validate_document_derivative_provenance();
 --> statement-breakpoint
 
 CREATE OR REPLACE FUNCTION validate_public_disclosure_document_link()
-RETURNS trigger AS $$
+RETURNS trigger AS $
 DECLARE
   derivative_org uuid;
   derivative_audience text;
   target_org uuid;
   target_status text;
+  target_version_id uuid;
+  target_derivative_id uuid;
+  target_link_org uuid;
 BEGIN
-  SELECT "organization_id", "audience"
-    INTO derivative_org, derivative_audience
-    FROM "document_derivatives"
-    WHERE "id" = NEW.document_derivative_id;
+  target_version_id :=
+    CASE WHEN TG_OP = 'DELETE'
+      THEN OLD.publication_version_id
+      ELSE NEW.publication_version_id
+    END;
+  target_derivative_id :=
+    CASE WHEN TG_OP = 'DELETE'
+      THEN OLD.document_derivative_id
+      ELSE NEW.document_derivative_id
+    END;
+  target_link_org :=
+    CASE WHEN TG_OP = 'DELETE'
+      THEN OLD.organization_id
+      ELSE NEW.organization_id
+    END;
 
   SELECT "organization_id", "status"
     INTO target_org, target_status
     FROM "disclosure_publication_versions"
-    WHERE "id" = NEW.publication_version_id;
+    WHERE "id" = target_version_id;
 
-  IF derivative_org IS NULL OR target_org IS NULL
-    OR derivative_org <> NEW.organization_id
-    OR target_org <> NEW.organization_id
+  IF target_org IS NULL
+    OR target_org <> target_link_org
+    OR target_status <> 'draft'
   THEN
-    RAISE EXCEPTION 'Disclosure document link must remain within one organization';
+    RAISE EXCEPTION 'Disclosure documents may only be changed while the version is a same-tenant draft';
   END IF;
 
-  IF derivative_audience <> 'public' THEN
-    RAISE EXCEPTION 'Public disclosure may only link public document derivatives';
+  IF TG_OP <> 'DELETE' THEN
+    SELECT "organization_id", "audience"
+      INTO derivative_org, derivative_audience
+      FROM "document_derivatives"
+      WHERE "id" = target_derivative_id;
+
+    IF derivative_org IS NULL
+      OR derivative_org <> target_link_org
+    THEN
+      RAISE EXCEPTION 'Disclosure document link must remain within one organization';
+    END IF;
+
+    IF derivative_audience <> 'public' THEN
+      RAISE EXCEPTION 'Public disclosure may only link public document derivatives';
+    END IF;
+
+    RETURN NEW;
   END IF;
 
-  IF target_status <> 'draft' THEN
-    RAISE EXCEPTION 'Disclosure documents may only be changed while the version is draft';
-  END IF;
-
-  RETURN NEW;
+  RETURN OLD;
 END;
-$$ LANGUAGE plpgsql;
+$ LANGUAGE plpgsql;
 --> statement-breakpoint
 DROP TRIGGER IF EXISTS disclosure_publication_documents_validate_link
   ON "disclosure_publication_documents";
 --> statement-breakpoint
 CREATE TRIGGER disclosure_publication_documents_validate_link
-BEFORE INSERT OR UPDATE ON "disclosure_publication_documents"
+BEFORE INSERT OR UPDATE OR DELETE ON "disclosure_publication_documents"
 FOR EACH ROW
 EXECUTE FUNCTION validate_public_disclosure_document_link();
+--> statement-breakpoint
+
+CREATE OR REPLACE FUNCTION preserve_disclosure_publication_identity()
+RETURNS trigger AS $
+BEGIN
+  IF NEW.organization_id IS DISTINCT FROM OLD.organization_id
+    OR NEW.source_type IS DISTINCT FROM OLD.source_type
+    OR NEW.source_id IS DISTINCT FROM OLD.source_id
+    OR NEW.slug IS DISTINCT FROM OLD.slug
+    OR NEW.created_by_user_id IS DISTINCT FROM OLD.created_by_user_id
+    OR NEW.created_at IS DISTINCT FROM OLD.created_at
+  THEN
+    RAISE EXCEPTION 'Disclosure publication identity and public slug are immutable';
+  END IF;
+  RETURN NEW;
+END;
+$ LANGUAGE plpgsql;
+--> statement-breakpoint
+DROP TRIGGER IF EXISTS disclosure_publications_preserve_identity
+  ON "disclosure_publications";
+--> statement-breakpoint
+CREATE TRIGGER disclosure_publications_preserve_identity
+BEFORE UPDATE ON "disclosure_publications"
+FOR EACH ROW
+EXECUTE FUNCTION preserve_disclosure_publication_identity();
