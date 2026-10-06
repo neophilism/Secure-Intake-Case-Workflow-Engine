@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getRuntimeDatabase } from "@/db/runtime";
 import { FormRenderer } from "@/components/forms/form-renderer";
+import { fieldsInDefinition } from "@/modules/forms/definition";
 import { findPublishedFormBySlugs } from "@/modules/forms/repository";
 import { submitPublicFormAction } from "./actions";
 
@@ -32,6 +33,9 @@ export default async function PublicIntakePage({
     organizationSlug,
     formSlug,
   );
+  const requiresAttachmentAdapter = fieldsInDefinition(
+    published.definition,
+  ).some((field) => field.type === "file" && field.required);
 
   return (
     <main>
@@ -51,7 +55,15 @@ export default async function PublicIntakePage({
         </p>
       ) : null}
 
-      <FormRenderer definition={published.definition} action={action} />
+      {requiresAttachmentAdapter ? (
+        <p role="alert">
+          This form requires secure attachments. The generic intake renderer
+          cannot accept it until the document/evidence storage adapter is
+          configured.
+        </p>
+      ) : (
+        <FormRenderer definition={published.definition} action={action} />
+      )}
     </main>
   );
 }
