@@ -1,7 +1,6 @@
 import {
   and,
   asc,
-  desc,
   eq,
   gt,
   inArray,
@@ -17,6 +16,7 @@ import {
   cases,
   externalParticipantCredentials,
   externalParticipantSessions,
+  intakeFormVersions,
   intakeSubmissions,
   organizations,
 } from "@/db/schema";
@@ -54,6 +54,10 @@ export async function findExternalParticipantCredentialForLogin(
     .select({
       credential: externalParticipantCredentials,
       submission: intakeSubmissions,
+      formVersion: {
+        id: intakeFormVersions.id,
+        definition: intakeFormVersions.definition,
+      },
       organization: {
         id: organizations.id,
         slug: organizations.slug,
@@ -164,6 +168,19 @@ export async function findExternalParticipantSessionContext(
         eq(
           intakeSubmissions.organizationId,
           externalParticipantCredentials.organizationId,
+        ),
+      ),
+    )
+    .innerJoin(
+      intakeFormVersions,
+      and(
+        eq(
+          intakeFormVersions.id,
+          intakeSubmissions.formVersionId,
+        ),
+        eq(
+          intakeFormVersions.organizationId,
+          intakeSubmissions.organizationId,
         ),
       ),
     )
