@@ -22,3 +22,11 @@ export async function verifyPassword(
 ): Promise<boolean> {
   return compare(password, passwordHash);
 }
+
+export async function consumePasswordVerificationWork(
+  password: string,
+): Promise<void> {
+  // Hashing performs comparable bcrypt work without requiring a stored
+  // credential, reducing account-enumeration timing differences.
+  await hash(password || "invalid-password", BCRYPT_COST);
+}
