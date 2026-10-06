@@ -411,3 +411,26 @@ export async function finalizeDraftSubmission(
 
   return submission ?? null;
 }
+
+
+export async function findSubmittedConfirmation(
+  db: Database,
+  confirmationCode: string,
+) {
+  const [submission] = await db
+    .select({
+      id: intakeSubmissions.id,
+      confirmationCode: intakeSubmissions.confirmationCode,
+      submittedAt: intakeSubmissions.submittedAt,
+    })
+    .from(intakeSubmissions)
+    .where(
+      and(
+        eq(intakeSubmissions.confirmationCode, confirmationCode),
+        eq(intakeSubmissions.status, "submitted"),
+      ),
+    )
+    .limit(1);
+
+  return submission ?? null;
+}
