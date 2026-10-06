@@ -1602,3 +1602,211 @@ export const backgroundSchedules = pgTable(
     ),
   ],
 );
+
+
+export const reviewPolicies = pgTable(
+  "review_policies",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    level: integer("level").notNull().default(1),
+    eligibleCaseStatuses: jsonb("eligible_case_statuses")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    filingWindowValue: integer("filing_window_value"),
+    filingWindowUnit: text("filing_window_unit"),
+    decisionDeadlineValue: integer("decision_deadline_value"),
+    decisionDeadlineUnit: text("decision_deadline_unit"),
+    decisionWarningBeforeValue: integer("decision_warning_before_value"),
+    decisionWarningBeforeUnit: text("decision_warning_before_unit"),
+    calendarId: uuid("calendar_id").references(() => deadlineCalendars.id, {
+      onDelete: "restrict",
+    }),
+    allowedOutcomes: jsonb("allowed_outcomes")
+      .$type<string[]>()
+      .notNull()
+      .default([
+        "affirmed",
+        "modified",
+        "reversed",
+        "remanded",
+        "dismissed",
+      ]),
+    requireIndependentReviewer: boolean("require_independent_reviewer")
+      .notNull()
+      .default(true),
+    status: text("status").notNull().default("active"),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("review_policies_organization_idx").on(table.organizationId),
+    uniqueIndex("review_policies_org_key_idx").on(
+      table.organizationId,
+      table.key,
+    ),
+  ],
+);
+
+export const reviewPolicyPrerequisites = pgTable(
+  "review_policy_prerequisites",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    policyId: uuid("policy_id")
+      .notNull()
+      .references(() => reviewPolicies.id, { onDelete: "cascade" }),
+    prerequisitePolicyId: uuid("prerequisite_policy_id")
+      .notNull()
+      .references(() => reviewPolicies.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("review_policy_prerequisites_organization_idx").on(
+      table.organizationId,
+    ),
+    uniqueIndex("review_policy_prerequisites_unique_idx").on(
+      table.policyId,
+      table.prerequisitePolicyId,
+    ),
+  ],
+);
+
+export const caseReviews = pgTable(
+  "case_reviews",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    policyId: uuid("policy_id")
+      .notNull()
+      .references(() => reviewPolicies.id, { onDelete: "restrict" }),
+    parentReviewId: uuid("parent_review_id"),
+    policyKeySnapshot: text("policy_key_snapshot").notNull(),
+    policyNameSnapshot: text("policy_name_snapshot").notNull(),
+    levelSnapshot: integer("level_snapshot").notNull(),
+    policySnapshot: jsonb("policy_snapshot")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    challengedSnapshot: jsonb("challenged_snapshot")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    status: text("status").notNull().default("filed"),
+    grounds: text("grounds").notNull(),
+    requestedRelief: text("requested_relief"),
+    filedByUserId: uuid("filed_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    filedAt: timestamp("filed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    reviewerMembershipId: uuid("reviewer_membership_id").references(
+      () => organizationMemberships.id,
+      { onDelete: "set null" },
+    ),
+    assignedByUserId: uuid("assigned_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    assignedAt: timestamp("assigned_at", { withTimezone: true }),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    decisionDueAt: timestamp("decision_due_at", { withTimezone: true }),
+    decisionWarningAt: timestamp("decision_warning_at", { withTimezone: true }),
+    decisionWarningIssuedAt: timestamp("decision_warning_issued_at", {
+      withTimezone: true,
+    }),
+    decisionOverdueAt: timestamp("decision_overdue_at", {
+      withTimezone: true,
+    }),
+    outcome: text("outcome"),
+    writtenDecision: text("written_decision"),
+    remandInstructions: text("remand_instructions"),
+    decidedByUserId: uuid("decided_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    withdrawnAt: timestamp("withdrawn_at", { withTimezone: true }),
+    caseEffectAppliedAt: timestamp("case_effect_applied_at", {
+      withTimezone: true,
+    }),
+    caseEffectTargetStatus: text("case_effect_target_status"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("case_reviews_organization_idx").on(table.organizationId),
+    index("case_reviews_case_idx").on(table.caseId, table.createdAt),
+    index("case_reviews_status_idx").on(
+      table.organizationId,
+      table.status,
+      table.decisionDueAt,
+    ),
+    index("case_reviews_reviewer_idx").on(
+      table.organizationId,
+      table.reviewerMembershipId,
+      table.status,
+    ),
+    foreignKey({
+      columns: [table.parentReviewId],
+      foreignColumns: [table.id],
+      name: "case_reviews_parent_review_fk",
+    }).onDelete("restrict"),
+  ],
+);
+
+export const caseReviewHistory = pgTable(
+  "case_review_history",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    reviewId: uuid("review_id")
+      .notNull()
+      .references(() => caseReviews.id, { onDelete: "cascade" }),
+    eventType: text("event_type").notNull(),
+    fromStatus: text("from_status"),
+    toStatus: text("to_status"),
+    actorUserId: uuid("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    metadata: jsonb("metadata")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    occurredAt: timestamp("occurred_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("case_review_history_organization_idx").on(table.organizationId),
+    index("case_review_history_review_idx").on(
+      table.reviewId,
+      table.occurredAt,
+    ),
+  ],
+);
