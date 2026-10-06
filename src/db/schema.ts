@@ -442,6 +442,147 @@ export const intakeFormWorkflowBindings = pgTable(
   ],
 );
 
+
+export const caseTeams = pgTable(
+  "case_teams",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    officeId: uuid("office_id").references(() => offices.id, {
+      onDelete: "set null",
+    }),
+    slug: text("slug").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    status: text("status").notNull().default("active"),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("case_teams_organization_idx").on(table.organizationId),
+    uniqueIndex("case_teams_org_slug_idx").on(
+      table.organizationId,
+      table.slug,
+    ),
+  ],
+);
+
+export const caseTeamMemberships = pgTable(
+  "case_team_memberships",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => caseTeams.id, { onDelete: "cascade" }),
+    organizationMembershipId: uuid("organization_membership_id")
+      .notNull()
+      .references(() => organizationMemberships.id, {
+        onDelete: "cascade",
+      }),
+    isAvailable: boolean("is_available").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("case_team_memberships_organization_idx").on(table.organizationId),
+    index("case_team_memberships_team_idx").on(table.teamId),
+    uniqueIndex("case_team_memberships_team_member_idx").on(
+      table.teamId,
+      table.organizationMembershipId,
+    ),
+  ],
+);
+
+export const caseQueues = pgTable(
+  "case_queues",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id").references(() => caseTeams.id, {
+      onDelete: "set null",
+    }),
+    slug: text("slug").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    assignmentStrategy: text("assignment_strategy")
+      .notNull()
+      .default("manual"),
+    status: text("status").notNull().default("active"),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("case_queues_organization_idx").on(table.organizationId),
+    uniqueIndex("case_queues_org_slug_idx").on(
+      table.organizationId,
+      table.slug,
+    ),
+  ],
+);
+
+export const queueAssignmentCursors = pgTable(
+  "queue_assignment_cursors",
+  {
+    queueId: uuid("queue_id")
+      .primaryKey()
+      .references(() => caseQueues.id, { onDelete: "cascade" }),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    cursorValue: integer("cursor_value").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("queue_assignment_cursors_organization_idx").on(
+      table.organizationId,
+    ),
+  ],
+);
+
+export const caseRoutingRules = pgTable(
+  "case_routing_rules",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    priority: integer("priority").notNull().default(100),
+    status: text("status").notNull().default("active"),
+    definition: jsonb("definition")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    targetQueueId: uuid("target_queue_id")
+      .notNull()
+      .references(() => caseQueues.id, { onDelete: "restrict" }),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("case_routing_rules_organization_idx").on(table.organizationId),
+    index("case_routing_rules_priority_idx").on(
+      table.organizationId,
+      table.priority,
+    ),
+  ],
+);
+
 export const caseNumberSequences = pgTable(
   "case_number_sequences",
   {
@@ -489,6 +630,18 @@ export const cases = pgTable(
     createdByUserId: uuid("created_by_user_id").references(() => users.id, {
       onDelete: "set null",
     }),
+    assignedQueueId: uuid("assigned_queue_id").references(
+      () => caseQueues.id,
+      { onDelete: "set null" },
+    ),
+    assignedMembershipId: uuid("assigned_membership_id").references(
+      () => organizationMemberships.id,
+      { onDelete: "set null" },
+    ),
+    assignedAt: timestamp("assigned_at", { withTimezone: true }),
+    escalationLevel: integer("escalation_level").notNull().default(0),
+    escalatedAt: timestamp("escalated_at", { withTimezone: true }),
+    escalationReason: text("escalation_reason"),
     openedAt: timestamp("opened_at", { withTimezone: true }),
     resolvedAt: timestamp("resolved_at", { withTimezone: true }),
     closedAt: timestamp("closed_at", { withTimezone: true }),
@@ -499,6 +652,11 @@ export const cases = pgTable(
     index("cases_organization_idx").on(table.organizationId),
     index("cases_status_idx").on(table.organizationId, table.status),
     index("cases_workflow_version_idx").on(table.workflowVersionId),
+    index("cases_queue_idx").on(table.organizationId, table.assignedQueueId),
+    index("cases_assignee_idx").on(
+      table.organizationId,
+      table.assignedMembershipId,
+    ),
     uniqueIndex("cases_org_number_idx").on(
       table.organizationId,
       table.caseNumber,
@@ -556,5 +714,56 @@ export const caseTags = pgTable(
   (table) => [
     index("case_tags_organization_idx").on(table.organizationId),
     uniqueIndex("case_tags_case_tag_idx").on(table.caseId, table.tag),
+  ],
+);
+
+
+export const caseAssignmentHistory = pgTable(
+  "case_assignment_history",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    fromQueueId: uuid("from_queue_id").references(() => caseQueues.id, {
+      onDelete: "set null",
+    }),
+    toQueueId: uuid("to_queue_id").references(() => caseQueues.id, {
+      onDelete: "set null",
+    }),
+    fromMembershipId: uuid("from_membership_id").references(
+      () => organizationMemberships.id,
+      { onDelete: "set null" },
+    ),
+    toMembershipId: uuid("to_membership_id").references(
+      () => organizationMemberships.id,
+      { onDelete: "set null" },
+    ),
+    source: text("source").notNull(),
+    routingRuleId: uuid("routing_rule_id").references(
+      () => caseRoutingRules.id,
+      { onDelete: "set null" },
+    ),
+    actorUserId: uuid("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    reason: text("reason"),
+    metadata: jsonb("metadata")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("case_assignment_history_organization_idx").on(
+      table.organizationId,
+    ),
+    index("case_assignment_history_case_idx").on(
+      table.caseId,
+      table.createdAt,
+    ),
   ],
 );
