@@ -346,6 +346,35 @@ export async function fileCaseReview(
       prerequisiteRows.map(({ prerequisite }) => prerequisite),
     );
 
+    const [existingOpenReview] = await tx
+      .select({ id: caseReviews.id })
+      .from(caseReviews)
+      .where(
+        and(
+          eq(caseReviews.organizationId, scope.organizationId),
+          eq(caseReviews.caseId, caseRecord.id),
+          eq(caseReviews.policyId, policy.id),
+          input.parentReviewId
+            ? eq(
+                caseReviews.parentReviewId,
+                input.parentReviewId,
+              )
+            : isNull(caseReviews.parentReviewId),
+          inArray(caseReviews.status, [
+            "filed",
+            "assigned",
+            "under_review",
+          ]),
+        ),
+      )
+      .limit(1);
+
+    if (existingOpenReview) {
+      throw new ReviewEligibilityError(
+        "An open review under this policy already exists for the challenged decision.",
+      );
+    }
+
     let challengedAt: Date;
     let challengedSnapshot: Record<string, unknown>;
 
@@ -873,12 +902,6 @@ export async function decideReview(
     if (!snapshot.allowedOutcomes.includes(outcome)) {
       throw new ReviewEligibilityError(
         "Outcome is not allowed by the filed review policy.",
-      );
-    }
-
-    if (outcome === "remanded" && !remandInstructions) {
-      throw new ReviewStateError(
-        "Remand instructions are required for a remanded review.",
       );
     }
 
