@@ -527,28 +527,41 @@ export async function ensureBuiltinSchedules(
     );
 
   for (const organization of activeOrganizations) {
-    await db
-      .insert(backgroundSchedules)
-      .values({
-        organizationId: organization.id,
+    for (const schedule of [
+      {
         key: "deadline-sweep",
         jobType: "deadline.sweep",
-        payload: {},
-        intervalSeconds,
         priority: 20,
-        maxAttempts: 5,
-        nextRunAt: now,
-      })
-      .onConflictDoUpdate({
-        target: [
-          backgroundSchedules.organizationId,
-          backgroundSchedules.key,
-        ],
-        set: {
+      },
+      {
+        key: "review-sweep",
+        jobType: "review.sweep",
+        priority: 20,
+      },
+    ] as const) {
+      await db
+        .insert(backgroundSchedules)
+        .values({
+          organizationId: organization.id,
+          key: schedule.key,
+          jobType: schedule.jobType,
+          payload: {},
           intervalSeconds,
-          updatedAt: now,
-        },
-      });
+          priority: schedule.priority,
+          maxAttempts: 5,
+          nextRunAt: now,
+        })
+        .onConflictDoUpdate({
+          target: [
+            backgroundSchedules.organizationId,
+            backgroundSchedules.key,
+          ],
+          set: {
+            intervalSeconds,
+            updatedAt: now,
+          },
+        });
+    }
   }
 }
 
