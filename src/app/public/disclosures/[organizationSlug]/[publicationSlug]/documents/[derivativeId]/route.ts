@@ -46,7 +46,7 @@ export async function GET(
         `attachment; filename="${safeFilename}"; filename*=UTF-8''${encodeURIComponent(
           result.filename,
         )}`,
-      "Cache-Control": "public, max-age=300",
+      "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
       ETag: `"${result.sha256}"`,
     },
