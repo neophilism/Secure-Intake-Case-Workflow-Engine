@@ -79,6 +79,8 @@ export default async function WorkflowAdministrationPage({
         {" · "}
         <Link href="/admin/routing">Routing</Link>
         {" · "}
+        <Link href="/admin/documents">Documents</Link>
+        {" · "}
         <Link href="/admin/cases">Cases</Link>
       </nav>
 
