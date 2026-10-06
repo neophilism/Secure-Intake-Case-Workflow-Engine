@@ -9,6 +9,7 @@ import type { TenantScope } from "@/lib/tenancy";
 import { auditEventValues } from "@/modules/audit/event";
 import { encryptWebhookSecret } from "./crypto";
 import {
+  assertWebhookDestinationPublic,
   normalizeWebhookEventTypes,
   normalizeWebhookUrl,
 } from "./policy";
@@ -50,6 +51,7 @@ export async function createWebhookSubscription(
   if (!name) throw new Error("Webhook name is required.");
 
   const endpointUrl = normalizeWebhookUrl(input.endpointUrl);
+  await assertWebhookDestinationPublic(endpointUrl);
   const eventTypes = normalizeWebhookEventTypes(input.eventTypes);
   const signingSecretCiphertext = encryptWebhookSecret(
     input.signingSecret,
