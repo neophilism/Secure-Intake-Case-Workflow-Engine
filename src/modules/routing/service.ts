@@ -17,6 +17,7 @@ import {
 } from "@/db/schema";
 import type { TenantScope } from "@/lib/tenancy";
 import { auditEventValues } from "@/modules/audit/event";
+import { createNotificationForMembershipInTransaction } from "@/modules/notifications/service";
 import {
   parseRoutingRuleDefinition,
   type RoutingRuleDefinition,
@@ -534,6 +535,26 @@ export async function manualAssignCase(
       }),
     );
 
+    if (
+      updated.assignedMembershipId &&
+      updated.assignedMembershipId !== record.assignedMembershipId
+    ) {
+      await createNotificationForMembershipInTransaction(
+        tx,
+        scope,
+        updated.assignedMembershipId,
+        {
+          eventType: "case.assigned",
+          severity: "info",
+          title: "Case assigned",
+          body: `Case ${updated.caseNumber} has been assigned to you.`,
+          link: `/admin/cases/${updated.id}`,
+          resourceType: "case",
+          resourceId: updated.id,
+        },
+      );
+    }
+
     return updated;
   });
 }
@@ -796,6 +817,26 @@ export async function applyRoutingRules(
       }),
     );
 
+    if (
+      updated.assignedMembershipId &&
+      updated.assignedMembershipId !== record.assignedMembershipId
+    ) {
+      await createNotificationForMembershipInTransaction(
+        tx,
+        scope,
+        updated.assignedMembershipId,
+        {
+          eventType: "case.assigned",
+          severity: "info",
+          title: "Case assigned by routing",
+          body: `Case ${updated.caseNumber} has been routed to you.`,
+          link: `/admin/cases/${updated.id}`,
+          resourceType: "case",
+          resourceId: updated.id,
+        },
+      );
+    }
+
     return {
       matched: true as const,
       case: updated,
@@ -1009,6 +1050,24 @@ export async function escalateCase(
         metadata: { reasonProvided: true },
       }),
     );
+
+    if (updated.assignedMembershipId) {
+      await createNotificationForMembershipInTransaction(
+        tx,
+        scope,
+        updated.assignedMembershipId,
+        {
+          eventType: "case.escalated",
+          severity:
+            updated.priority === "critical" ? "critical" : "warning",
+          title: "Case escalated",
+          body: `Case ${updated.caseNumber} has been escalated to level ${updated.escalationLevel}.`,
+          link: `/admin/cases/${updated.id}`,
+          resourceType: "case",
+          resourceId: updated.id,
+        },
+      );
+    }
 
     return updated;
   });
