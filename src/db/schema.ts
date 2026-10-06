@@ -299,6 +299,112 @@ export const apiClients = pgTable(
 );
 
 
+export const applicationManifestRevisions = pgTable(
+  "application_manifest_revisions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    manifestKey: text("manifest_key").notNull(),
+    manifestHash: text("manifest_hash").notNull(),
+    manifest: jsonb("manifest")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    status: text("status").notNull().default("active"),
+    appliedByUserId: uuid("applied_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    appliedAt: timestamp("applied_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("application_manifest_revisions_organization_idx").on(
+      table.organizationId,
+      table.appliedAt,
+    ),
+    uniqueIndex("application_manifest_revisions_org_hash_idx").on(
+      table.organizationId,
+      table.manifestHash,
+    ),
+    uniqueIndex("application_manifest_revisions_one_active_idx")
+      .on(table.organizationId)
+      .where(sql`${table.status} = 'active'`),
+  ],
+);
+
+export const applicationProfiles = pgTable(
+  "application_profiles",
+  {
+    organizationId: uuid("organization_id")
+      .primaryKey()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    manifestRevisionId: uuid("manifest_revision_id")
+      .notNull()
+      .references(() => applicationManifestRevisions.id, {
+        onDelete: "restrict",
+      }),
+    applicationKey: text("application_key").notNull(),
+    applicationName: text("application_name").notNull(),
+    shortName: text("short_name"),
+    description: text("description"),
+    branding: jsonb("branding")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    terminology: jsonb("terminology")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("application_profiles_org_key_idx").on(
+      table.organizationId,
+      table.applicationKey,
+    ),
+  ],
+);
+
+export const applicationManagedResources = pgTable(
+  "application_managed_resources",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    manifestRevisionId: uuid("manifest_revision_id")
+      .notNull()
+      .references(() => applicationManifestRevisions.id, {
+        onDelete: "cascade",
+      }),
+    resourceType: text("resource_type").notNull(),
+    resourceKey: text("resource_key").notNull(),
+    resourceId: text("resource_id").notNull(),
+    checksum: text("checksum").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("application_managed_resources_key_idx").on(
+      table.organizationId,
+      table.resourceType,
+      table.resourceKey,
+    ),
+    index("application_managed_resources_revision_idx").on(
+      table.manifestRevisionId,
+    ),
+  ],
+);
+
+
 export const intakeForms = pgTable(
   "intake_forms",
   {
