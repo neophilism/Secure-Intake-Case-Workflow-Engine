@@ -55,10 +55,11 @@ export default async function CaseDetailPage({
   const canUpdate = hasPermission(context, "case:update");
   const canClose = hasPermission(context, "case:close");
   const transitions = isCaseStatus(record.status)
-    ? allowedDefaultTransitions(record.status).filter(
-        (status) => status !== "closed" || canClose,
+    ? allowedDefaultTransitions(record.status).filter((status) =>
+        status === "closed" ? canClose : canUpdate,
       )
     : [];
+  const canTransition = transitions.length > 0;
 
   return (
     <main>
@@ -154,7 +155,7 @@ export default async function CaseDetailPage({
         </section>
       ) : null}
 
-      {canUpdate && transitions.length > 0 ? (
+      {canTransition ? (
         <section>
           <h2>Change status</h2>
           <form action={transitionCaseAction.bind(null, record.id)}>
