@@ -9,6 +9,8 @@ import {
 } from "@/modules/auth/authorization";
 import { getCurrentAuthorizationContext } from "@/modules/auth/server-session";
 
+const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 export async function createOfficeAction(formData: FormData) {
   const context = await getCurrentAuthorizationContext();
   if (!context) {
@@ -26,7 +28,7 @@ export async function createOfficeAction(formData: FormData) {
   const parentOfficeId =
     String(formData.get("parentOfficeId") ?? "").trim() || null;
 
-  if (!name || !slug) {
+  if (!name || !slugPattern.test(slug)) {
     redirect("/admin/organizations?error=invalid_office");
   }
 
