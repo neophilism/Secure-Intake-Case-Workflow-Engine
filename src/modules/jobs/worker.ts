@@ -7,6 +7,7 @@ import {
   completeBackgroundJob,
   enqueueDueSchedules,
   failBackgroundJob,
+  renewBackgroundJobLease,
   type ClaimedJob,
 } from "./service";
 
@@ -77,6 +78,21 @@ export async function runBackgroundWorkerIteration(
 
     const scope = createTrustedTenantScope(job.organizationId);
 
+    const heartbeatMs = Math.max(
+      1000,
+      Math.floor((input.leaseSeconds * 1000) / 2),
+    );
+    const heartbeat = setInterval(() => {
+      void renewBackgroundJobLease(
+        db,
+        job.id,
+        input.workerId,
+        input.leaseSeconds,
+      ).catch(() => {
+        // Completion/failure will detect lost lease ownership.
+      });
+    }, heartbeatMs);
+
     try {
       await handler({
         db,
@@ -100,6 +116,8 @@ export async function runBackgroundWorkerIteration(
         new Date(),
       );
       failed += 1;
+    } finally {
+      clearInterval(heartbeat);
     }
   }
 
