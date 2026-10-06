@@ -17,6 +17,10 @@ import {
 } from "@/db/schema";
 import type { TenantScope } from "@/lib/tenancy";
 import { auditEventValues } from "@/modules/audit/event";
+import {
+  completeDeadlinesForTransition,
+  instantiateDeadlinesForCaseEvent,
+} from "@/modules/deadlines/service";
 import { formatCaseNumber } from "./case-number";
 import {
   isCasePriority,
@@ -279,6 +283,14 @@ export async function createCaseFromSubmission(
         },
       }),
     );
+
+    await instantiateDeadlinesForCaseEvent(tx, scope, {
+      caseId: record.id,
+      workflow: workflowDefinition,
+      trigger: { type: "case_created" },
+      actorUserId: input.actorUserId,
+      startedAt: now,
+    });
 
     return record;
   });
@@ -543,6 +555,25 @@ export async function transitionCase(
         },
       }),
     );
+
+    await completeDeadlinesForTransition(tx, scope, {
+      caseId: current.id,
+      workflow: workflowDefinition,
+      transitionKey: transition.key,
+      actorUserId: input.actorUserId,
+      occurredAt: now,
+    });
+
+    await instantiateDeadlinesForCaseEvent(tx, scope, {
+      caseId: current.id,
+      workflow: workflowDefinition,
+      trigger: {
+        type: "transition",
+        transitionKey: transition.key,
+      },
+      actorUserId: input.actorUserId,
+      startedAt: now,
+    });
 
     return updated;
   });
