@@ -358,6 +358,90 @@ export const intakeSubmissions = pgTable(
 );
 
 
+
+export const caseWorkflows = pgTable(
+  "case_workflows",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    slug: text("slug").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    status: text("status").notNull().default("active"),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("case_workflows_organization_idx").on(table.organizationId),
+    uniqueIndex("case_workflows_org_slug_idx").on(
+      table.organizationId,
+      table.slug,
+    ),
+  ],
+);
+
+export const caseWorkflowVersions = pgTable(
+  "case_workflow_versions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    workflowId: uuid("workflow_id")
+      .notNull()
+      .references(() => caseWorkflows.id, { onDelete: "cascade" }),
+    versionNumber: integer("version_number").notNull(),
+    definition: jsonb("definition")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    status: text("status").notNull().default("draft"),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("case_workflow_versions_organization_idx").on(table.organizationId),
+    index("case_workflow_versions_workflow_idx").on(table.workflowId),
+    uniqueIndex("case_workflow_versions_workflow_number_idx").on(
+      table.workflowId,
+      table.versionNumber,
+    ),
+    uniqueIndex("case_workflow_versions_one_published_idx")
+      .on(table.workflowId)
+      .where(sql`${table.status} = 'published'`),
+  ],
+);
+
+export const intakeFormWorkflowBindings = pgTable(
+  "intake_form_workflow_bindings",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    formId: uuid("form_id")
+      .notNull()
+      .references(() => intakeForms.id, { onDelete: "cascade" }),
+    workflowId: uuid("workflow_id")
+      .notNull()
+      .references(() => caseWorkflows.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("intake_form_workflow_bindings_organization_idx").on(table.organizationId),
+    uniqueIndex("intake_form_workflow_bindings_form_idx").on(table.formId),
+  ],
+);
+
 export const caseNumberSequences = pgTable(
   "case_number_sequences",
   {
@@ -390,6 +474,13 @@ export const cases = pgTable(
       { onDelete: "restrict" },
     ),
     caseType: text("case_type").notNull().default("general"),
+    workflowVersionId: uuid("workflow_version_id").references(
+      () => caseWorkflowVersions.id,
+      { onDelete: "restrict" },
+    ),
+    workflowDefinition: jsonb("workflow_definition")
+      .$type<Record<string, unknown>>()
+      .notNull(),
     title: text("title").notNull(),
     summary: text("summary"),
     status: text("status").notNull().default("intake_review"),
@@ -430,7 +521,16 @@ export const caseStatusHistory = pgTable(
     actorUserId: uuid("actor_user_id").references(() => users.id, {
       onDelete: "set null",
     }),
+    workflowVersionId: uuid("workflow_version_id").references(
+      () => caseWorkflowVersions.id,
+      { onDelete: "restrict" },
+    ),
+    transitionKey: text("transition_key"),
     note: text("note"),
+    metadata: jsonb("metadata")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
