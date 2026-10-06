@@ -369,11 +369,6 @@ export const caseWorkflows = pgTable(
     slug: text("slug").notNull(),
     name: text("name").notNull(),
     description: text("description"),
-    acceptedMimeTypes: jsonb("accepted_mime_types")
-      .$type<string[]>()
-      .notNull()
-      .default([]),
-    maxBytes: integer("max_bytes"),
     status: text("status").notNull().default("active"),
     createdByUserId: uuid("created_by_user_id").references(() => users.id, {
       onDelete: "set null",
@@ -784,6 +779,11 @@ export const documentTypes = pgTable(
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description"),
+    acceptedMimeTypes: jsonb("accepted_mime_types")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    maxBytes: integer("max_bytes"),
     status: text("status").notNull().default("active"),
     createdByUserId: uuid("created_by_user_id").references(() => users.id, {
       onDelete: "set null",
