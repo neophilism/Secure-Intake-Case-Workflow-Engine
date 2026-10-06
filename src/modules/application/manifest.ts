@@ -74,7 +74,15 @@ const terminologySchema = z
       plural: "Queues",
     }),
   })
-  .default({});
+  .default({
+    case: { singular: "Case", plural: "Cases" },
+    submission: { singular: "Submission", plural: "Submissions" },
+    submitter: { singular: "Submitter", plural: "Submitters" },
+    review: { singular: "Review", plural: "Reviews" },
+    deadline: { singular: "Deadline", plural: "Deadlines" },
+    document: { singular: "Document", plural: "Documents" },
+    queue: { singular: "Queue", plural: "Queues" },
+  });
 
 const roleSchema = z.object({
   key: identifier,
