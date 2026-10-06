@@ -10,6 +10,7 @@ import {
 } from "@/db/schema";
 import type { TenantScope } from "@/lib/tenancy";
 import { auditEventValues } from "@/modules/audit/event";
+import { createNotificationForCaseAssigneeInTransaction } from "@/modules/notifications/service";
 import { escalateCase } from "@/modules/routing/service";
 import type {
   DeadlinePolicy,
@@ -601,6 +602,18 @@ export async function sweepOrganizationDeadlines(
             newState: { warningIssuedAt: now.toISOString() },
           }),
         );
+
+        await createNotificationForCaseAssigneeInTransaction(
+          tx,
+          scope,
+          deadline.caseId,
+          {
+            eventType: "deadline.warning",
+            severity: "warning",
+            title: `Deadline approaching: ${deadline.label}`,
+            body: `The deadline is due at ${deadline.dueAt.toISOString()}.`,
+          },
+        );
         warnings += 1;
       }
 
@@ -639,6 +652,18 @@ export async function sweepOrganizationDeadlines(
               overdueAt: updated.overdueAt?.toISOString() ?? null,
             },
           }),
+        );
+
+        await createNotificationForCaseAssigneeInTransaction(
+          tx,
+          scope,
+          deadline.caseId,
+          {
+            eventType: "deadline.overdue",
+            severity: "critical",
+            title: `Deadline overdue: ${deadline.label}`,
+            body: `The deadline was due at ${deadline.dueAt.toISOString()}.`,
+          },
         );
         overdue += 1;
       }
