@@ -9,12 +9,14 @@ import {
   SubmissionValidationError,
   submitPublicForm,
 } from "@/modules/forms/service";
+import type { PublicFormActionState } from "@/modules/forms/public-action-state";
 
 export async function submitPublicFormAction(
   organizationSlug: string,
   formSlug: string,
+  _previousState: PublicFormActionState,
   formData: FormData,
-) {
+): Promise<PublicFormActionState> {
   const db = getRuntimeDatabase();
   const published = await findPublishedFormBySlugs(
     db,
@@ -44,11 +46,10 @@ export async function submitPublicFormAction(
     );
   } catch (error) {
     if (error instanceof SubmissionValidationError) {
-      redirect(
-        `/intake/${encodeURIComponent(organizationSlug)}/${encodeURIComponent(
-          formSlug,
-        )}?error=validation`,
-      );
+      return {
+        status: "validation_error",
+        errors: error.errors,
+      };
     }
 
     if (error instanceof FormNotAvailableError) {
@@ -57,4 +58,6 @@ export async function submitPublicFormAction(
 
     throw error;
   }
+
+  return { status: "idle", errors: [] };
 }

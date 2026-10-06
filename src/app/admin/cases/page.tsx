@@ -94,6 +94,7 @@ export default async function CasesPage({
             <p>No submitted intake is waiting for review.</p>
           ) : (
             <table>
+              <caption>Submitted intake awaiting case creation</caption>
               <thead>
                 <tr>
                   <th>Submitted</th>
@@ -138,6 +139,7 @@ export default async function CasesPage({
           <p>No cases have been created.</p>
         ) : (
           <table>
+            <caption>Current cases</caption>
             <thead>
               <tr>
                 <th>Case</th>

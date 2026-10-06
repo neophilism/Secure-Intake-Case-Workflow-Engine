@@ -328,16 +328,17 @@ export default async function OperationsPage({
           <p>No {casePlural.toLowerCase()} match this operational view.</p>
         ) : (
           <table>
+            <caption>Operational search results</caption>
             <thead>
               <tr>
-                <th>{caseSingular}</th>
-                <th>Title</th>
-                <th>Status</th>
-                <th>Priority</th>
-                <th>{queueSingular}</th>
-                <th>Assignee</th>
-                <th>Exceptions</th>
-                <th>Updated</th>
+                <th scope="col">{caseSingular}</th>
+                <th scope="col">Title</th>
+                <th scope="col">Status</th>
+                <th scope="col">Priority</th>
+                <th scope="col">{queueSingular}</th>
+                <th scope="col">Assignee</th>
+                <th scope="col">Exceptions</th>
+                <th scope="col">Updated</th>
               </tr>
             </thead>
             <tbody>
@@ -462,10 +463,11 @@ export default async function OperationsPage({
           <p>No routing {queuePlural.toLowerCase()} are configured.</p>
         ) : (
           <table>
+            <caption>{queueSingular} workload</caption>
             <thead>
               <tr>
-                <th>Queue</th>
-                <th>Status</th>
+                <th scope="col">{queueSingular}</th>
+                <th scope="col">Status</th>
                 <th>Open {casePlural.toLowerCase()}</th>
               </tr>
             </thead>
@@ -502,10 +504,11 @@ export default async function OperationsPage({
       <section>
         <h2>Staff workload</h2>
         <table>
+          <caption>Staff workload</caption>
           <thead>
             <tr>
-              <th>Staff member</th>
-              <th>Title</th>
+              <th scope="col">Staff member</th>
+              <th scope="col">Title</th>
               <th>Open assigned {casePlural.toLowerCase()}</th>
             </tr>
           </thead>

@@ -734,3 +734,77 @@ framework telemetry.
 See `SECURITY.md` and
 `docs/architecture/0021-security-hardening-baseline.md` for the full trust
 model and residual deployment responsibilities.
+
+
+## Accessibility and public-sector usability
+
+PR 19 establishes the shared accessibility/usability baseline inherited by thin
+applications.
+
+### Keyboard and screen-reader behavior
+
+The root layout includes a keyboard-visible "Skip to main content" link and a
+focusable content target.
+
+Global focus styles use `:focus-visible` and must not be removed by downstream
+themes without replacing them with an equally visible indicator.
+
+Public intake fields use explicit labels and associate help/error text with
+controls through `aria-describedby`. Server-side validation returns a
+field-linked error summary and moves focus to that summary so a keyboard or
+screen-reader user does not need to discover errors by scanning the entire
+form.
+
+Invalid controls use `aria-invalid`. Required fields are communicated in text
+as well as visually.
+
+### Public intake language
+
+Generic public intake avoids internal implementation language in the primary
+flow. Form-version metadata remains available under expandable "Form
+information" details instead of appearing as a primary instruction.
+
+When a thin app supplies separate branded home copy, the page retains one
+primary `h1`; the form title is nested below it.
+
+### Responsive presentation
+
+The shared stylesheet provides:
+
+- readable line lengths and spacing;
+- controls sized for pointer/touch use;
+- horizontal table scrolling on narrow screens;
+- single-column definition lists on small screens;
+- preserved keyboard focus visibility;
+- reduced-motion behavior for users who request it.
+
+Thin apps may customize appearance, but should preserve the semantic HTML and
+interaction behavior.
+
+### Print behavior
+
+Case detail pages expose a "Print case summary" action. Print CSS removes
+navigation/forms/actions and avoids splitting major sections where practical.
+
+This is a convenience output, not a certified records-export format. Formal
+records exports should continue using the engine's structured/export
+capabilities.
+
+### Automated accessibility regression gate
+
+CI runs:
+
+```bash
+npm run test:a11y
+```
+
+The suite uses Axe against representative core surfaces and checks WCAG 2 A/AA
+and WCAG 2.1 A/AA rules that can be evaluated reliably in the DOM test
+environment.
+
+Color-contrast automation is disabled in JSDOM because it has no layout/render
+engine. Contrast must still be reviewed when changing the shared stylesheet or
+thin-app branding.
+
+Automated checks supplement rather than replace keyboard, screen-reader,
+zoom/reflow, and human usability testing.
