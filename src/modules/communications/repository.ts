@@ -9,6 +9,7 @@ import {
   correspondenceMessageDocumentLinks,
   documentVersions,
   documents,
+  cases,
 } from "@/db/schema";
 import type { TenantScope } from "@/lib/tenancy";
 
@@ -193,4 +194,44 @@ export async function listCaseCorrespondenceAttachments(
       ),
     )
     .orderBy(asc(correspondenceMessageDocumentLinks.attachedAt));
+}
+
+
+export async function listCorrespondenceDeliveryQueue(
+  db: Database,
+  scope: TenantScope,
+) {
+  const rows = await db
+    .select({
+      message: caseCorrespondenceMessages,
+      case: {
+        id: cases.id,
+        caseNumber: cases.caseNumber,
+        title: cases.title,
+      },
+    })
+    .from(caseCorrespondenceMessages)
+    .innerJoin(
+      cases,
+      and(
+        eq(cases.id, caseCorrespondenceMessages.caseId),
+        eq(
+          cases.organizationId,
+          caseCorrespondenceMessages.organizationId,
+        ),
+      ),
+    )
+    .where(
+      eq(
+        caseCorrespondenceMessages.organizationId,
+        scope.organizationId,
+      ),
+    )
+    .orderBy(desc(caseCorrespondenceMessages.updatedAt));
+
+  return rows.filter(
+    ({ message }) =>
+      message.direction === "outbound" &&
+      (message.status === "queued" || message.status === "failed"),
+  );
 }
