@@ -34,6 +34,47 @@ export function FormRenderer({
   );
   const errorSummaryRef = useRef<HTMLDivElement>(null);
 
+  if (state.status === "submitted") {
+    return (
+      <section role="status" aria-live="polite">
+        <h2>Submission received</h2>
+        {definition.confirmationMessage ? (
+          <p>{definition.confirmationMessage}</p>
+        ) : (
+          <p>Your submission has been recorded.</p>
+        )}
+        {state.confirmationCode ? (
+          <p>
+            Tracking code: <strong>{state.confirmationCode}</strong>
+          </p>
+        ) : null}
+        {state.participantPortal ? (
+          <>
+            <h3>Participant portal access</h3>
+            <p>
+              Save both values below. The access secret is shown only in
+              this immediate submission result and cannot be recovered
+              from the receipt code.
+            </p>
+            <p>
+              Tracking code:{" "}
+              <code>{state.participantPortal.trackingCode}</code>
+            </p>
+            <p>
+              Access secret:{" "}
+              <code>{state.participantPortal.accessSecret}</code>
+            </p>
+            <p>
+              <a href={state.participantPortal.loginPath}>
+                Open participant portal
+              </a>
+            </p>
+          </>
+        ) : null}
+      </section>
+    );
+  }
+
   const record = (fieldId: string, value: unknown) => {
     setAnswers((current) => ({ ...current, [fieldId]: value }));
   };
