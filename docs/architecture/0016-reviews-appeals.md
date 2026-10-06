@@ -58,6 +58,8 @@ For a higher-level review, the snapshot captures the decided parent review, incl
 
 The original challenged record is not rewritten.
 
+PostgreSQL enforces this filing boundary with a trigger that rejects updates to the filed policy snapshot, challenged-decision snapshot, grounds/requested relief, filer/time, calculated filing deadline, and calculated decision clock.
+
 ## Filing eligibility
 
 The service validates:
@@ -71,6 +73,8 @@ The service validates:
 - absence of an already-open review under the same policy for the same challenged decision.
 
 The calculated filing deadline is retained on the review record for later audit.
+
+Partial unique indexes permit at most one open review for the same case, policy, and challenged root/parent review. This closes the race where two concurrent filing requests both pass application-level duplicate checks.
 
 The legacy `case:appeal` permission remains accepted for filing compatibility; new configurations should prefer `review:file`.
 
@@ -144,6 +148,8 @@ The operation does not rewrite or delete the challenged decision.
 The engine deliberately does not infer which workflow deadlines should restart merely from an outcome label. Downstream configuration may define the appropriate post-review workflow/deadline behavior.
 
 ## History and audit
+
+Review operational history is database-enforced append-only: update and delete triggers reject mutation of history rows.
 
 Review operational history records:
 
