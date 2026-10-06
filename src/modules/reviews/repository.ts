@@ -1,10 +1,12 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import type { Database } from "@/db/client";
 import {
   caseReviewHistory,
   caseReviews,
   cases,
+  membershipRoles,
   organizationMemberships,
+  rolePermissions,
   reviewPolicies,
   reviewPolicyPrerequisites,
   users,
@@ -83,19 +85,19 @@ export async function listCaseReviewHistory(
 ) {
   if (reviewIds.length === 0) return [];
 
-  const rows = [];
-  for (const reviewId of reviewIds) {
-    const history = await listReviewHistory(
-      db,
-      scope,
-      reviewId,
-    );
-    rows.push(...history);
-  }
-  return rows.sort(
-    (a, b) =>
-      a.occurredAt.getTime() - b.occurredAt.getTime(),
-  );
+  return db
+    .select()
+    .from(caseReviewHistory)
+    .where(
+      and(
+        eq(
+          caseReviewHistory.organizationId,
+          scope.organizationId,
+        ),
+        inArray(caseReviewHistory.reviewId, [...reviewIds]),
+      ),
+    )
+    .orderBy(asc(caseReviewHistory.occurredAt));
 }
 
 export async function listReviewHistory(
@@ -177,4 +179,61 @@ export async function findReviewById(
     .limit(1);
 
   return review ?? null;
+}
+
+
+export async function listEligibleReviewers(
+  db: Database,
+  scope: TenantScope,
+) {
+  return db
+    .selectDistinct({
+      membershipId: organizationMemberships.id,
+      userId: users.id,
+      email: users.email,
+      displayName: users.displayName,
+      title: organizationMemberships.title,
+    })
+    .from(organizationMemberships)
+    .innerJoin(
+      users,
+      and(
+        eq(users.id, organizationMemberships.userId),
+        eq(users.status, "active"),
+      ),
+    )
+    .innerJoin(
+      membershipRoles,
+      and(
+        eq(
+          membershipRoles.organizationMembershipId,
+          organizationMemberships.id,
+        ),
+        eq(
+          membershipRoles.organizationId,
+          scope.organizationId,
+        ),
+      ),
+    )
+    .innerJoin(
+      rolePermissions,
+      and(
+        eq(rolePermissions.roleId, membershipRoles.roleId),
+        eq(
+          rolePermissions.organizationId,
+          scope.organizationId,
+        ),
+        eq(rolePermissions.permission, "review:decide"),
+      ),
+    )
+    .where(
+      and(
+        eq(
+          organizationMemberships.organizationId,
+          scope.organizationId,
+        ),
+        eq(organizationMemberships.status, "active"),
+      ),
+    )
+    .orderBy(asc(users.displayName), asc(users.email));
 }
