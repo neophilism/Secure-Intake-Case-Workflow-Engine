@@ -14,11 +14,13 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 19 — accessibility, usability, and public-sector quality**
+**PR 21 — generic 1.0 release contract and integration testing**
 
-This milestone adds an accessible responsive presentation baseline, skip navigation and visible keyboard focus, structured form validation with field-linked error summaries, plain-language public intake copy, responsive tables, printable case summaries, reduced-motion support, and an Axe-based WCAG A/AA regression gate in CI.
+This milestone completes the upstream engine as a domain-neutral release candidate. CI now boots an empty PostgreSQL database, runs every migration, applies a neutral thin-application manifest, and verifies intake, case creation, routing, deadlines, workflow transitions, independent review, closure, manifest idempotency, historical version pinning, and ownership-collision protection.
 
-See [docs/development.md](docs/development.md) for local setup and [docs/architecture](docs/architecture) for architectural decisions.
+The package version is **1.0.0-rc.1**. Tagged releases publish a verified container image to GitHub Container Registry for use by separate downstream application repositories.
+
+See [docs/development.md](docs/development.md), [docs/downstream-application-contract.md](docs/downstream-application-contract.md), and [docs/architecture](docs/architecture) for the release and downstream contracts.
 
 ## Security status
 
