@@ -22,6 +22,12 @@ import {
   recordCustodyEvent,
   recordMalwareScanResult,
 } from "@/modules/documents/service";
+import {
+  cancelDeadline,
+  completeDeadline,
+  pauseDeadline,
+  resumeDeadline,
+} from "@/modules/deadlines/service";
 
 async function requireCaseContext() {
   const context = await getCurrentAuthorizationContext();
@@ -336,4 +342,112 @@ export async function recordDocumentCustodyAction(
   }
 
   redirect(`/admin/cases/${caseId}`);
+}
+
+
+async function runDeadlineOperation(
+  caseId: string,
+  deadlineId: string,
+  formData: FormData,
+  operation: "pause" | "resume" | "complete" | "cancel",
+) {
+  const context = await requireCaseContext();
+  if (!hasPermission(context, "deadline:operate")) {
+    redirect("/forbidden");
+  }
+
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!reason) {
+    redirect(`/admin/cases/${caseId}?error=deadline_reason_required`);
+  }
+
+  const common = {
+    deadlineId,
+    actorUserId: context.user.id,
+    reason,
+  };
+
+  try {
+    if (operation === "pause") {
+      await pauseDeadline(
+        getRuntimeDatabase(),
+        requireTenantScope(context),
+        common,
+      );
+    } else if (operation === "resume") {
+      await resumeDeadline(
+        getRuntimeDatabase(),
+        requireTenantScope(context),
+        common,
+      );
+    } else if (operation === "complete") {
+      await completeDeadline(
+        getRuntimeDatabase(),
+        requireTenantScope(context),
+        common,
+      );
+    } else {
+      await cancelDeadline(
+        getRuntimeDatabase(),
+        requireTenantScope(context),
+        common,
+      );
+    }
+  } catch {
+    redirect(`/admin/cases/${caseId}?error=deadline_${operation}_failed`);
+  }
+
+  redirect(`/admin/cases/${caseId}`);
+}
+
+export async function pauseDeadlineAction(
+  caseId: string,
+  deadlineId: string,
+  formData: FormData,
+) {
+  return runDeadlineOperation(
+    caseId,
+    deadlineId,
+    formData,
+    "pause",
+  );
+}
+
+export async function resumeDeadlineAction(
+  caseId: string,
+  deadlineId: string,
+  formData: FormData,
+) {
+  return runDeadlineOperation(
+    caseId,
+    deadlineId,
+    formData,
+    "resume",
+  );
+}
+
+export async function completeDeadlineAction(
+  caseId: string,
+  deadlineId: string,
+  formData: FormData,
+) {
+  return runDeadlineOperation(
+    caseId,
+    deadlineId,
+    formData,
+    "complete",
+  );
+}
+
+export async function cancelDeadlineAction(
+  caseId: string,
+  deadlineId: string,
+  formData: FormData,
+) {
+  return runDeadlineOperation(
+    caseId,
+    deadlineId,
+    formData,
+    "cancel",
+  );
 }

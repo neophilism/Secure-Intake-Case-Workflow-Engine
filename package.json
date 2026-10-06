@@ -1,6 +1,6 @@
 {
   "name": "secure-intake-case-workflow-engine",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -15,7 +15,8 @@
     "db:studio": "drizzle-kit studio",
     "auth:bootstrap": "tsx scripts/bootstrap-admin.ts",
     "check": "npm run typecheck && npm run test && npm run build",
-    "auth:sync-roles": "tsx scripts/sync-default-roles.ts"
+    "auth:sync-roles": "tsx scripts/sync-default-roles.ts",
+    "deadline:sweep": "tsx scripts/sweep-deadlines.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

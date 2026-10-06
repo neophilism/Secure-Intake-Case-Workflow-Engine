@@ -28,14 +28,22 @@ import {
   listQueues,
 } from "@/modules/routing/repository";
 import {
+  listCaseDeadlines,
+  listDeadlineHistory,
+} from "@/modules/deadlines/repository";
+import {
   findWorkflowState,
   parseWorkflowDefinition,
   transitionsFromState,
 } from "@/modules/workflows/definition";
 import {
   applyRoutingRulesAction,
+  cancelDeadlineAction,
+  completeDeadlineAction,
   escalateCaseAction,
   manualAssignCaseAction,
+  pauseDeadlineAction,
+  resumeDeadlineAction,
   recordDocumentCustodyAction,
   recordDocumentScanAction,
   transitionCaseAction,
@@ -73,6 +81,7 @@ export default async function CaseDetailPage({
     assignmentHistory,
     caseDocuments,
     documentTypes,
+    deadlines,
   ] = await Promise.all([
     listCaseStatusHistory(db, scope, record.id),
     listCaseTags(db, scope, record.id),
@@ -89,6 +98,9 @@ export default async function CaseDetailPage({
     hasPermission(context, "document:upload")
       ? listDocumentTypes(db, scope)
       : Promise.resolve([]),
+    hasPermission(context, "deadline:view")
+      ? listCaseDeadlines(db, scope, record.id)
+      : Promise.resolve([]),
   ]);
 
   const workflow = parseWorkflowDefinition(record.workflowDefinition);
@@ -103,6 +115,11 @@ export default async function CaseDetailPage({
     hasPermission(context, "document:manage");
   const canApplyRouting =
     canAssign && hasPermission(context, "routing:view");
+  const canViewDeadlines = hasPermission(context, "deadline:view");
+  const canOperateDeadlines = hasPermission(
+    context,
+    "deadline:operate",
+  );
   const visibleDocuments = caseDocuments.filter(({ document }) =>
     canViewDocumentVisibility(
       document.visibility,
@@ -127,6 +144,15 @@ export default async function CaseDetailPage({
               )
             : [],
         },
+      ] as const),
+    ),
+  );
+
+  const deadlineHistory = new Map(
+    await Promise.all(
+      deadlines.map(async (deadline) => [
+        deadline.id,
+        await listDeadlineHistory(db, scope, deadline.id),
       ] as const),
     ),
   );
@@ -176,6 +202,8 @@ export default async function CaseDetailPage({
         <Link href="/admin/routing">Routing</Link>
         {" · "}
         <Link href="/admin/documents">Documents</Link>
+        {" · "}
+        <Link href="/admin/deadlines">Deadlines</Link>
         {" · "}
         <Link href="/admin/audit">Audit</Link>
       </nav>
@@ -247,6 +275,181 @@ export default async function CaseDetailPage({
         <section>
           <h2>Summary</h2>
           <p>{record.summary}</p>
+        </section>
+      ) : null}
+
+      {canViewDeadlines ? (
+        <section>
+          <h2>Deadlines & statutory clocks</h2>
+          {deadlines.length === 0 ? (
+            <p>No deadlines are attached to this case.</p>
+          ) : (
+            deadlines.map((deadline) => {
+              const clockHistory =
+                deadlineHistory.get(deadline.id) ?? [];
+              const final =
+                deadline.status === "completed" ||
+                deadline.status === "cancelled";
+
+              return (
+                <article key={deadline.id}>
+                  <h3>
+                    {deadline.label} — {deadline.status}
+                  </h3>
+                  <dl>
+                    <dt>Policy</dt>
+                    <dd>
+                      <code>{deadline.policyKey}</code> occurrence{" "}
+                      {deadline.occurrence}
+                    </dd>
+                    <dt>Started</dt>
+                    <dd>{deadline.startedAt.toISOString()}</dd>
+                    <dt>Due</dt>
+                    <dd>{deadline.dueAt.toISOString()}</dd>
+                    <dt>Warning</dt>
+                    <dd>
+                      {deadline.warningAt?.toISOString() ?? "—"}
+                      {deadline.warningIssuedAt
+                        ? ` — issued ${deadline.warningIssuedAt.toISOString()}`
+                        : ""}
+                    </dd>
+                    <dt>Clock</dt>
+                    <dd>
+                      {deadline.durationValue} {deadline.durationUnit}
+                    </dd>
+                    <dt>Pausable</dt>
+                    <dd>{deadline.pausable ? "yes" : "no"}</dd>
+                    <dt>Paused</dt>
+                    <dd>{deadline.pausedAt?.toISOString() ?? "—"}</dd>
+                    <dt>Accumulated pause</dt>
+                    <dd>
+                      {deadline.accumulatedPauseSeconds} seconds
+                    </dd>
+                    <dt>Overdue</dt>
+                    <dd>{deadline.overdueAt?.toISOString() ?? "—"}</dd>
+                    <dt>Escalated</dt>
+                    <dd>{deadline.escalatedAt?.toISOString() ?? "—"}</dd>
+                    <dt>Escalation policy</dt>
+                    <dd>
+                      {deadline.escalationPriority
+                        ? `priority=${deadline.escalationPriority}`
+                        : ""}
+                      {deadline.escalationPriority &&
+                      deadline.escalationQueueSlug
+                        ? ", "
+                        : ""}
+                      {deadline.escalationQueueSlug
+                        ? `queue=${deadline.escalationQueueSlug}`
+                        : ""}
+                      {!deadline.escalationPriority &&
+                      !deadline.escalationQueueSlug
+                        ? "—"
+                        : ""}
+                    </dd>
+                  </dl>
+
+                  {deadline.description ? (
+                    <p>{deadline.description}</p>
+                  ) : null}
+
+                  <details>
+                    <summary>Policy snapshot</summary>
+                    <pre>
+                      {JSON.stringify(
+                        deadline.policySnapshot,
+                        null,
+                        2,
+                      )}
+                    </pre>
+                  </details>
+
+                  <details>
+                    <summary>Clock history</summary>
+                    {clockHistory.length === 0 ? (
+                      <p>No clock history.</p>
+                    ) : (
+                      <ol>
+                        {clockHistory.map((event) => (
+                          <li key={event.id}>
+                            {event.occurredAt.toISOString()}:{" "}
+                            {event.eventType}
+                            {event.reason
+                              ? ` — ${event.reason}`
+                              : ""}
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </details>
+
+                  {canOperateDeadlines && !final ? (
+                    <div>
+                      {deadline.status === "active" &&
+                      deadline.pausable ? (
+                        <form
+                          action={pauseDeadlineAction.bind(
+                            null,
+                            record.id,
+                            deadline.id,
+                          )}
+                        >
+                          <label>
+                            Pause reason
+                            <input name="reason" required />
+                          </label>
+                          <button type="submit">Pause clock</button>
+                        </form>
+                      ) : null}
+
+                      {deadline.status === "paused" ? (
+                        <form
+                          action={resumeDeadlineAction.bind(
+                            null,
+                            record.id,
+                            deadline.id,
+                          )}
+                        >
+                          <label>
+                            Resume reason
+                            <input name="reason" required />
+                          </label>
+                          <button type="submit">Resume clock</button>
+                        </form>
+                      ) : null}
+
+                      <form
+                        action={completeDeadlineAction.bind(
+                          null,
+                          record.id,
+                          deadline.id,
+                        )}
+                      >
+                        <label>
+                          Completion reason
+                          <input name="reason" required />
+                        </label>
+                        <button type="submit">Complete deadline</button>
+                      </form>
+
+                      <form
+                        action={cancelDeadlineAction.bind(
+                          null,
+                          record.id,
+                          deadline.id,
+                        )}
+                      >
+                        <label>
+                          Cancellation reason
+                          <input name="reason" required />
+                        </label>
+                        <button type="submit">Cancel deadline</button>
+                      </form>
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })
+          )}
         </section>
       ) : null}
 

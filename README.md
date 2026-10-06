@@ -14,11 +14,11 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 9 — immutable audit event system**
+**PR 10 — deadlines, statutory clocks, and escalation**
 
-This milestone adds a tenant-scoped append-only audit envelope across intake, workflow configuration, case lifecycle, assignment/routing, and document/evidence operations.
+This milestone adds versioned workflow deadline policies, timezone-aware business-day calendars, concurrent case clocks, warnings, pause/resume, overdue evaluation, deadline history, supervisory dashboards, and configured escalation.
 
-Audit rows include actor/resource/correlation metadata and bounded state deltas. PostgreSQL rejects audit-row updates or deletes, and the protected admin viewer is read-only.
+Clock creation/completion is transactional with the case event that triggers it. Time-dependent warnings/overdue states are evaluated through the reusable deadline sweep service.
 
 See [docs/development.md](docs/development.md) for local setup and [docs/architecture](docs/architecture) for architectural decisions.
 

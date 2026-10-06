@@ -63,6 +63,51 @@ export const transitionActionSchema = z.discriminatedUnion("type", [
 
 export type TransitionAction = z.infer<typeof transitionActionSchema>;
 
+
+export const deadlineDurationUnitSchema = z.enum([
+  "hours",
+  "calendar_days",
+  "business_days",
+]);
+
+export const deadlineDurationSchema = z.object({
+  value: z.number().int().positive().max(36500),
+  unit: deadlineDurationUnitSchema,
+});
+
+export const deadlineTriggerSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("case_created") }),
+  z.object({
+    type: z.literal("transition"),
+    transitionKey: identifier,
+  }),
+]);
+
+export const deadlineEscalationSchema = z
+  .object({
+    priority: z.enum(casePriorities).optional(),
+    queueSlug: identifier.optional(),
+  })
+  .refine(
+    (value) => value.priority !== undefined || value.queueSlug !== undefined,
+    "Deadline escalation must set a priority, a queue, or both.",
+  );
+
+export const deadlinePolicySchema = z.object({
+  key: identifier,
+  label: z.string().min(1).max(300),
+  description: z.string().max(2000).optional(),
+  trigger: deadlineTriggerSchema,
+  duration: deadlineDurationSchema,
+  warningBefore: deadlineDurationSchema.optional(),
+  calendarKey: identifier.optional(),
+  pausable: z.boolean().default(false),
+  completeOnTransitions: z.array(identifier).max(100).default([]),
+  escalation: deadlineEscalationSchema.optional(),
+});
+
+export type DeadlinePolicy = z.infer<typeof deadlinePolicySchema>;
+
 export const workflowTransitionSchema = z.object({
   key: identifier,
   label: z.string().min(1).max(300),
@@ -90,6 +135,7 @@ export const workflowDefinitionSchema = z
     initialState: identifier,
     states: z.array(workflowStateSchema).min(1).max(200),
     transitions: z.array(workflowTransitionSchema).max(1000),
+    deadlinePolicies: z.array(deadlinePolicySchema).max(200).default([]),
   })
   .superRefine((definition, ctx) => {
     const stateKeys = new Set<string>();
@@ -145,6 +191,57 @@ export const workflowDefinitionSchema = z
           code: "custom",
           message: "A transition must change state.",
           path: ["transitions", index],
+        });
+      }
+    });
+
+    const deadlineKeys = new Set<string>();
+    definition.deadlinePolicies.forEach((policy, index) => {
+      if (deadlineKeys.has(policy.key)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Duplicate deadline policy key: ${policy.key}`,
+          path: ["deadlinePolicies", index, "key"],
+        });
+      }
+      deadlineKeys.add(policy.key);
+
+      if (
+        policy.trigger.type === "transition" &&
+        !transitionKeys.has(policy.trigger.transitionKey)
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Unknown deadline trigger transition: ${policy.trigger.transitionKey}`,
+          path: ["deadlinePolicies", index, "trigger", "transitionKey"],
+        });
+      }
+
+      policy.completeOnTransitions.forEach((transitionKey, completionIndex) => {
+        if (!transitionKeys.has(transitionKey)) {
+          ctx.addIssue({
+            code: "custom",
+            message: `Unknown deadline completion transition: ${transitionKey}`,
+            path: [
+              "deadlinePolicies",
+              index,
+              "completeOnTransitions",
+              completionIndex,
+            ],
+          });
+        }
+      });
+
+      const usesBusinessDays =
+        policy.duration.unit === "business_days" ||
+        policy.warningBefore?.unit === "business_days";
+
+      if (usesBusinessDays && !policy.calendarKey) {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            "Business-day deadline policies require calendarKey.",
+          path: ["deadlinePolicies", index, "calendarKey"],
         });
       }
     });

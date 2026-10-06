@@ -46,7 +46,7 @@ export default async function AuditPage({
         {" · "}
         <Link href="/admin/documents">Documents</Link>
         {" · "}
-        <Link href="/admin/cases">Cases</Link>
+        <Link href="/admin/cases">Cases</Link>\n        {" · "}\n        <Link href="/admin/deadlines">Deadlines</Link>
       </nav>
 
       <h1>Immutable audit log</h1>
