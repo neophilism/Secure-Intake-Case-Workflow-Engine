@@ -193,27 +193,12 @@ function FormFieldControl({
 
     case "address":
       return (
-        <fieldset>
-          <legend>{field.label}</legend>
-          {(["line1", "line2", "city", "region", "postalCode", "country"] as const).map(
-            (part) => (
-              <label key={part}>
-                {addressLabel(part)}
-                <input
-                  name={`${field.id}.${part}`}
-                  required={
-                    required &&
-                    ["line1", "city", "region", "postalCode", "country"].includes(part)
-                  }
-                  onChange={(event) =>
-                    setAddressPart(field.id, part, event.currentTarget.value, onValueChange)
-                  }
-                />
-              </label>
-            ),
-          )}
-          {help}
-        </fieldset>
+        <AddressFieldControl
+          field={field}
+          required={required}
+          help={help}
+          onValueChange={onValueChange}
+        />
       );
 
     case "file":
@@ -246,16 +231,46 @@ function addressLabel(
   return labels[part];
 }
 
-const addressState = new Map<string, Record<string, string>>();
+function AddressFieldControl({
+  field,
+  required,
+  help,
+  onValueChange,
+}: {
+  field: FormField;
+  required: boolean;
+  help: React.ReactNode;
+  onValueChange: (value: unknown) => void;
+}) {
+  const [address, setAddress] = useState<Record<string, string>>({});
 
-function setAddressPart(
-  fieldId: string,
-  part: string,
-  value: string,
-  onValueChange: (value: unknown) => void,
-) {
-  const current = addressState.get(fieldId) ?? {};
-  const next = { ...current, [part]: value };
-  addressState.set(fieldId, next);
-  onValueChange(next);
+  const updatePart = (part: string, value: string) => {
+    const next = { ...address, [part]: value };
+    setAddress(next);
+    onValueChange(next);
+  };
+
+  return (
+    <fieldset>
+      <legend>{field.label}</legend>
+      {(["line1", "line2", "city", "region", "postalCode", "country"] as const).map(
+        (part) => (
+          <label key={part}>
+            {addressLabel(part)}
+            <input
+              name={`${field.id}.${part}`}
+              required={
+                required &&
+                ["line1", "city", "region", "postalCode", "country"].includes(part)
+              }
+              onChange={(event) =>
+                updatePart(part, event.currentTarget.value)
+              }
+            />
+          </label>
+        ),
+      )}
+      {help}
+    </fieldset>
+  );
 }
