@@ -778,7 +778,8 @@ export async function fileCaseReviewAction(
   const context = await requireCaseContext();
   if (
     !hasPermission(context, "case:view") ||
-    !hasPermission(context, "review:file")
+    (!hasPermission(context, "review:file") &&
+      !hasPermission(context, "case:appeal"))
   ) {
     redirect("/forbidden");
   }
