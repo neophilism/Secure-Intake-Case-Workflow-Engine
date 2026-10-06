@@ -1,0 +1,640 @@
+{
+  "schemaVersion": 1,
+  "application": {
+    "key": "public-integrity-demo",
+    "name": "Public Integrity Demonstration Office",
+    "shortName": "Integrity Office",
+    "description": "Fictional end-to-end reference application for the Secure Intake & Case Workflow Engine.",
+    "branding": {
+      "accentColor": "#334155",
+      "homeTitle": "Report a public integrity concern",
+      "homeDescription": "This fictional demonstration office shows how a thin application can use the reusable intake and case-workflow engine without custom application code."
+    },
+    "terminology": {
+      "case": {
+        "singular": "Matter",
+        "plural": "Matters"
+      },
+      "submission": {
+        "singular": "Complaint",
+        "plural": "Complaints"
+      },
+      "submitter": {
+        "singular": "Complainant",
+        "plural": "Complainants"
+      },
+      "review": {
+        "singular": "Appeal",
+        "plural": "Appeals"
+      },
+      "deadline": {
+        "singular": "Deadline",
+        "plural": "Deadlines"
+      },
+      "document": {
+        "singular": "Record",
+        "plural": "Records"
+      },
+      "queue": {
+        "singular": "Work queue",
+        "plural": "Work queues"
+      }
+    }
+  },
+  "roles": [
+    {
+      "key": "integrity_intake_officer",
+      "name": "Integrity Intake Officer",
+      "description": "Screens complaints and opens matters for investigation.",
+      "permissions": [
+        "organization:view",
+        "form:view",
+        "workflow:view",
+        "routing:view",
+        "submission:view",
+        "case:create",
+        "case:view",
+        "case:update",
+        "deadline:view",
+        "deadline:operate",
+        "document:view",
+        "document:upload",
+        "document:view_private",
+        "note:view",
+        "note:create_internal"
+      ]
+    },
+    {
+      "key": "integrity_investigator",
+      "name": "Integrity Investigator",
+      "description": "Investigates assigned matters and communicates with complainants.",
+      "permissions": [
+        "organization:view",
+        "form:view",
+        "workflow:view",
+        "routing:view",
+        "submission:view",
+        "case:view",
+        "case:update",
+        "deadline:view",
+        "deadline:operate",
+        "document:view",
+        "document:upload",
+        "document:view_private",
+        "note:view",
+        "note:create_internal",
+        "note:create_participant",
+        "correspondence:view",
+        "correspondence:manage",
+        "notification:view"
+      ]
+    },
+    {
+      "key": "integrity_supervisor",
+      "name": "Integrity Supervisor",
+      "description": "Supervises investigations and issues initial decisions.",
+      "permissions": [
+        "organization:view",
+        "form:view",
+        "workflow:view",
+        "routing:view",
+        "routing:manage",
+        "submission:view",
+        "case:view",
+        "case:assign",
+        "case:update",
+        "case:close",
+        "deadline:view",
+        "deadline:operate",
+        "deadline:manage",
+        "document:view",
+        "document:upload",
+        "document:view_private",
+        "note:view",
+        "note:create_internal",
+        "note:create_participant",
+        "correspondence:view",
+        "correspondence:manage",
+        "review:view",
+        "review:file",
+        "notification:view",
+        "audit:view"
+      ]
+    },
+    {
+      "key": "integrity_appeals_officer",
+      "name": "Integrity Appeals Officer",
+      "description": "Independently decides appeals from initial matter decisions.",
+      "permissions": [
+        "organization:view",
+        "case:view",
+        "review:view",
+        "review:file",
+        "review:assign",
+        "review:decide",
+        "deadline:view",
+        "document:view",
+        "document:view_private",
+        "correspondence:view",
+        "note:view",
+        "notification:view",
+        "audit:view"
+      ]
+    }
+  ],
+  "documentTypes": [
+    {
+      "key": "supporting_record",
+      "name": "Supporting Record",
+      "description": "Evidence or other material supporting a complaint or investigation.",
+      "acceptedMimeTypes": [
+        "application/pdf",
+        "image/png",
+        "image/jpeg",
+        "text/plain"
+      ],
+      "maxBytes": 25000000
+    },
+    {
+      "key": "investigative_record",
+      "name": "Investigative Record",
+      "description": "Records gathered or produced during an investigation.",
+      "acceptedMimeTypes": [
+        "application/pdf",
+        "image/png",
+        "image/jpeg",
+        "text/plain"
+      ],
+      "maxBytes": 50000000
+    }
+  ],
+  "deadlineCalendars": [
+    {
+      "key": "standard_business",
+      "name": "Standard Business Calendar",
+      "timeZone": "America/New_York",
+      "weekendDays": [
+        0,
+        6
+      ]
+    }
+  ],
+  "teams": [
+    {
+      "slug": "investigations",
+      "name": "Investigations Team",
+      "description": "Investigators available for round-robin matter assignment."
+    }
+  ],
+  "queues": [
+    {
+      "slug": "intake",
+      "name": "Intake",
+      "description": "Newly opened matters awaiting or undergoing screening.",
+      "assignmentStrategy": "manual"
+    },
+    {
+      "slug": "investigations",
+      "name": "Investigations",
+      "description": "Accepted matters assigned to investigators.",
+      "teamSlug": "investigations",
+      "assignmentStrategy": "round_robin"
+    },
+    {
+      "slug": "supervisory_review",
+      "name": "Supervisory Review",
+      "description": "Investigations ready for an initial decision.",
+      "assignmentStrategy": "manual"
+    }
+  ],
+  "communicationTemplates": [
+    {
+      "key": "information_request",
+      "name": "Request for additional information",
+      "channel": "portal",
+      "subjectTemplate": "Additional information requested for {{case_number}}",
+      "bodyTemplate": "The Integrity Office needs additional information before it can continue reviewing {{case_number}}. Please respond with the requested information.",
+      "defaultVisibility": "participant"
+    },
+    {
+      "key": "decision_notice",
+      "name": "Initial decision notice",
+      "channel": "portal",
+      "subjectTemplate": "Decision issued for {{case_number}}",
+      "bodyTemplate": "The Integrity Office has issued an initial decision in {{case_number}}. Review the matter record for the decision and any available appeal rights.",
+      "defaultVisibility": "participant"
+    }
+  ],
+  "workflows": [
+    {
+      "slug": "integrity_matter",
+      "name": "Public Integrity Matter",
+      "description": "Complaint screening, investigation, information requests, supervisory decision, appeal effect, and closure.",
+      "definition": {
+        "schemaVersion": 1,
+        "initialState": "submitted",
+        "states": [
+          {
+            "key": "submitted",
+            "label": "Submitted"
+          },
+          {
+            "key": "intake_screening",
+            "label": "Intake screening"
+          },
+          {
+            "key": "investigation",
+            "label": "Investigation"
+          },
+          {
+            "key": "information_requested",
+            "label": "Information requested"
+          },
+          {
+            "key": "supervisor_review",
+            "label": "Supervisor review"
+          },
+          {
+            "key": "decided",
+            "label": "Initial decision issued"
+          },
+          {
+            "key": "appeal_decided",
+            "label": "Appeal decided"
+          },
+          {
+            "key": "closed",
+            "label": "Closed"
+          }
+        ],
+        "transitions": [
+          {
+            "key": "begin_screening",
+            "label": "Begin screening",
+            "from": "submitted",
+            "to": "intake_screening",
+            "requiredPermissions": [
+              "case:update"
+            ],
+            "comment": "optional"
+          },
+          {
+            "key": "accept_for_investigation",
+            "label": "Accept for investigation",
+            "from": "intake_screening",
+            "to": "investigation",
+            "requiredPermissions": [
+              "case:update"
+            ],
+            "comment": "required",
+            "actions": [
+              {
+                "type": "mark_open"
+              },
+              {
+                "type": "add_tag",
+                "value": "accepted"
+              }
+            ]
+          },
+          {
+            "key": "request_information",
+            "label": "Request additional information",
+            "from": "investigation",
+            "to": "information_requested",
+            "requiredPermissions": [
+              "case:update"
+            ],
+            "comment": "required"
+          },
+          {
+            "key": "information_received",
+            "label": "Record information received",
+            "from": "information_requested",
+            "to": "investigation",
+            "requiredPermissions": [
+              "case:update"
+            ],
+            "comment": "required"
+          },
+          {
+            "key": "submit_supervisor_review",
+            "label": "Submit for supervisor review",
+            "from": "investigation",
+            "to": "supervisor_review",
+            "requiredPermissions": [
+              "case:update"
+            ],
+            "comment": "required"
+          },
+          {
+            "key": "return_to_investigation",
+            "label": "Return for additional investigation",
+            "from": "supervisor_review",
+            "to": "investigation",
+            "requiredPermissions": [
+              "case:close"
+            ],
+            "comment": "required"
+          },
+          {
+            "key": "issue_decision",
+            "label": "Issue initial decision",
+            "from": "supervisor_review",
+            "to": "decided",
+            "requiredPermissions": [
+              "case:close"
+            ],
+            "comment": "required",
+            "guards": {
+              "requiredCaseFields": [
+                "disposition"
+              ],
+              "requiredSubmissionFields": [],
+              "requiredDocuments": []
+            },
+            "actions": [
+              {
+                "type": "mark_resolved"
+              }
+            ]
+          },
+          {
+            "key": "close_without_appeal",
+            "label": "Close after initial decision",
+            "from": "decided",
+            "to": "closed",
+            "requiredPermissions": [
+              "case:close"
+            ],
+            "comment": "required",
+            "actions": [
+              {
+                "type": "mark_closed"
+              }
+            ]
+          },
+          {
+            "key": "close_after_appeal",
+            "label": "Close after appeal decision",
+            "from": "appeal_decided",
+            "to": "closed",
+            "requiredPermissions": [
+              "case:close"
+            ],
+            "comment": "required",
+            "actions": [
+              {
+                "type": "mark_closed"
+              }
+            ]
+          }
+        ],
+        "deadlinePolicies": [
+          {
+            "key": "screening_due",
+            "label": "Complete intake screening",
+            "trigger": {
+              "type": "transition",
+              "transitionKey": "begin_screening"
+            },
+            "duration": {
+              "value": 5,
+              "unit": "business_days"
+            },
+            "warningBefore": {
+              "value": 1,
+              "unit": "business_days"
+            },
+            "calendarKey": "standard_business",
+            "completeOnTransitions": [
+              "accept_for_investigation"
+            ]
+          },
+          {
+            "key": "investigation_update_due",
+            "label": "Investigation progress checkpoint",
+            "trigger": {
+              "type": "transition",
+              "transitionKey": "accept_for_investigation"
+            },
+            "duration": {
+              "value": 30,
+              "unit": "calendar_days"
+            },
+            "warningBefore": {
+              "value": 5,
+              "unit": "calendar_days"
+            },
+            "pausable": true,
+            "completeOnTransitions": [
+              "submit_supervisor_review"
+            ],
+            "escalation": {
+              "priority": "high",
+              "queueSlug": "supervisory_review"
+            }
+          },
+          {
+            "key": "supervisor_decision_due",
+            "label": "Supervisor decision due",
+            "trigger": {
+              "type": "transition",
+              "transitionKey": "submit_supervisor_review"
+            },
+            "duration": {
+              "value": 10,
+              "unit": "business_days"
+            },
+            "warningBefore": {
+              "value": 2,
+              "unit": "business_days"
+            },
+            "calendarKey": "standard_business",
+            "completeOnTransitions": [
+              "return_to_investigation",
+              "issue_decision"
+            ],
+            "escalation": {
+              "priority": "high",
+              "queueSlug": "supervisory_review"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "forms": [
+    {
+      "slug": "integrity-complaint",
+      "name": "Public Integrity Complaint",
+      "description": "Fictional complaint intake used by the reference application.",
+      "accessMode": "public",
+      "workflowSlug": "integrity_matter",
+      "definition": {
+        "schemaVersion": 1,
+        "intro": "Describe the conduct you believe should be reviewed. This demonstration form uses synthetic data only.",
+        "submitLabel": "Submit complaint",
+        "confirmationMessage": "Your demonstration complaint has been received.",
+        "sections": [
+          {
+            "id": "complainant",
+            "title": "Complainant",
+            "description": "Tell the demonstration office how to identify the complainant.",
+            "fields": [
+              {
+                "id": "name",
+                "type": "short_text",
+                "label": "Name",
+                "required": true,
+                "validation": {
+                  "minLength": 2,
+                  "maxLength": 200
+                }
+              },
+              {
+                "id": "email",
+                "type": "email",
+                "label": "Email",
+                "required": true
+              }
+            ]
+          },
+          {
+            "id": "concern",
+            "title": "Concern",
+            "fields": [
+              {
+                "id": "category",
+                "type": "select",
+                "label": "Type of concern",
+                "required": true,
+                "options": [
+                  {
+                    "value": "procurement",
+                    "label": "Procurement or contracting"
+                  },
+                  {
+                    "value": "conflict",
+                    "label": "Conflict of interest"
+                  },
+                  {
+                    "value": "records",
+                    "label": "Records or disclosure"
+                  },
+                  {
+                    "value": "other",
+                    "label": "Other public-integrity concern"
+                  }
+                ]
+              },
+              {
+                "id": "summary",
+                "type": "long_text",
+                "label": "Describe the concern",
+                "required": true,
+                "validation": {
+                  "minLength": 30,
+                  "maxLength": 10000
+                }
+              },
+              {
+                "id": "urgent",
+                "type": "boolean",
+                "label": "Does this concern require urgent attention?",
+                "required": false
+              }
+            ]
+          },
+          {
+            "id": "attestation",
+            "title": "Certification",
+            "fields": [
+              {
+                "id": "truthful",
+                "type": "attestation",
+                "label": "Certification",
+                "required": true,
+                "attestationText": "I certify that the information in this demonstration complaint is accurate to the best of my knowledge."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "routingRules": [
+    {
+      "key": "urgent_integrity_complaint",
+      "name": "Urgent integrity complaints",
+      "priority": 10,
+      "targetQueueSlug": "investigations",
+      "definition": {
+        "schemaVersion": 1,
+        "match": "all",
+        "conditions": [
+          {
+            "field": "case_type",
+            "operator": "equals",
+            "value": "integrity-complaint"
+          },
+          {
+            "field": "submission",
+            "fieldId": "urgent",
+            "operator": "equals",
+            "value": true
+          }
+        ]
+      }
+    },
+    {
+      "key": "standard_integrity_complaint",
+      "name": "Standard integrity complaints",
+      "priority": 100,
+      "targetQueueSlug": "investigations",
+      "definition": {
+        "schemaVersion": 1,
+        "match": "all",
+        "conditions": [
+          {
+            "field": "case_type",
+            "operator": "equals",
+            "value": "integrity-complaint"
+          }
+        ]
+      }
+    }
+  ],
+  "reviewPolicies": [
+    {
+      "key": "initial_appeal",
+      "name": "Initial Decision Appeal",
+      "description": "Independent appeal of an initial Public Integrity Demonstration Office decision.",
+      "level": 1,
+      "eligibleCaseStatuses": [
+        "decided"
+      ],
+      "filingWindow": {
+        "value": 30,
+        "unit": "calendar_days"
+      },
+      "decisionDeadline": {
+        "value": 20,
+        "unit": "business_days"
+      },
+      "decisionWarningBefore": {
+        "value": 3,
+        "unit": "business_days"
+      },
+      "calendarKey": "standard_business",
+      "allowedOutcomes": [
+        "affirmed",
+        "modified",
+        "reversed",
+        "remanded"
+      ],
+      "requireIndependentReviewer": true,
+      "prerequisitePolicyKeys": []
+    }
+  ]
+}
