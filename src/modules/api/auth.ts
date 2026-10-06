@@ -53,17 +53,24 @@ export function normalizeApiPermissions(
   permissions: readonly string[],
 ) {
   const allowed = new Set<string>(corePermissions);
-  return [
+  const requested = [
     ...new Set(
       permissions
         .map((permission) => permission.trim())
-        .filter(
-          (permission) =>
-            allowed.has(permission) &&
-            !forbiddenApiScopes.has(permission),
-        ),
+        .filter(Boolean),
     ),
-  ].sort();
+  ];
+  const invalid = requested.filter(
+    (permission) =>
+      !allowed.has(permission) ||
+      forbiddenApiScopes.has(permission),
+  );
+  if (invalid.length) {
+    throw new Error(
+      `Invalid or non-delegable API permissions: ${invalid.join(", ")}`,
+    );
+  }
+  return requested.sort();
 }
 
 export async function createApiClient(
