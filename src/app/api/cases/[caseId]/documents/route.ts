@@ -40,6 +40,16 @@ export async function POST(
   const { caseId } = await params;
   const formData = await request.formData();
   const file = formData.get("file");
+  const visibility = parseDocumentVisibility(
+    String(formData.get("visibility") ?? "internal"),
+  );
+
+  if (
+    visibility === "restricted" &&
+    !hasPermission(context, "document:view_private")
+  ) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
 
   if (!(file instanceof File) || file.size < 1) {
     return NextResponse.redirect(
@@ -64,9 +74,7 @@ export async function POST(
         description: String(
           formData.get("description") ?? "",
         ),
-        visibility: parseDocumentVisibility(
-          String(formData.get("visibility") ?? "internal"),
-        ),
+        visibility,
         filename: file.name,
         mimeType: file.type || "application/octet-stream",
         data: new Uint8Array(await file.arrayBuffer()),
