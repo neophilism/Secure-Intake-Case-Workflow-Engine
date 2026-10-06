@@ -3,6 +3,14 @@ import { lookup } from "node:dns/promises";
 
 const eventTypePattern = /^[a-z0-9_.:-]+$/i;
 
+function normalizedHostname(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/^\[/, "")
+    .replace(/\]$/, "")
+    .replace(/\.$/, "");
+}
+
 export function normalizeWebhookEventTypes(
   values: readonly string[],
 ) {
@@ -44,7 +52,7 @@ export function normalizeWebhookUrl(value: string) {
     throw new Error("Webhook URL must use the standard HTTPS port.");
   }
 
-  const hostname = url.hostname.toLowerCase();
+  const hostname = normalizedHostname(url.hostname);
   if (
     hostname === "localhost" ||
     hostname.endsWith(".localhost") ||
@@ -65,7 +73,7 @@ export async function assertWebhookDestinationPublic(
   endpointUrl: string,
 ) {
   const url = new URL(normalizeWebhookUrl(endpointUrl));
-  const hostname = url.hostname;
+  const hostname = normalizedHostname(url.hostname);
   if (isIP(hostname)) {
     if (isPrivateAddress(hostname)) {
       throw new Error("Webhook destination is private.");
