@@ -35,6 +35,8 @@ CREATE INDEX IF NOT EXISTS "intake_form_versions_form_idx" ON "intake_form_versi
 --> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "intake_form_versions_form_number_idx" ON "intake_form_versions" ("form_id", "version_number");
 --> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "intake_form_versions_one_published_idx" ON "intake_form_versions" ("form_id") WHERE "status" = 'published';
+--> statement-breakpoint
 
 CREATE TABLE IF NOT EXISTS "intake_submissions" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
