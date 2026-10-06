@@ -2,6 +2,7 @@ import { hasPermission, requireTenantScope } from "@/modules/auth/authorization"
 import { getCurrentAuthorizationContext } from "@/modules/auth/server-session";
 import { createApiClient } from "@/modules/api/auth";
 import { getRuntimeDatabase } from "@/db/runtime";
+import { rejectUntrustedBrowserMutation } from "@/lib/request-security";
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => {
@@ -23,6 +24,9 @@ function escapeHtml(value: string) {
 }
 
 export async function POST(request: Request) {
+  const originRejection = rejectUntrustedBrowserMutation(request);
+  if (originRejection) return originRejection;
+
   const context = await getCurrentAuthorizationContext();
   if (!context) {
     return Response.redirect(new URL("/login", request.url), 303);
@@ -89,6 +93,9 @@ export async function POST(request: Request) {
           "Cache-Control": "no-store",
           "Referrer-Policy": "no-referrer",
           "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy":
+            "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
         },
       },
     );
