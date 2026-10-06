@@ -544,6 +544,74 @@ npm run db:migrate
 npm run auth:sync-roles
 ```
 
+
+## External participant portal
+
+A published form can opt into a protected external-participant portal:
+
+```json
+{
+  "schemaVersion": 1,
+  "participantPortal": {
+    "enabled": true,
+    "allowMessaging": true
+  },
+  "sections": []
+}
+```
+
+The `sections` example above is abbreviated; normal form validation still requires at least one section and field.
+
+When a portal-enabled form is finalized, the engine issues:
+
+- the normal confirmation/tracking code, which is **not** a secret; and
+- an independent 256-bit access secret.
+
+The access secret is shown only in the immediate successful form action state. It is not placed in a query string, redirect, confirmation URL, database column, or audit event. PostgreSQL stores only its SHA-256 hash.
+
+Participant login is available at:
+
+```text
+/participant/<organization-slug>
+```
+
+Login requires both the tracking code and access secret. Successful authentication creates a separate participant session token whose raw value is stored only in an HttpOnly, SameSite=Strict browser cookie; PostgreSQL stores only the session-token hash.
+
+Session defaults:
+
+```env
+PARTICIPANT_SESSION_COOKIE_NAME=sicwe_participant_session
+PARTICIPANT_SESSION_TTL_HOURS=8
+```
+
+Participant login uses the existing persistent login-throttle table with a distinct participant credential bucket. Source-IP throttling is used only when `AUTH_TRUST_PROXY_HEADERS=true` behind a trusted proxy, following the same trust rule as staff login.
+
+The portal deliberately exposes a bounded view:
+
+- tracking code;
+- submitted timestamp;
+- case number, once a case exists;
+- the human workflow-state label;
+- case updated timestamp;
+- sent/received portal correspondence with `participant` or `public` visibility.
+
+It does **not** expose submission answers, protected compartments, case title/summary, assignments, deadlines, notes, reviews, audit events, internal correspondence, or arbitrary documents.
+
+Portal messages reuse the existing correspondence subsystem:
+
+```text
+staff portal draft -> publish -> sent
+participant reply   -> received
+```
+
+Portal publication does not use an email/letter delivery transport or background delivery job.
+
+Portal messages cannot use `internal` visibility. Attachments are intentionally rejected until a participant-safe document delivery/download contract exists.
+
+Participant pages are explicitly `private, no-store` and carry `noindex` metadata.
+
+The current credential is intentionally a one-submission external credential, not a general user account. Account-based external identity, credential recovery, participant document downloads, and public uploads are separate capabilities.
+
 ## Verification
 
 ```bash
