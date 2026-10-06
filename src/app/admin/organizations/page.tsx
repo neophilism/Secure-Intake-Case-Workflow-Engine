@@ -54,6 +54,8 @@ export default async function OrganizationAdministrationPage({
 
       <nav>
         <a href="/admin/forms">Manage intake forms</a>
+        {" · "}
+        <a href="/admin/cases">Cases</a>
       </nav>
 
       <section>

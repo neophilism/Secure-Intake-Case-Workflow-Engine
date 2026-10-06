@@ -46,6 +46,12 @@ export default async function FormAdministrationPage({
 
   return (
     <main>
+      <nav>
+        <a href="/admin/organizations">Organization</a>
+        {" · "}
+        <a href="/admin/cases">Cases</a>
+      </nav>
+
       <h1>Intake form administration</h1>
       <p>
         Forms are configuration-driven and versioned. Publishing a new version
