@@ -12,3 +12,6 @@ CREATE TABLE IF NOT EXISTS "auth_login_throttles" (
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "auth_login_throttles_blocked_until_idx"
   ON "auth_login_throttles" ("blocked_until");
+--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "auth_login_throttles_updated_at_idx"
+  ON "auth_login_throttles" ("updated_at");
