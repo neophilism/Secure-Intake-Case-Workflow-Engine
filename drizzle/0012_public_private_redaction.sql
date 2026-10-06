@@ -203,7 +203,7 @@ EXECUTE FUNCTION validate_document_derivative_provenance();
 --> statement-breakpoint
 
 CREATE OR REPLACE FUNCTION validate_public_disclosure_document_link()
-RETURNS trigger AS $
+RETURNS trigger AS $$
 DECLARE
   derivative_org uuid;
   derivative_audience text;
@@ -262,7 +262,7 @@ BEGIN
 
   RETURN OLD;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 --> statement-breakpoint
 DROP TRIGGER IF EXISTS disclosure_publication_documents_validate_link
   ON "disclosure_publication_documents";
@@ -274,7 +274,7 @@ EXECUTE FUNCTION validate_public_disclosure_document_link();
 --> statement-breakpoint
 
 CREATE OR REPLACE FUNCTION preserve_disclosure_publication_identity()
-RETURNS trigger AS $
+RETURNS trigger AS $$
 BEGIN
   IF NEW.organization_id IS DISTINCT FROM OLD.organization_id
     OR NEW.source_type IS DISTINCT FROM OLD.source_type
@@ -287,7 +287,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 --> statement-breakpoint
 DROP TRIGGER IF EXISTS disclosure_publications_preserve_identity
   ON "disclosure_publications";
