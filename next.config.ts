@@ -86,6 +86,7 @@ const nextConfig: NextConfig = {
       { source: "/notifications", headers: noStore },
       { source: "/select-organization", headers: noStore },
       { source: "/login", headers: noStore },
+      { source: "/participant/:path*", headers: noStore },
     ];
   },
 };
