@@ -37,6 +37,10 @@ const securityHeaders = [
     value: "DENY",
   },
   {
+    key: "X-Permitted-Cross-Domain-Policies",
+    value: "none",
+  },
+  {
     key: "Permissions-Policy",
     value:
       "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
@@ -62,11 +66,26 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   async headers() {
+    const noStore = [
+      {
+        key: "Cache-Control",
+        value: "private, no-store, max-age=0",
+      },
+      {
+        key: "Pragma",
+        value: "no-cache",
+      },
+    ];
+
     return [
       {
         source: "/:path*",
         headers: securityHeaders,
       },
+      { source: "/admin/:path*", headers: noStore },
+      { source: "/notifications", headers: noStore },
+      { source: "/select-organization", headers: noStore },
+      { source: "/login", headers: noStore },
     ];
   },
 };
