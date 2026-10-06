@@ -35,6 +35,37 @@ export const users = pgTable(
   (table) => [uniqueIndex("users_email_idx").on(table.email)],
 );
 
+export const userCredentials = pgTable("user_credentials", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  passwordHash: text("password_hash").notNull(),
+  passwordUpdatedAt: timestamp("password_updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const authIdentities = pgTable(
+  "auth_identities",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    subject: text("subject").notNull(),
+    email: text("email"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("auth_identities_user_idx").on(table.userId),
+    uniqueIndex("auth_identities_provider_subject_idx").on(
+      table.provider,
+      table.subject,
+    ),
+  ],
+);
+
 export const offices = pgTable(
   "offices",
   {
@@ -77,6 +108,7 @@ export const organizationMemberships = pgTable(
   },
   (table) => [
     index("organization_memberships_organization_idx").on(table.organizationId),
+    index("organization_memberships_user_idx").on(table.userId),
     uniqueIndex("organization_memberships_org_user_idx").on(
       table.organizationId,
       table.userId,
@@ -126,5 +158,96 @@ export const organizationInvitations = pgTable(
   (table) => [
     index("organization_invitations_organization_idx").on(table.organizationId),
     uniqueIndex("organization_invitations_token_hash_idx").on(table.tokenHash),
+  ],
+);
+
+export const roles = pgTable(
+  "roles",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    isSystem: boolean("is_system").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("roles_organization_idx").on(table.organizationId),
+    uniqueIndex("roles_org_key_idx").on(table.organizationId, table.key),
+  ],
+);
+
+export const rolePermissions = pgTable(
+  "role_permissions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    roleId: uuid("role_id")
+      .notNull()
+      .references(() => roles.id, { onDelete: "cascade" }),
+    permission: text("permission").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("role_permissions_organization_idx").on(table.organizationId),
+    uniqueIndex("role_permissions_role_permission_idx").on(
+      table.roleId,
+      table.permission,
+    ),
+  ],
+);
+
+export const membershipRoles = pgTable(
+  "membership_roles",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    organizationMembershipId: uuid("organization_membership_id")
+      .notNull()
+      .references(() => organizationMemberships.id, { onDelete: "cascade" }),
+    roleId: uuid("role_id")
+      .notNull()
+      .references(() => roles.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("membership_roles_organization_idx").on(table.organizationId),
+    uniqueIndex("membership_roles_membership_role_idx").on(
+      table.organizationMembershipId,
+      table.roleId,
+    ),
+  ],
+);
+
+export const authSessions = pgTable(
+  "auth_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    activeOrganizationId: uuid("active_organization_id").references(
+      () => organizations.id,
+      { onDelete: "set null" },
+    ),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("auth_sessions_user_idx").on(table.userId),
+    uniqueIndex("auth_sessions_token_hash_idx").on(table.tokenHash),
   ],
 );
