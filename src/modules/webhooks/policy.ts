@@ -92,7 +92,7 @@ export async function assertWebhookDestinationPublic(
   }
 }
 
-export function isPrivateAddress(address: string) {
+export function isPrivateAddress(address: string): boolean {
   const normalized = address.toLowerCase();
 
   if (normalized.includes(":")) {
