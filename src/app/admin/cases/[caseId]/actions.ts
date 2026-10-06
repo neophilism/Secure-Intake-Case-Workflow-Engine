@@ -99,7 +99,6 @@ export async function transitionCaseAction(
         actorPermissions: [...context.permissions],
         comment: comment || null,
         disposition: disposition || undefined,
-        documentTypes: [],
       },
     );
   } catch (error) {
