@@ -220,6 +220,60 @@ Existing installations should synchronize the new deadline permissions:
 npm run auth:sync-roles
 ```
 
+## Notes, correspondence, and communication
+
+Case detail pages now support notes and threaded correspondence.
+
+Communication visibility is explicit:
+
+```text
+internal
+case_participants
+public
+```
+
+Case access does not automatically grant note/correspondence access. Default roles can be synchronized after migration with:
+
+```bash
+npm run auth:sync-roles
+```
+
+Organization communication templates and the outbound queue are available at:
+
+```text
+/admin/communications
+```
+
+Templates support only these deterministic placeholders:
+
+```text
+{{case_number}}
+{{case_title}}
+{{case_status}}
+{{case_type}}
+```
+
+Outbound correspondence follows:
+
+```text
+draft -> queued -> sent
+                 -> failed -> queued
+```
+
+PR 11 provides the provider-neutral `CommunicationTransport` and `deliverQueuedCorrespondence` service boundary but does not hard-code a mail vendor. Transport adapters receive the message ID as an idempotency key. PR 12 background jobs can process/retry the same queued-message model.
+
+Staff may also record a queued message as externally sent, supporting letters, external portals, or existing email systems.
+
+Inbound messages can be manually recorded and linked to a prior message/thread. External message IDs are deduplicated within the organization.
+
+Correspondence attachments must already be case-linked, immutable document versions that are scan-clean and available. Participant/public communications may only attach participant-visible documents.
+
+Case notes may attach existing case documents. External-visible notes apply the same participant-safe document rule.
+
+Immutable audit events deliberately record message status/metadata but do not duplicate message bodies, sender/recipient addresses, or attachment content.
+
+The case detail page includes a unified timeline combining workflow status, assignments, deadline activity, document attachments, notes, and correspondence.
+
 ## Verification
 
 ```bash
