@@ -35,6 +35,10 @@ export const corePermissions = [
   "correspondence:view",
   "correspondence:manage",
   "communication:template_manage",
+  "notification:view",
+  "notification:manage",
+  "job:view",
+  "job:manage",
   "audit:view",
 ] as const;
 
@@ -60,6 +64,10 @@ export const defaultRoleTemplates: readonly RoleTemplate[] = [
     name: "Supervisor",
     description: "Operational supervision without organization security administration.",
     permissions: [
+      "job:manage",
+      "job:view",
+      "notification:manage",
+      "notification:view",
       "communication:template_manage",
       "correspondence:manage",
       "correspondence:view",
@@ -97,6 +105,7 @@ export const defaultRoleTemplates: readonly RoleTemplate[] = [
     name: "Case Worker",
     description: "Standard case-processing access.",
     permissions: [
+      "notification:view",
       "correspondence:manage",
       "correspondence:view",
       "note:create_participant",
@@ -123,6 +132,7 @@ export const defaultRoleTemplates: readonly RoleTemplate[] = [
     name: "Intake Reviewer",
     description: "Intake and preliminary review access.",
     permissions: [
+      "notification:view",
       "correspondence:view",
       "note:view",
       "organization:view",
@@ -146,6 +156,7 @@ export const defaultRoleTemplates: readonly RoleTemplate[] = [
     name: "Reviewer",
     description: "Independent review and appeal access.",
     permissions: [
+      "notification:view",
       "correspondence:view",
       "note:view",
       "organization:view",
@@ -167,6 +178,8 @@ export const defaultRoleTemplates: readonly RoleTemplate[] = [
     name: "Auditor",
     description: "Read-only oversight and audit access.",
     permissions: [
+      "job:view",
+      "notification:view",
       "correspondence:view",
       "note:view",
       "organization:view",

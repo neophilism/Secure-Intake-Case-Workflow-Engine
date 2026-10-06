@@ -18,6 +18,8 @@ import {
 } from "@/db/schema";
 import type { TenantScope } from "@/lib/tenancy";
 import { auditEventValues } from "@/modules/audit/event";
+import { enqueueBackgroundJobInTransaction } from "@/modules/jobs/service";
+import { createNotificationForUserInTransaction } from "@/modules/notifications/service";
 import {
   canExposeDocumentInCommunication,
   normalizeRecipients,
@@ -430,6 +432,16 @@ export async function queueOutboundCorrespondence(
       }),
     );
 
+    await enqueueBackgroundJobInTransaction(tx, scope, {
+      jobType: "correspondence.deliver",
+      payload: { messageId: message.id },
+      priority: 40,
+      maxAttempts: 5,
+      dedupeKey:
+        `correspondence-delivery:${message.id}:${now.toISOString()}`,
+      availableAt: now,
+    });
+
     return updated;
   });
 }
@@ -572,6 +584,24 @@ export async function recordOutboundCorrespondenceFailure(
       }),
     );
 
+    if (message.createdByUserId) {
+      await createNotificationForUserInTransaction(
+        tx,
+        scope,
+        message.createdByUserId,
+        {
+          eventType: "correspondence.delivery_failed",
+          severity: "warning",
+          title: "Correspondence delivery failed",
+          body:
+            "An outbound case correspondence message could not be delivered.",
+          link: `/admin/cases/${message.caseId}`,
+          resourceType: "correspondence_message",
+          resourceId: message.id,
+        },
+      );
+    }
+
     return updated;
   });
 }
@@ -581,14 +611,20 @@ export async function deliverQueuedCorrespondence(
   scope: TenantScope,
   messageId: string,
   transport: CommunicationTransport,
+  options: { recordFailure?: boolean } = {},
 ) {
   const message = await db.transaction((tx) =>
     requireMessage(tx, scope, messageId),
   );
-  if (
-    message.direction !== "outbound" ||
-    message.status !== "queued"
-  ) {
+  if (message.direction !== "outbound") {
+    throw new CommunicationStateError(
+      "Only outbound correspondence can be delivered.",
+    );
+  }
+  if (message.status === "sent") {
+    return message;
+  }
+  if (message.status !== "queued") {
     throw new CommunicationStateError(
       "Correspondence must be queued before delivery.",
     );
@@ -615,14 +651,16 @@ export async function deliverQueuedCorrespondence(
       attachments,
     });
   } catch (error) {
-    await recordOutboundCorrespondenceFailure(db, scope, {
-      messageId: message.id,
-      provider: transport.provider,
-      failureMessage:
-        error instanceof Error
-          ? error.message
-          : "Unknown communication delivery failure.",
-    });
+    if (options.recordFailure ?? true) {
+      await recordOutboundCorrespondenceFailure(db, scope, {
+        messageId: message.id,
+        provider: transport.provider,
+        failureMessage:
+          error instanceof Error
+            ? error.message
+            : "Unknown communication delivery failure.",
+      });
+    }
     throw error;
   }
 

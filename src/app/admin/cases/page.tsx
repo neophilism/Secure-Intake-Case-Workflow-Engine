@@ -63,6 +63,10 @@ export default async function CasesPage({
         <Link href="/admin/deadlines">Deadlines</Link>
         {" · "}
         <Link href="/admin/communications">Communications</Link>
+        {" · "}
+        <Link href="/notifications">Notifications</Link>
+        {" · "}
+        <Link href="/admin/jobs">Jobs</Link>
       </nav>
 
       <h1>Cases</h1>

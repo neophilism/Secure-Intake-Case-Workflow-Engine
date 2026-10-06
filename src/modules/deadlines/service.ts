@@ -1,4 +1,4 @@
-import { and, desc, eq, max, or } from "drizzle-orm";
+import { and, desc, eq, isNull, max, or } from "drizzle-orm";
 import type { Database, DatabaseTransaction } from "@/db/client";
 import {
   auditEvents,
@@ -10,6 +10,7 @@ import {
 } from "@/db/schema";
 import type { TenantScope } from "@/lib/tenancy";
 import { auditEventValues } from "@/modules/audit/event";
+import { createNotificationForCaseAssigneeInTransaction } from "@/modules/notifications/service";
 import { escalateCase } from "@/modules/routing/service";
 import type {
   DeadlinePolicy,
@@ -575,33 +576,58 @@ export async function sweepOrganizationDeadlines(
         !deadline.warningIssuedAt &&
         now.getTime() >= deadline.warningAt.getTime()
       ) {
-        await tx
+        const [warned] = await tx
           .update(caseDeadlines)
           .set({ warningIssuedAt: now, updatedAt: now })
-          .where(eq(caseDeadlines.id, deadline.id));
+          .where(
+            and(
+              eq(caseDeadlines.id, deadline.id),
+              eq(
+                caseDeadlines.organizationId,
+                scope.organizationId,
+              ),
+              eq(caseDeadlines.status, "active"),
+              isNull(caseDeadlines.warningIssuedAt),
+            ),
+          )
+          .returning();
 
-        await tx.insert(caseDeadlineHistory).values({
-          organizationId: scope.organizationId,
-          deadlineId: deadline.id,
-          eventType: "warning",
-          actorUserId: null,
-          metadata: {},
-          occurredAt: now,
-        });
-
-        await tx.insert(auditEvents).values(
-          auditEventValues({
+        if (warned) {
+          await tx.insert(caseDeadlineHistory).values({
             organizationId: scope.organizationId,
-            actorType: "system",
-            action: "deadline.warning_reached",
-            resourceType: "case_deadline",
-            resourceId: deadline.id,
-            parentResourceType: "case",
-            parentResourceId: deadline.caseId,
-            newState: { warningIssuedAt: now.toISOString() },
-          }),
-        );
-        warnings += 1;
+            deadlineId: deadline.id,
+            eventType: "warning",
+            actorUserId: null,
+            metadata: {},
+            occurredAt: now,
+          });
+
+          await tx.insert(auditEvents).values(
+            auditEventValues({
+              organizationId: scope.organizationId,
+              actorType: "system",
+              action: "deadline.warning_reached",
+              resourceType: "case_deadline",
+              resourceId: deadline.id,
+              parentResourceType: "case",
+              parentResourceId: deadline.caseId,
+              newState: { warningIssuedAt: now.toISOString() },
+            }),
+          );
+
+          await createNotificationForCaseAssigneeInTransaction(
+            tx,
+            scope,
+            deadline.caseId,
+            {
+              eventType: "deadline.warning",
+              severity: "warning",
+              title: `Deadline approaching: ${deadline.label}`,
+              body: `The deadline is due at ${deadline.dueAt.toISOString()}.`,
+            },
+          );
+          warnings += 1;
+        }
       }
 
       if (now.getTime() >= deadline.dueAt.getTime()) {
@@ -612,35 +638,59 @@ export async function sweepOrganizationDeadlines(
             overdueAt: deadline.overdueAt ?? now,
             updatedAt: now,
           })
-          .where(eq(caseDeadlines.id, deadline.id))
+          .where(
+            and(
+              eq(caseDeadlines.id, deadline.id),
+              eq(
+                caseDeadlines.organizationId,
+                scope.organizationId,
+              ),
+              eq(caseDeadlines.status, "active"),
+            ),
+          )
           .returning();
 
-        await tx.insert(caseDeadlineHistory).values({
-          organizationId: scope.organizationId,
-          deadlineId: deadline.id,
-          eventType: "overdue",
-          actorUserId: null,
-          metadata: {},
-          occurredAt: now,
-        });
-
-        await tx.insert(auditEvents).values(
-          auditEventValues({
+        if (updated) {
+          await tx.insert(caseDeadlineHistory).values({
             organizationId: scope.organizationId,
-            actorType: "system",
-            action: "deadline.overdue",
-            resourceType: "case_deadline",
-            resourceId: deadline.id,
-            parentResourceType: "case",
-            parentResourceId: deadline.caseId,
-            previousState: { status: deadline.status },
-            newState: {
-              status: updated.status,
-              overdueAt: updated.overdueAt?.toISOString() ?? null,
+            deadlineId: deadline.id,
+            eventType: "overdue",
+            actorUserId: null,
+            metadata: {},
+            occurredAt: now,
+          });
+
+          await tx.insert(auditEvents).values(
+            auditEventValues({
+              organizationId: scope.organizationId,
+              actorType: "system",
+              action: "deadline.overdue",
+              resourceType: "case_deadline",
+              resourceId: deadline.id,
+              parentResourceType: "case",
+              parentResourceId: deadline.caseId,
+              previousState: { status: deadline.status },
+              newState: {
+                status: updated.status,
+                overdueAt:
+                  updated.overdueAt?.toISOString() ?? null,
+              },
+            }),
+          );
+
+          await createNotificationForCaseAssigneeInTransaction(
+            tx,
+            scope,
+            deadline.caseId,
+            {
+              eventType: "deadline.overdue",
+              severity: "critical",
+              title: `Deadline overdue: ${deadline.label}`,
+              body: `The deadline was due at ${deadline.dueAt.toISOString()}.`,
             },
-          }),
-        );
-        overdue += 1;
+          );
+          overdue += 1;
+        }
       }
     });
   }

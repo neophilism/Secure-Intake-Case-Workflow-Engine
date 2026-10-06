@@ -1,6 +1,6 @@
 {
   "name": "secure-intake-case-workflow-engine",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -16,7 +16,10 @@
     "auth:bootstrap": "tsx scripts/bootstrap-admin.ts",
     "check": "npm run typecheck && npm run test && npm run build",
     "auth:sync-roles": "tsx scripts/sync-default-roles.ts",
-    "deadline:sweep": "tsx scripts/sweep-deadlines.ts"
+    "deadline:sweep": "tsx scripts/sweep-deadlines.ts",
+    "worker": "tsx scripts/run-worker.ts",
+    "worker:once": "tsx scripts/run-worker.ts --once",
+    "jobs:seed-schedules": "tsx scripts/seed-background-schedules.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

@@ -71,6 +71,13 @@
       "when": 1791277200000,
       "tag": "0009_notes_correspondence",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791280800000,
+      "tag": "0010_notifications_jobs",
+      "breakpoints": true
     }
   ]
 }

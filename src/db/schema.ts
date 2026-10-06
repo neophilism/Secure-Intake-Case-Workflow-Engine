@@ -1403,3 +1403,202 @@ export const correspondenceMessageDocumentLinks = pgTable(
     ),
   ],
 );
+
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    organizationMembershipId: uuid("organization_membership_id")
+      .notNull()
+      .references(() => organizationMemberships.id, { onDelete: "cascade" }),
+    eventType: text("event_type").notNull(),
+    severity: text("severity").notNull().default("info"),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    link: text("link"),
+    resourceType: text("resource_type"),
+    resourceId: text("resource_id"),
+    inAppVisible: boolean("in_app_visible").notNull().default(true),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("notifications_membership_time_idx").on(
+      table.organizationMembershipId,
+      table.createdAt,
+    ),
+    index("notifications_organization_event_idx").on(
+      table.organizationId,
+      table.eventType,
+      table.createdAt,
+    ),
+  ],
+);
+
+export const notificationPreferences = pgTable(
+  "notification_preferences",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    organizationMembershipId: uuid("organization_membership_id")
+      .notNull()
+      .references(() => organizationMemberships.id, { onDelete: "cascade" }),
+    eventType: text("event_type").notNull().default("*"),
+    channel: text("channel").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    destination: text("destination"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("notification_preferences_organization_idx").on(table.organizationId),
+    uniqueIndex("notification_preferences_membership_event_channel_idx").on(
+      table.organizationMembershipId,
+      table.eventType,
+      table.channel,
+    ),
+  ],
+);
+
+export const notificationDeliveries = pgTable(
+  "notification_deliveries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    notificationId: uuid("notification_id")
+      .notNull()
+      .references(() => notifications.id, { onDelete: "cascade" }),
+    channel: text("channel").notNull(),
+    destination: text("destination").notNull(),
+    status: text("status").notNull().default("pending"),
+    provider: text("provider"),
+    externalMessageId: text("external_message_id"),
+    attempts: integer("attempts").notNull().default(0),
+    lastError: text("last_error"),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("notification_deliveries_notification_idx").on(table.notificationId),
+    index("notification_deliveries_status_idx").on(
+      table.organizationId,
+      table.status,
+      table.createdAt,
+    ),
+    uniqueIndex("notification_deliveries_notification_channel_idx").on(
+      table.notificationId,
+      table.channel,
+    ),
+  ],
+);
+
+export const backgroundJobs = pgTable(
+  "background_jobs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    jobType: text("job_type").notNull(),
+    payload: jsonb("payload")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    status: text("status").notNull().default("pending"),
+    priority: integer("priority").notNull().default(100),
+    dedupeKey: text("dedupe_key"),
+    availableAt: timestamp("available_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    maxAttempts: integer("max_attempts").notNull().default(5),
+    lockedBy: text("locked_by"),
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
+    leaseUntil: timestamp("lease_until", { withTimezone: true }),
+    lastError: text("last_error"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("background_jobs_ready_idx").on(
+      table.status,
+      table.availableAt,
+      table.priority,
+      table.createdAt,
+    ),
+    index("background_jobs_lease_idx").on(table.status, table.leaseUntil),
+    index("background_jobs_organization_idx").on(table.organizationId),
+    uniqueIndex("background_jobs_dedupe_idx")
+      .on(table.organizationId, table.jobType, table.dedupeKey)
+      .where(sql`${table.dedupeKey} is not null`),
+  ],
+);
+
+export const backgroundJobAttempts = pgTable(
+  "background_job_attempts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    jobId: uuid("job_id")
+      .notNull()
+      .references(() => backgroundJobs.id, { onDelete: "cascade" }),
+    attemptNumber: integer("attempt_number").notNull(),
+    workerId: text("worker_id").notNull(),
+    outcome: text("outcome"),
+    errorMessage: text("error_message"),
+    startedAt: timestamp("started_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("background_job_attempts_job_idx").on(table.jobId, table.attemptNumber),
+    uniqueIndex("background_job_attempts_number_idx").on(
+      table.jobId,
+      table.attemptNumber,
+    ),
+  ],
+);
+
+export const backgroundSchedules = pgTable(
+  "background_schedules",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    jobType: text("job_type").notNull(),
+    payload: jsonb("payload")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    intervalSeconds: integer("interval_seconds").notNull(),
+    priority: integer("priority").notNull().default(100),
+    maxAttempts: integer("max_attempts").notNull().default(5),
+    status: text("status").notNull().default("active"),
+    nextRunAt: timestamp("next_run_at", { withTimezone: true }).notNull(),
+    lastEnqueuedAt: timestamp("last_enqueued_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("background_schedules_due_idx").on(table.status, table.nextRunAt),
+    uniqueIndex("background_schedules_org_key_idx").on(
+      table.organizationId,
+      table.key,
+    ),
+  ],
+);

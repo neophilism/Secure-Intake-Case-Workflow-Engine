@@ -9,6 +9,10 @@ const schema = z.object({
   APP_BASE_URL: z.string().url().default("http://localhost:3000"),
   AUTH_SESSION_COOKIE_NAME: z.string().min(1).default("sicwe_session"),
   AUTH_SESSION_TTL_HOURS: z.coerce.number().int().positive().default(12),
+  BACKGROUND_JOB_LEASE_SECONDS: z.coerce.number().int().positive().default(60),
+  BACKGROUND_JOB_POLL_MS: z.coerce.number().int().positive().default(1000),
+  BACKGROUND_JOB_BATCH_SIZE: z.coerce.number().int().positive().max(100).default(10),
+  BACKGROUND_DEADLINE_SWEEP_SECONDS: z.coerce.number().int().positive().default(60),
 });
 
 export const env = schema.parse({
@@ -16,4 +20,9 @@ export const env = schema.parse({
   APP_BASE_URL: process.env.APP_BASE_URL,
   AUTH_SESSION_COOKIE_NAME: process.env.AUTH_SESSION_COOKIE_NAME,
   AUTH_SESSION_TTL_HOURS: process.env.AUTH_SESSION_TTL_HOURS,
+  BACKGROUND_JOB_LEASE_SECONDS: process.env.BACKGROUND_JOB_LEASE_SECONDS,
+  BACKGROUND_JOB_POLL_MS: process.env.BACKGROUND_JOB_POLL_MS,
+  BACKGROUND_JOB_BATCH_SIZE: process.env.BACKGROUND_JOB_BATCH_SIZE,
+  BACKGROUND_DEADLINE_SWEEP_SECONDS:
+    process.env.BACKGROUND_DEADLINE_SWEEP_SECONDS,
 });
