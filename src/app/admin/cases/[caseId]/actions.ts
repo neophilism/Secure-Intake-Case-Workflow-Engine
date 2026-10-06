@@ -72,7 +72,7 @@ export async function transitionCaseAction(
     formData.get("toStatus") ?? "",
   ).trim();
 
-  let toStatus;
+  let toStatus: ReturnType<typeof parseCaseStatus>;
   try {
     toStatus = parseCaseStatus(rawStatus);
   } catch {
