@@ -137,6 +137,10 @@ export async function findExternalParticipantSessionContext(
       session: externalParticipantSessions,
       credential: externalParticipantCredentials,
       submission: intakeSubmissions,
+      formVersion: {
+        id: intakeFormVersions.id,
+        definition: intakeFormVersions.definition,
+      },
       organization: {
         id: organizations.id,
         slug: organizations.slug,
