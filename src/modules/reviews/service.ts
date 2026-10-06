@@ -713,6 +713,7 @@ export async function assignReview(
             scope.organizationId,
           ),
           eq(caseReviews.status, review.status),
+          eq(caseReviews.updatedAt, review.updatedAt),
         ),
       )
       .returning();
@@ -1268,7 +1269,9 @@ export async function sweepReviewDeadlines(
         candidate.decisionWarningAt &&
         !candidate.decisionWarningIssuedAt &&
         now.getTime() >=
-          candidate.decisionWarningAt.getTime()
+          candidate.decisionWarningAt.getTime() &&
+        (!candidate.decisionDueAt ||
+          now.getTime() < candidate.decisionDueAt.getTime())
       ) {
         const [warned] = await tx
           .update(caseReviews)
