@@ -22,6 +22,8 @@ import {
   recordCustodyEvent,
   recordMalwareScanResult,
 } from "@/modules/documents/service";
+import { listCaseDocuments } from "@/modules/documents/repository";
+import { canViewDocumentVisibility } from "@/modules/documents/policy";
 import {
   cancelDeadline,
   completeDeadline,
@@ -46,6 +48,34 @@ async function requireCaseContext() {
   if (!context) redirect("/login");
   if (!context.tenantScope) redirect("/select-organization");
   return context;
+}
+
+async function requireCommunicationAttachmentAccess(
+  caseId: string,
+  versionIds: readonly string[],
+  context: Awaited<ReturnType<typeof requireCaseContext>>,
+) {
+  if (versionIds.length === 0) return;
+
+  const records = await listCaseDocuments(
+    getRuntimeDatabase(),
+    requireTenantScope(context),
+    caseId,
+  );
+  const allowed = new Set(
+    records
+      .filter(({ document }) =>
+        canViewDocumentVisibility(
+          document.visibility,
+          context.permissions,
+        ),
+      )
+      .map(({ version }) => version.id),
+  );
+
+  if (versionIds.some((versionId) => !allowed.has(versionId))) {
+    redirect("/forbidden");
+  }
 }
 
 export async function updateCaseMetadataAction(
@@ -478,7 +508,10 @@ export async function createCaseNoteAction(
     visibility === "internal"
       ? "note:create_internal"
       : "note:create_participant";
-  if (!hasPermission(context, permission)) {
+  if (
+    !hasPermission(context, "case:view") ||
+    !hasPermission(context, permission)
+  ) {
     redirect("/forbidden");
   }
 
@@ -491,6 +524,12 @@ export async function createCaseNoteAction(
   if (!body) {
     redirect(`/admin/cases/${caseId}?error=note_body_required`);
   }
+
+  await requireCommunicationAttachmentAccess(
+    caseId,
+    documentVersionIds,
+    context,
+  );
 
   try {
     await createCaseNote(
@@ -516,7 +555,10 @@ export async function createOutboundCorrespondenceAction(
   formData: FormData,
 ) {
   const context = await requireCaseContext();
-  if (!hasPermission(context, "correspondence:manage")) {
+  if (
+    !hasPermission(context, "case:view") ||
+    !hasPermission(context, "correspondence:manage")
+  ) {
     redirect("/forbidden");
   }
 
@@ -537,6 +579,12 @@ export async function createOutboundCorrespondenceAction(
     .getAll("documentVersionIds")
     .map((value) => String(value).trim())
     .filter(Boolean);
+
+  await requireCommunicationAttachmentAccess(
+    caseId,
+    documentVersionIds,
+    context,
+  );
 
   try {
     await createOutboundCorrespondenceDraft(
@@ -575,7 +623,10 @@ export async function queueCorrespondenceAction(
   _formData: FormData,
 ) {
   const context = await requireCaseContext();
-  if (!hasPermission(context, "correspondence:manage")) {
+  if (
+    !hasPermission(context, "case:view") ||
+    !hasPermission(context, "correspondence:manage")
+  ) {
     redirect("/forbidden");
   }
 
@@ -603,7 +654,10 @@ export async function recordCorrespondenceSentAction(
   formData: FormData,
 ) {
   const context = await requireCaseContext();
-  if (!hasPermission(context, "correspondence:manage")) {
+  if (
+    !hasPermission(context, "case:view") ||
+    !hasPermission(context, "correspondence:manage")
+  ) {
     redirect("/forbidden");
   }
 
@@ -639,7 +693,10 @@ export async function recordInboundCorrespondenceAction(
   formData: FormData,
 ) {
   const context = await requireCaseContext();
-  if (!hasPermission(context, "correspondence:manage")) {
+  if (
+    !hasPermission(context, "case:view") ||
+    !hasPermission(context, "correspondence:manage")
+  ) {
     redirect("/forbidden");
   }
 
@@ -660,6 +717,12 @@ export async function recordInboundCorrespondenceAction(
     .getAll("documentVersionIds")
     .map((value) => String(value).trim())
     .filter(Boolean);
+
+  await requireCommunicationAttachmentAccess(
+    caseId,
+    documentVersionIds,
+    context,
+  );
 
   try {
     await recordInboundCorrespondence(
