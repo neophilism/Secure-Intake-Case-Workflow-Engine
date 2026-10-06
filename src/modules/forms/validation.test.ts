@@ -93,6 +93,41 @@ describe("submission validation", () => {
     });
   });
 
+  it("drops stale values through a hidden conditional chain", () => {
+    const chained = parseFormDefinition({
+      schemaVersion: 1,
+      sections: [
+        {
+          id: "chain",
+          title: "Chain",
+          fields: [
+            { id: "a", type: "boolean", label: "A" },
+            {
+              id: "b",
+              type: "boolean",
+              label: "B",
+              condition: { fieldId: "a", operator: "equals", value: true },
+            },
+            {
+              id: "c",
+              type: "short_text",
+              label: "C",
+              condition: { fieldId: "b", operator: "equals", value: true },
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = validateSubmissionAnswers(chained, {
+      a: false,
+      b: true,
+      c: "stale hidden value",
+    });
+
+    expect(result.answers).toEqual({ a: false });
+  });
+
   it("allows incomplete drafts while still validating supplied values", () => {
     const result = validateSubmissionAnswers(
       definition,
