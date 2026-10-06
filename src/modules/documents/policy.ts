@@ -1,11 +1,12 @@
-export const documentVisibilities = [
-  "participant",
-  "internal",
-  "restricted",
-] as const;
+import {
+  canStaffViewInformationClass,
+  informationClasses,
+  parseInformationClass,
+  type InformationClass,
+} from "@/modules/disclosures/policy";
 
-export type DocumentVisibility =
-  (typeof documentVisibilities)[number];
+export const documentVisibilities = informationClasses;
+export type DocumentVisibility = InformationClass;
 
 export const malwareScanStatuses = [
   "pending",
@@ -30,7 +31,12 @@ export type DocumentContentStatus =
 export function isDocumentVisibility(
   value: string,
 ): value is DocumentVisibility {
-  return (documentVisibilities as readonly string[]).includes(value);
+  try {
+    parseInformationClass(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function isTrustedDocumentContent(input: {
@@ -49,9 +55,8 @@ export function canViewDocumentVisibility(
   visibility: string,
   permissions: ReadonlySet<string>,
 ): boolean {
-  if (visibility === "restricted") {
-    return permissions.has("document:view_private");
-  }
-
-  return permissions.has("document:view");
+  return canStaffViewInformationClass(
+    visibility,
+    permissions,
+  );
 }
