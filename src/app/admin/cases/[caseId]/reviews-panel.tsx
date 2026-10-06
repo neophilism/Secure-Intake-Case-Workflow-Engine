@@ -2,6 +2,7 @@ import type {
   listCaseReviewHistory,
   listCaseReviews,
   listReviewPolicies,
+  listEligibleReviewers,
 } from "@/modules/reviews/repository";
 import type { listOrganizationMembers } from "@/modules/routing/repository";
 import type { WorkflowState } from "@/modules/workflows/definition";
@@ -23,6 +24,9 @@ type Policies = Awaited<ReturnType<typeof listReviewPolicies>>;
 type Members = Awaited<
   ReturnType<typeof listOrganizationMembers>
 >;
+type EligibleReviewers = Awaited<
+  ReturnType<typeof listEligibleReviewers>
+>;
 
 export function CaseReviewsPanel({
   caseId,
@@ -31,6 +35,7 @@ export function CaseReviewsPanel({
   history,
   policies,
   members,
+  eligibleReviewers,
   workflowStates,
   currentMembershipId,
   currentUserId,
@@ -46,6 +51,7 @@ export function CaseReviewsPanel({
   history: ReviewHistory;
   policies: Policies;
   members: Members;
+  eligibleReviewers: EligibleReviewers;
   workflowStates: readonly WorkflowState[];
   currentMembershipId: string | null;
   currentUserId: string;
@@ -228,7 +234,7 @@ export function CaseReviewsPanel({
                           required
                         >
                           <option value="">Select reviewer</option>
-                          {members.map((member) => (
+                          {eligibleReviewers.map((member) => (
                             <option
                               key={member.membershipId}
                               value={member.membershipId}
