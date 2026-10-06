@@ -22,8 +22,21 @@ export async function createDocumentTypeAction(formData: FormData) {
   const description = String(
     formData.get("description") ?? "",
   ).trim();
+  const acceptedMimeTypes = String(
+    formData.get("acceptedMimeTypes") ?? "",
+  )
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const maxBytesRaw = String(formData.get("maxBytes") ?? "").trim();
+  const maxBytes = maxBytesRaw ? Number(maxBytesRaw) : null;
 
-  if (!key || !name) {
+  if (
+    !key ||
+    !name ||
+    (maxBytes !== null &&
+      (!Number.isSafeInteger(maxBytes) || maxBytes < 1))
+  ) {
     redirect("/admin/documents?error=invalid_type");
   }
 
@@ -35,6 +48,8 @@ export async function createDocumentTypeAction(formData: FormData) {
         key,
         name,
         description: description || null,
+        acceptedMimeTypes,
+        maxBytes,
         actorUserId: context.user.id,
       },
     );
