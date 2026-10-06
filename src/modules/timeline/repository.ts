@@ -6,6 +6,8 @@ import {
   caseDeadlineHistory,
   caseDeadlines,
   caseNotes,
+  caseReviewHistory,
+  caseReviews,
   caseStatusHistory,
   documentCaseLinks,
   documentVersions,
@@ -21,7 +23,8 @@ export interface CaseTimelineItem {
     | "deadline"
     | "document"
     | "note"
-    | "correspondence";
+    | "correspondence"
+    | "review";
   occurredAt: Date;
   title: string;
   detail: string | null;
@@ -35,6 +38,7 @@ export async function listCaseTimeline(
   options: {
     includeNotes: boolean;
     includeCorrespondence: boolean;
+    includeReviews: boolean;
     canViewDocuments: boolean;
     canViewPrivateDocuments: boolean;
   },
@@ -46,6 +50,7 @@ export async function listCaseTimeline(
     documentsAttached,
     notes,
     correspondence,
+    reviews,
   ] = await Promise.all([
     db
       .select()
@@ -153,6 +158,34 @@ export async function listCaseTimeline(
             ),
           )
       : Promise.resolve([]),
+    options.includeReviews
+      ? db
+          .select({
+            history: caseReviewHistory,
+            review: caseReviews,
+          })
+          .from(caseReviewHistory)
+          .innerJoin(
+            caseReviews,
+            and(
+              eq(
+                caseReviews.id,
+                caseReviewHistory.reviewId,
+              ),
+              eq(
+                caseReviews.organizationId,
+                caseReviewHistory.organizationId,
+              ),
+              eq(caseReviews.caseId, caseId),
+            ),
+          )
+          .where(
+            eq(
+              caseReviewHistory.organizationId,
+              scope.organizationId,
+            ),
+          )
+      : Promise.resolve([]),
   ]);
 
   const items: CaseTimelineItem[] = [];
@@ -235,6 +268,20 @@ export async function listCaseTimeline(
       title: `${message.direction} ${message.channel} — ${message.status}`,
       detail: message.subject ?? message.body,
       visibility: message.visibility,
+    });
+  }
+
+  for (const { history, review } of reviews) {
+    items.push({
+      id: `review:${history.id}`,
+      kind: "review",
+      occurredAt: history.occurredAt,
+      title: `${review.policyNameSnapshot}: ${history.eventType}`,
+      detail:
+        history.eventType === "decided" && review.outcome
+          ? `Outcome: ${review.outcome}`
+          : null,
+      visibility: "internal",
     });
   }
 
