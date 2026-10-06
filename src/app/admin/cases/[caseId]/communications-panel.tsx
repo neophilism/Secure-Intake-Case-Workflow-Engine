@@ -39,6 +39,8 @@ export function CaseCommunicationsPanel({
   correspondenceAttachments,
   templates,
   caseDocuments,
+  canViewNotes,
+  canViewCorrespondence,
   canCreateInternalNote,
   canCreateParticipantNote,
   canManageCorrespondence,
@@ -50,6 +52,8 @@ export function CaseCommunicationsPanel({
   correspondenceAttachments: CorrespondenceAttachments;
   templates: Templates;
   caseDocuments: CaseDocuments;
+  canViewNotes: boolean;
+  canViewCorrespondence: boolean;
   canCreateInternalNote: boolean;
   canCreateParticipantNote: boolean;
   canManageCorrespondence: boolean;
@@ -89,6 +93,7 @@ export function CaseCommunicationsPanel({
 
   return (
     <>
+      {canViewNotes ? (
       <section>
         <h2>Case notes</h2>
         {notes.length === 0 ? (
@@ -172,7 +177,9 @@ export function CaseCommunicationsPanel({
           </details>
         ) : null}
       </section>
+      ) : null}
 
+      {canViewCorrespondence ? (
       <section>
         <h2>Correspondence</h2>
         {correspondence.length === 0 ? (
@@ -522,6 +529,7 @@ export function CaseCommunicationsPanel({
           </>
         ) : null}
       </section>
+      ) : null}
     </>
   );
 }
