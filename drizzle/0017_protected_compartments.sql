@@ -10,7 +10,9 @@ CREATE TABLE IF NOT EXISTS "submission_protected_compartments" (
   CONSTRAINT "submission_protected_compartments_key_check"
     CHECK ("compartment_key" ~ '^[a-z][a-z0-9_-]{0,99}$'),
   CONSTRAINT "submission_protected_compartments_ciphertext_check"
-    CHECK ("ciphertext" LIKE 'v1.%')
+    CHECK ("ciphertext" LIKE 'v1.%'),
+  CONSTRAINT "submission_protected_compartments_field_ids_check"
+    CHECK (jsonb_typeof("field_ids") = 'array')
 );
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "submission_protected_compartments_org_idx"
@@ -64,3 +66,57 @@ CREATE INDEX IF NOT EXISTS "protected_reveal_requests_compartment_idx"
 CREATE UNIQUE INDEX IF NOT EXISTS "protected_reveal_requests_active_idx"
   ON "protected_reveal_requests" ("compartment_id", "requested_by_user_id")
   WHERE "status" IN ('pending','approved');
+--> statement-breakpoint
+
+CREATE OR REPLACE FUNCTION "enforce_submission_protected_compartment_tenant"()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $protected_compartment_tenant$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM "intake_submissions" s
+    WHERE s."id" = NEW."submission_id"
+      AND s."organization_id" = NEW."organization_id"
+  ) THEN
+    RAISE EXCEPTION 'Protected compartment organization must match its submission.';
+  END IF;
+  RETURN NEW;
+END;
+$protected_compartment_tenant$;
+--> statement-breakpoint
+DROP TRIGGER IF EXISTS "submission_protected_compartments_tenant_trigger"
+  ON "submission_protected_compartments";
+--> statement-breakpoint
+CREATE TRIGGER "submission_protected_compartments_tenant_trigger"
+BEFORE INSERT OR UPDATE
+ON "submission_protected_compartments"
+FOR EACH ROW
+EXECUTE FUNCTION "enforce_submission_protected_compartment_tenant"();
+--> statement-breakpoint
+
+CREATE OR REPLACE FUNCTION "enforce_protected_reveal_request_tenant"()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $protected_reveal_tenant$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM "submission_protected_compartments" c
+    WHERE c."id" = NEW."compartment_id"
+      AND c."organization_id" = NEW."organization_id"
+  ) THEN
+    RAISE EXCEPTION 'Protected reveal request organization must match its compartment.';
+  END IF;
+  RETURN NEW;
+END;
+$protected_reveal_tenant$;
+--> statement-breakpoint
+DROP TRIGGER IF EXISTS "protected_reveal_requests_tenant_trigger"
+  ON "protected_reveal_requests";
+--> statement-breakpoint
+CREATE TRIGGER "protected_reveal_requests_tenant_trigger"
+BEFORE INSERT OR UPDATE
+ON "protected_reveal_requests"
+FOR EACH ROW
+EXECUTE FUNCTION "enforce_protected_reveal_request_tenant"();
