@@ -84,18 +84,23 @@ Staff with case access can work from the protected case console:
 
 Submitted intake appears in the review queue for users with both `submission:view` and `case:create`. Starting review allocates a tenant/year case number and creates an `intake_review` case linked to the immutable source submission.
 
-The PR 5 default lifecycle is:
+New cases use a versioned workflow definition. If an intake form is not bound to a custom workflow, the built-in default workflow is snapshotted into the case. If a form is bound, the currently published workflow version is snapshotted and its version ID is retained.
+
+Manage workflows at:
 
 ```text
-intake_review -> accepted | rejected
-accepted      -> open | intake_review
-rejected      -> intake_review
-open          -> resolved | closed
-resolved      -> open | closed
-closed        -> open
+/admin/workflows
 ```
 
-This transition map is temporary platform behavior. PR 6 replaces it with configurable workflows.
+Workflow definitions support named states, keyed transitions, required permissions, required/forbidden comments, required case fields, required submission fields, required document types/counts, and safe automatic case actions.
+
+Existing installations should synchronize newly introduced default-role permissions after migration:
+
+```bash
+npm run auth:sync-roles
+```
+
+Document guards are modeled now but intentionally fail closed until the document/evidence subsystem is connected in PR 8.
 
 ## Verification
 

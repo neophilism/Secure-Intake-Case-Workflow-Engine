@@ -5,20 +5,28 @@ import {
   caseStatusHistory,
   cases,
   caseTags,
+  caseWorkflowVersions,
   intakeForms,
+  intakeFormWorkflowBindings,
   intakeSubmissions,
 } from "@/db/schema";
 import type { TenantScope } from "@/lib/tenancy";
 import { formatCaseNumber } from "./case-number";
 import {
-  assertDefaultCaseTransition,
   isCasePriority,
-  isCaseStatus,
-  timestampsAfterTransition,
   type CasePriority,
-  type CaseStatus,
 } from "./lifecycle";
 import { normalizeCaseTags } from "./tags";
+import { applyTransitionActions } from "@/modules/workflows/actions";
+import { defaultCaseWorkflowDefinition } from "@/modules/workflows/default-workflow";
+import {
+  findTransition,
+  parseWorkflowDefinition,
+} from "@/modules/workflows/definition";
+import {
+  evaluateTransitionGuards,
+  type GuardFailure,
+} from "@/modules/workflows/evaluator";
 
 export class CaseNotFoundError extends Error {
   constructor() {
@@ -38,6 +46,30 @@ export class CaseConcurrencyError extends Error {
   constructor() {
     super("The case changed before this operation completed.");
     this.name = "CaseConcurrencyError";
+  }
+}
+
+export class WorkflowNotAvailableError extends Error {
+  constructor() {
+    super("The configured workflow has no published version.");
+    this.name = "WorkflowNotAvailableError";
+  }
+}
+
+export class WorkflowTransitionNotAvailableError extends Error {
+  constructor() {
+    super("The requested workflow transition is not available from the current state.");
+    this.name = "WorkflowTransitionNotAvailableError";
+  }
+}
+
+export class TransitionGuardError extends Error {
+  readonly failures: readonly GuardFailure[];
+
+  constructor(failures: readonly GuardFailure[]) {
+    super("Workflow transition requirements were not satisfied.");
+    this.name = "TransitionGuardError";
+    this.failures = failures;
   }
 }
 
@@ -98,6 +130,55 @@ export async function createCaseFromSubmission(
       throw new SubmissionNotReviewableError();
     }
 
+    const [binding] = await tx
+      .select()
+      .from(intakeFormWorkflowBindings)
+      .where(
+        and(
+          eq(
+            intakeFormWorkflowBindings.organizationId,
+            scope.organizationId,
+          ),
+          eq(
+            intakeFormWorkflowBindings.formId,
+            source.form.id,
+          ),
+        ),
+      )
+      .limit(1);
+
+    let workflowVersionId: string | null = null;
+    let workflowDefinition = defaultCaseWorkflowDefinition;
+
+    if (binding) {
+      const [publishedVersion] = await tx
+        .select()
+        .from(caseWorkflowVersions)
+        .where(
+          and(
+            eq(
+              caseWorkflowVersions.organizationId,
+              scope.organizationId,
+            ),
+            eq(
+              caseWorkflowVersions.workflowId,
+              binding.workflowId,
+            ),
+            eq(caseWorkflowVersions.status, "published"),
+          ),
+        )
+        .limit(1);
+
+      if (!publishedVersion) {
+        throw new WorkflowNotAvailableError();
+      }
+
+      workflowVersionId = publishedVersion.id;
+      workflowDefinition = parseWorkflowDefinition(
+        publishedVersion.definition,
+      );
+    }
+
     const now = new Date();
     const calendarYear = now.getUTCFullYear();
 
@@ -143,8 +224,10 @@ export async function createCaseFromSubmission(
         caseNumber,
         sourceSubmissionId: source.submission.id,
         caseType: source.form.slug,
+        workflowVersionId,
+        workflowDefinition,
         title,
-        status: "intake_review",
+        status: workflowDefinition.initialState,
         priority: input.priority ?? "normal",
         createdByUserId: input.actorUserId,
       })
@@ -158,9 +241,15 @@ export async function createCaseFromSubmission(
       organizationId: scope.organizationId,
       caseId: record.id,
       fromStatus: null,
-      toStatus: "intake_review",
+      toStatus: workflowDefinition.initialState,
       actorUserId: input.actorUserId,
+      workflowVersionId,
+      transitionKey: null,
       note: "Case created from submitted intake.",
+      metadata: {
+        source: "submitted_intake",
+        workflowInitialState: workflowDefinition.initialState,
+      },
     });
 
     return record;
@@ -172,10 +261,12 @@ export async function transitionCase(
   scope: TenantScope,
   input: {
     caseId: string;
-    toStatus: CaseStatus;
+    transitionKey: string;
     actorUserId: string;
-    note?: string | null;
+    actorPermissions: readonly string[];
+    comment?: string | null;
     disposition?: string | null;
+    documentTypes?: readonly string[];
   },
 ) {
   return db.transaction(async (tx) => {
@@ -193,36 +284,104 @@ export async function transitionCase(
     if (!current) {
       throw new CaseNotFoundError();
     }
-    if (!isCaseStatus(current.status)) {
-      throw new Error(
-        `Unsupported default lifecycle status: ${current.status}`,
-      );
+
+    const workflowDefinition = parseWorkflowDefinition(
+      current.workflowDefinition,
+    );
+    const transition = findTransition(
+      workflowDefinition,
+      input.transitionKey,
+      current.status,
+    );
+
+    if (!transition) {
+      throw new WorkflowTransitionNotAvailableError();
     }
 
-    assertDefaultCaseTransition(current.status, input.toStatus);
+    let submissionAnswers: Record<string, unknown> | null = null;
+    if (
+      transition.guards.requiredSubmissionFields.length > 0 &&
+      current.sourceSubmissionId
+    ) {
+      const [source] = await tx
+        .select({ answers: intakeSubmissions.answers })
+        .from(intakeSubmissions)
+        .where(
+          and(
+            eq(
+              intakeSubmissions.id,
+              current.sourceSubmissionId,
+            ),
+            eq(
+              intakeSubmissions.organizationId,
+              scope.organizationId,
+            ),
+          ),
+        )
+        .limit(1);
+
+      submissionAnswers = source?.answers ?? null;
+    }
+
+    const existingTags = await tx
+      .select({ tag: caseTags.tag })
+      .from(caseTags)
+      .where(
+        and(
+          eq(caseTags.caseId, current.id),
+          eq(caseTags.organizationId, scope.organizationId),
+        ),
+      );
+
+    if (!isCasePriority(current.priority)) {
+      throw new Error(`Unsupported case priority: ${current.priority}`);
+    }
+
+    const proposedDisposition =
+      input.disposition !== undefined
+        ? input.disposition?.trim() || null
+        : current.disposition;
+
+    const failures = evaluateTransitionGuards(transition, {
+      actorPermissions: new Set(input.actorPermissions),
+      comment: input.comment,
+      caseRecord: {
+        title: current.title,
+        summary: current.summary,
+        disposition: proposedDisposition,
+        sourceSubmissionId: current.sourceSubmissionId,
+      },
+      submissionAnswers,
+      documentTypes: input.documentTypes ?? [],
+    });
+
+    if (failures.length > 0) {
+      throw new TransitionGuardError(failures);
+    }
 
     const now = new Date();
-    const timestamps = timestampsAfterTransition(
+    const actionResult = applyTransitionActions(
       {
+        priority: current.priority,
+        disposition: proposedDisposition,
         openedAt: current.openedAt,
         resolvedAt: current.resolvedAt,
         closedAt: current.closedAt,
+        tags: existingTags.map((entry) => entry.tag),
       },
-      input.toStatus,
+      transition.actions,
       now,
     );
 
     const [updated] = await tx
       .update(cases)
       .set({
-        status: input.toStatus,
-        disposition:
-          input.disposition !== undefined
-            ? input.disposition?.trim() || null
-            : current.disposition,
-        openedAt: timestamps.openedAt,
-        resolvedAt: timestamps.resolvedAt,
-        closedAt: timestamps.closedAt,
+        status: transition.to,
+        priority: actionResult.casePatch.priority,
+        disposition: actionResult.casePatch.disposition,
+        openedAt: actionResult.casePatch.openedAt,
+        resolvedAt: actionResult.casePatch.resolvedAt,
+        closedAt: actionResult.casePatch.closedAt,
         updatedAt: now,
       })
       .where(
@@ -238,13 +397,37 @@ export async function transitionCase(
       throw new CaseConcurrencyError();
     }
 
+    await tx
+      .delete(caseTags)
+      .where(
+        and(
+          eq(caseTags.caseId, current.id),
+          eq(caseTags.organizationId, scope.organizationId),
+        ),
+      );
+
+    if (actionResult.tags.length > 0) {
+      await tx.insert(caseTags).values(
+        actionResult.tags.map((tag) => ({
+          organizationId: scope.organizationId,
+          caseId: current.id,
+          tag,
+        })),
+      );
+    }
+
     await tx.insert(caseStatusHistory).values({
       organizationId: scope.organizationId,
       caseId: current.id,
       fromStatus: current.status,
-      toStatus: input.toStatus,
+      toStatus: transition.to,
       actorUserId: input.actorUserId,
-      note: input.note?.trim() || null,
+      workflowVersionId: current.workflowVersionId,
+      transitionKey: transition.key,
+      note: input.comment?.trim() || null,
+      metadata: {
+        automaticActions: transition.actions,
+      },
     });
 
     return updated;
@@ -336,13 +519,6 @@ export async function updateCaseMetadata(
 export function parseCasePriority(value: string): CasePriority {
   if (!isCasePriority(value)) {
     throw new Error("Case priority is invalid.");
-  }
-  return value;
-}
-
-export function parseCaseStatus(value: string): CaseStatus {
-  if (!isCaseStatus(value)) {
-    throw new Error("Case status is invalid.");
   }
   return value;
 }
