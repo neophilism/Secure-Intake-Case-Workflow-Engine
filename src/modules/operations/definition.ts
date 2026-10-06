@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const operationalFocuses = [
   "all",
+  "open",
   "mine",
   "unassigned",
   "overdue",
