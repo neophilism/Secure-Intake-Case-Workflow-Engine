@@ -60,6 +60,8 @@ export async function createDocumentType(
     key: string;
     name: string;
     description?: string | null;
+    acceptedMimeTypes?: string[];
+    maxBytes?: number | null;
     actorUserId?: string | null;
   },
 ) {
@@ -78,6 +80,13 @@ export async function createDocumentType(
       key,
       name: input.name.trim(),
       description: input.description?.trim() || null,
+      acceptedMimeTypes: (input.acceptedMimeTypes ?? [])
+        .map((value) => value.trim())
+        .filter(Boolean),
+      maxBytes:
+        input.maxBytes !== undefined && input.maxBytes !== null
+          ? input.maxBytes
+          : null,
       createdByUserId: input.actorUserId ?? null,
     })
     .returning();
@@ -110,6 +119,7 @@ export async function uploadDocumentToCase(
     input.caseId,
     input.documentTypeId,
   );
+  validateTypeRestrictions(target, input.mimeType, input.data.byteLength);
   const prepared = prepareContent(input.data, input.filename);
   const documentId = randomUUID();
   const versionId = randomUUID();
@@ -229,7 +239,11 @@ export async function uploadDocumentToSubmission(
       )
       .limit(1),
     db
-      .select({ id: documentTypes.id })
+      .select({
+        id: documentTypes.id,
+        acceptedMimeTypes: documentTypes.acceptedMimeTypes,
+        maxBytes: documentTypes.maxBytes,
+      })
       .from(documentTypes)
       .where(
         and(
@@ -243,6 +257,7 @@ export async function uploadDocumentToSubmission(
 
   if (!submission || !type) throw new DocumentNotFoundError();
 
+  validateTypeRestrictions(type, input.mimeType, input.data.byteLength);
   const prepared = prepareContent(input.data, input.filename);
   const documentId = randomUUID();
   const versionId = randomUUID();
@@ -645,7 +660,11 @@ async function validateUploadTarget(
       )
       .limit(1),
     db
-      .select({ id: documentTypes.id })
+      .select({
+        id: documentTypes.id,
+        acceptedMimeTypes: documentTypes.acceptedMimeTypes,
+        maxBytes: documentTypes.maxBytes,
+      })
       .from(documentTypes)
       .where(
         and(
@@ -659,7 +678,36 @@ async function validateUploadTarget(
 
   if (!caseRecord || !type) throw new DocumentNotFoundError();
 
-  return { caseId: caseRecord.id, documentTypeId: type.id };
+  return {
+    caseId: caseRecord.id,
+    documentTypeId: type.id,
+    acceptedMimeTypes: type.acceptedMimeTypes,
+    maxBytes: type.maxBytes,
+  };
+}
+
+function validateTypeRestrictions(
+  type: {
+    acceptedMimeTypes: string[];
+    maxBytes: number | null;
+  },
+  mimeType: string,
+  sizeBytes: number,
+) {
+  const normalizedMime = mimeType.trim() || "application/octet-stream";
+
+  if (
+    type.acceptedMimeTypes.length > 0 &&
+    !type.acceptedMimeTypes.includes(normalizedMime)
+  ) {
+    throw new Error(
+      `Document MIME type ${normalizedMime} is not allowed for this document type.`,
+    );
+  }
+
+  if (type.maxBytes !== null && sizeBytes > type.maxBytes) {
+    throw new Error("Document exceeds the document-type size limit.");
+  }
 }
 
 export function parseDocumentVisibility(
