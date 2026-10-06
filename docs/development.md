@@ -415,6 +415,74 @@ Existing installations should synchronize default roles:
 npm run auth:sync-roles
 ```
 
+## Public/private separation, redaction, and disclosure publication
+
+The canonical stored classifications are:
+
+```text
+public
+participant
+internal
+restricted
+```
+
+The legacy communication value `case_participants` is migrated to `participant`. Parsers remain backward compatible for imported historical communication data.
+
+Classification and publication are deliberately separate. Marking a source record or derivative `public` does not make it anonymously accessible.
+
+Disclosure operations are available at:
+
+```text
+/admin/disclosures
+```
+
+Permissions:
+
+```text
+disclosure:view
+disclosure:prepare
+disclosure:review
+disclosure:publish
+```
+
+Preparing a release also requires ordinary permission to view the source record. `disclosure:prepare` never grants access to a case, submission, note, correspondence, review, or restricted document by itself.
+
+A publication is a stable slug plus immutable content revisions:
+
+```text
+draft -> submitted -> approved -> published -> superseded
+                   \-> rejected
+```
+
+The reviewer must be a different user from the preparer.
+
+A currently published revision stays live while a replacement is drafted/reviewed. Publishing the replacement supersedes the old revision atomically.
+
+Corrections never edit released content in place. A database trigger makes public title, summary, public JSON, redaction summary, preparer, publication identity, and version number immutable.
+
+Public JSON is structurally bounded and has an object root. Human disclosure review remains responsible for determining whether the material is actually lawful and appropriate to release.
+
+Redacted files are separate document derivatives. The source document is never overwritten. A derivative records its exact source version, output version, audience, redaction summary, creator, and hash-backed storage metadata.
+
+Public derivatives must be scan-clean and available before a disclosure revision can be approved or published.
+
+The public route is:
+
+```text
+/public/disclosures/<organization-slug>/<publication-slug>
+```
+
+Anonymous reads begin from a publication whose status is `published` and a version whose status is `published`. They never query a case, submission, note, review, correspondence, or arbitrary document version directly.
+
+Withdrawing a publication removes anonymous access immediately; publication-scoped document responses use `Cache-Control: no-store`.
+
+Existing installations should run the migration and synchronize default roles:
+
+```bash
+npm run db:migrate
+npm run auth:sync-roles
+```
+
 ## Verification
 
 ```bash
