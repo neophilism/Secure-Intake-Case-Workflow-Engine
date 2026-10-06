@@ -692,13 +692,13 @@ export async function sweepOrganizationDeadlines(
         actorUserId: null,
         reason: `Deadline ${deadline.policyKey} is overdue.`,
         targetQueueId,
-        priority:
-          deadline.escalationPriority as
-            | "low"
-            | "normal"
-            | "high"
-            | "critical"
-            | null,
+        priority: deadline.escalationPriority
+          ? (deadline.escalationPriority as
+              | "low"
+              | "normal"
+              | "high"
+              | "critical")
+          : undefined,
       });
 
       await db.transaction(async (tx) => {
@@ -856,9 +856,13 @@ async function resolvePolicyCalendar(
     policy.duration.unit === "business_days" ||
     policy.warningBefore?.unit === "business_days";
 
-  if (!needsCalendar) return null;
   if (!policy.calendarKey) {
-    throw new Error("Business-day deadline policy is missing calendarKey.");
+    if (needsCalendar) {
+      throw new Error(
+        "Business-day deadline policy is missing calendarKey.",
+      );
+    }
+    return null;
   }
 
   const [calendar] = await tx
