@@ -13,6 +13,11 @@ import {
   transitionCase,
   updateCaseMetadata,
 } from "@/modules/cases/service";
+import {
+  applyRoutingRules,
+  escalateCase,
+  manualAssignCase,
+} from "@/modules/routing/service";
 
 async function requireCaseContext() {
   const context = await getCurrentAuthorizationContext();
@@ -114,6 +119,123 @@ export async function transitionCaseAction(
     }
 
     redirect(`/admin/cases/${caseId}?error=transition_failed`);
+  }
+
+  redirect(`/admin/cases/${caseId}`);
+}
+
+
+export async function manualAssignCaseAction(
+  caseId: string,
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (!hasPermission(context, "case:assign")) {
+    redirect("/forbidden");
+  }
+
+  const queueId = String(formData.get("queueId") ?? "").trim();
+  const membershipId = String(
+    formData.get("membershipId") ?? "",
+  ).trim();
+  const reason = String(formData.get("reason") ?? "").trim();
+
+  try {
+    await manualAssignCase(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        caseId,
+        queueId: queueId || null,
+        membershipId: membershipId || null,
+        actorUserId: context.user.id,
+        reason: reason || null,
+      },
+    );
+  } catch {
+    redirect(`/admin/cases/${caseId}?error=assignment_failed`);
+  }
+
+  redirect(`/admin/cases/${caseId}`);
+}
+
+export async function applyRoutingRulesAction(
+  caseId: string,
+  _formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (
+    !hasPermission(context, "case:assign") ||
+    !hasPermission(context, "routing:view")
+  ) {
+    redirect("/forbidden");
+  }
+
+  let matched = false;
+  try {
+    const result = await applyRoutingRules(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        caseId,
+        actorUserId: context.user.id,
+      },
+    );
+    matched = result.matched;
+  } catch {
+    redirect(`/admin/cases/${caseId}?error=routing_failed`);
+  }
+
+  redirect(
+    matched
+      ? `/admin/cases/${caseId}`
+      : `/admin/cases/${caseId}?error=no_routing_match`,
+  );
+}
+
+export async function escalateCaseAction(
+  caseId: string,
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (!hasPermission(context, "case:assign")) {
+    redirect("/forbidden");
+  }
+
+  const reason = String(formData.get("reason") ?? "").trim();
+  const targetQueueId = String(
+    formData.get("targetQueueId") ?? "",
+  ).trim();
+  const priorityRaw = String(
+    formData.get("priority") ?? "",
+  ).trim();
+
+  if (!reason) {
+    redirect(`/admin/cases/${caseId}?error=invalid_escalation`);
+  }
+
+  const priority =
+    priorityRaw === "low" ||
+    priorityRaw === "normal" ||
+    priorityRaw === "high" ||
+    priorityRaw === "critical"
+      ? priorityRaw
+      : undefined;
+
+  try {
+    await escalateCase(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        caseId,
+        actorUserId: context.user.id,
+        reason,
+        targetQueueId: targetQueueId || null,
+        priority,
+      },
+    );
+  } catch {
+    redirect(`/admin/cases/${caseId}?error=escalation_failed`);
   }
 
   redirect(`/admin/cases/${caseId}`);

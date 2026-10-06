@@ -8,6 +8,7 @@ import {
 } from "@/modules/auth/authorization";
 import { getCurrentAuthorizationContext } from "@/modules/auth/server-session";
 import { createCaseFromSubmission } from "@/modules/cases/service";
+import { applyRoutingRules } from "@/modules/routing/service";
 
 export async function createCaseFromSubmissionAction(
   formData: FormData,
@@ -30,18 +31,34 @@ export async function createCaseFromSubmissionAction(
     redirect("/admin/cases?error=invalid_submission");
   }
 
-  try {
-    const record = await createCaseFromSubmission(
-      getRuntimeDatabase(),
-      requireTenantScope(context),
-      {
-        submissionId,
-        actorUserId: context.user.id,
-      },
-    );
+  const db = getRuntimeDatabase();
+  const scope = requireTenantScope(context);
+  let record: Awaited<
+    ReturnType<typeof createCaseFromSubmission>
+  >;
 
-    redirect(`/admin/cases/${record.id}`);
+  try {
+    record = await createCaseFromSubmission(db, scope, {
+      submissionId,
+      actorUserId: context.user.id,
+    });
   } catch {
     redirect("/admin/cases?error=create_failed");
   }
+
+  let routingFailed = false;
+  try {
+    await applyRoutingRules(db, scope, {
+      caseId: record.id,
+      actorUserId: context.user.id,
+    });
+  } catch {
+    routingFailed = true;
+  }
+
+  redirect(
+    routingFailed
+      ? `/admin/cases/${record.id}?error=routing_failed`
+      : `/admin/cases/${record.id}`,
+  );
 }

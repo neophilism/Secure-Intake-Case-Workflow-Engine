@@ -14,11 +14,19 @@ import {
 } from "@/modules/cases/repository";
 import { casePriorities } from "@/modules/cases/lifecycle";
 import {
+  listCaseAssignmentHistory,
+  listOrganizationMembers,
+  listQueues,
+} from "@/modules/routing/repository";
+import {
   findWorkflowState,
   parseWorkflowDefinition,
   transitionsFromState,
 } from "@/modules/workflows/definition";
 import {
+  applyRoutingRulesAction,
+  escalateCaseAction,
+  manualAssignCaseAction,
   transitionCaseAction,
   updateCaseMetadataAction,
 } from "./actions";
@@ -45,17 +53,30 @@ export default async function CaseDetailPage({
   const record = await findCaseById(db, scope, caseId);
   if (!record) notFound();
 
-  const [history, tags, source] = await Promise.all([
+  const [
+    history,
+    tags,
+    source,
+    queues,
+    members,
+    assignmentHistory,
+  ] = await Promise.all([
     listCaseStatusHistory(db, scope, record.id),
     listCaseTags(db, scope, record.id),
     hasPermission(context, "submission:view")
       ? findCaseSourceSubmission(db, scope, record.id)
       : Promise.resolve(null),
+    listQueues(db, scope),
+    listOrganizationMembers(db, scope),
+    listCaseAssignmentHistory(db, scope, record.id),
   ]);
 
   const workflow = parseWorkflowDefinition(record.workflowDefinition);
   const state = findWorkflowState(workflow, record.status);
   const canUpdate = hasPermission(context, "case:update");
+  const canAssign = hasPermission(context, "case:assign");
+  const canApplyRouting =
+    canAssign && hasPermission(context, "routing:view");
   const transitions = transitionsFromState(
     workflow,
     record.status,
@@ -65,12 +86,40 @@ export default async function CaseDetailPage({
     ),
   );
 
+  const queueById = new Map(
+    queues.map((queue) => [queue.id, queue]),
+  );
+  const memberById = new Map(
+    members.map((member) => [member.membershipId, member]),
+  );
+  const currentQueue = record.assignedQueueId
+    ? queueById.get(record.assignedQueueId)
+    : null;
+  const currentAssignee = record.assignedMembershipId
+    ? memberById.get(record.assignedMembershipId)
+    : null;
+
+  const memberLabel = (membershipId: string | null) => {
+    if (!membershipId) return "unassigned";
+    const member = memberById.get(membershipId);
+    return member
+      ? member.displayName ?? member.email
+      : membershipId;
+  };
+
+  const queueLabel = (queueId: string | null) => {
+    if (!queueId) return "no queue";
+    return queueById.get(queueId)?.name ?? queueId;
+  };
+
   return (
     <main>
       <nav>
         <Link href="/admin/cases">← Cases</Link>
         {" · "}
         <Link href="/admin/workflows">Workflows</Link>
+        {" · "}
+        <Link href="/admin/routing">Routing</Link>
       </nav>
 
       <h1>
@@ -81,7 +130,9 @@ export default async function CaseDetailPage({
         <p role="alert">
           {error === "transition_requirements"
             ? "The workflow requirements for that transition were not satisfied."
-            : `The requested case operation could not be completed (${error}).`}
+            : error === "no_routing_match"
+              ? "No active routing rule matched this case."
+              : `The requested case operation could not be completed (${error}).`}
         </p>
       ) : null}
 
@@ -98,6 +149,22 @@ export default async function CaseDetailPage({
         <dd>{record.caseType}</dd>
         <dt>Priority</dt>
         <dd>{record.priority}</dd>
+        <dt>Queue</dt>
+        <dd>{currentQueue?.name ?? "Unassigned"}</dd>
+        <dt>Assignee</dt>
+        <dd>
+          {currentAssignee
+            ? currentAssignee.displayName ?? currentAssignee.email
+            : "Unassigned"}
+        </dd>
+        <dt>Assigned</dt>
+        <dd>{record.assignedAt?.toISOString() ?? "—"}</dd>
+        <dt>Escalation level</dt>
+        <dd>{record.escalationLevel}</dd>
+        <dt>Last escalated</dt>
+        <dd>{record.escalatedAt?.toISOString() ?? "—"}</dd>
+        <dt>Escalation reason</dt>
+        <dd>{record.escalationReason ?? "—"}</dd>
         <dt>Created</dt>
         <dd>{record.createdAt.toISOString()}</dd>
         <dt>Opened</dt>
@@ -118,6 +185,126 @@ export default async function CaseDetailPage({
           <p>{record.summary}</p>
         </section>
       ) : null}
+
+      {canAssign ? (
+        <section>
+          <h2>Assignment</h2>
+
+          <form action={manualAssignCaseAction.bind(null, record.id)}>
+            <label>
+              Queue
+              <select
+                name="queueId"
+                defaultValue={record.assignedQueueId ?? ""}
+              >
+                <option value="">No queue</option>
+                {queues
+                  .filter((queue) => queue.status === "active")
+                  .map((queue) => (
+                    <option key={queue.id} value={queue.id}>
+                      {queue.name} ({queue.assignmentStrategy})
+                    </option>
+                  ))}
+              </select>
+            </label>
+
+            <label>
+              Assignee
+              <select
+                name="membershipId"
+                defaultValue={record.assignedMembershipId ?? ""}
+              >
+                <option value="">Unassigned</option>
+                {members.map((member) => (
+                  <option
+                    key={member.membershipId}
+                    value={member.membershipId}
+                  >
+                    {member.displayName ?? member.email}
+                    {member.title ? ` — ${member.title}` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Reason
+              <input name="reason" />
+            </label>
+
+            <button type="submit">Save assignment</button>
+          </form>
+
+          {canApplyRouting ? (
+            <form action={applyRoutingRulesAction.bind(null, record.id)}>
+              <button type="submit">
+                Apply routing rules now
+              </button>
+            </form>
+          ) : null}
+
+          <details>
+            <summary>Escalate case</summary>
+            <form action={escalateCaseAction.bind(null, record.id)}>
+              <label>
+                Escalation reason
+                <textarea name="reason" rows={3} required />
+              </label>
+
+              <label>
+                Escalation queue (optional)
+                <select name="targetQueueId" defaultValue="">
+                  <option value="">Keep current queue</option>
+                  {queues
+                    .filter((queue) => queue.status === "active")
+                    .map((queue) => (
+                      <option key={queue.id} value={queue.id}>
+                        {queue.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+
+              <label>
+                Priority (optional)
+                <select name="priority" defaultValue="">
+                  <option value="">Keep current priority</option>
+                  {casePriorities.map((priority) => (
+                    <option key={priority} value={priority}>
+                      {priority}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <button type="submit">Escalate</button>
+            </form>
+          </details>
+        </section>
+      ) : null}
+
+      <section>
+        <h2>Assignment history</h2>
+        {assignmentHistory.length === 0 ? (
+          <p>No assignment changes have been recorded.</p>
+        ) : (
+          <ol>
+            {assignmentHistory.map((entry) => (
+              <li key={entry.id}>
+                {entry.createdAt.toISOString()}:{" "}
+                {queueLabel(entry.fromQueueId)} /{" "}
+                {memberLabel(entry.fromMembershipId)}
+                {" → "}
+                {queueLabel(entry.toQueueId)} /{" "}
+                {memberLabel(entry.toMembershipId)}
+                {" — "}
+                {entry.source}
+                {entry.reason ? ` — ${entry.reason}` : ""}
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
 
       {canUpdate ? (
         <section>

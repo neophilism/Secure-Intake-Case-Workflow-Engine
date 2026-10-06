@@ -14,11 +14,11 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 6 — configurable workflow and transition engine**
+**PR 7 — assignment and routing**
 
-This milestone replaces the hard-coded case state machine with versioned workflow definitions, workflow-to-form bindings, pinned case workflow snapshots, configurable transition permissions/comments/guards, and safe automatic case actions.
+This milestone adds operational teams, work queues, manual assignment, ordered routing rules, round-robin distribution, availability controls, reassignment history, and explicit escalation.
 
-Existing cases are backfilled with the prior lifecycle snapshot so upgrades preserve historical behavior.
+Case creation now immediately runs the routing engine, while routing failures leave the durable case intact for staff review and manual assignment.
 
 See [docs/development.md](docs/development.md) for local setup and [docs/architecture](docs/architecture) for architectural decisions.
 
