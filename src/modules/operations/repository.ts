@@ -145,6 +145,7 @@ export async function searchCases(
   scope: TenantScope,
   definition: CaseSearchDefinition,
   currentMembershipId: string,
+  options: { offset?: number } = {},
 ) {
   const conditions = searchConditions(
     scope,
@@ -220,7 +221,8 @@ export async function searchCases(
     .leftJoin(users, eq(users.id, organizationMemberships.userId))
     .where(and(...conditions))
     .orderBy(...order)
-    .limit(definition.limit);
+    .limit(definition.limit)
+    .offset(Math.min(Math.max(options.offset ?? 0, 0), 10000));
 }
 
 async function countCases(
