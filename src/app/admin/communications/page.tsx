@@ -56,6 +56,10 @@ export default async function CommunicationsPage({
         {" · "}
         <Link href="/admin/cases">Cases</Link>
         {" · "}
+        <Link href="/notifications">Notifications</Link>
+        {" · "}
+        <Link href="/admin/jobs">Jobs</Link>
+        {" · "}
         <Link href="/admin/audit">Audit</Link>
       </nav>
 
