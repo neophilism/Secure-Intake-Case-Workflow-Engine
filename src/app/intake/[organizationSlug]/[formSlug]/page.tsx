@@ -10,13 +10,10 @@ export const dynamic = "force-dynamic";
 
 export default async function PublicIntakePage({
   params,
-  searchParams,
 }: {
   params: Promise<{ organizationSlug: string; formSlug: string }>;
-  searchParams: Promise<{ error?: string }>;
 }) {
   const { organizationSlug, formSlug } = await params;
-  const { error } = await searchParams;
 
   const db = getRuntimeDatabase();
   const [published, application] = await Promise.all([
@@ -87,17 +84,11 @@ export default async function PublicIntakePage({
       {published.form.description ? (
         <p>{published.form.description}</p>
       ) : null}
-      <p>
-        Provided by {applicationName}. Form version{" "}
-        {published.version.versionNumber}.
-      </p>
-
-      {error === "validation" ? (
-        <p role="alert">
-          Some answers did not meet the form requirements. Review the form and
-          try again.
-        </p>
-      ) : null}
+      <p>This form is provided by {applicationName}.</p>
+      <details>
+        <summary>Form information</summary>
+        <p>Published form version {published.version.versionNumber}.</p>
+      </details>
 
       {requiresAttachmentAdapter ? (
         <p role="alert">
