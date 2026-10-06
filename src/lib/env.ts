@@ -27,6 +27,16 @@ const schema = z.object({
     .regex(/^[A-Za-z0-9_-]{1,100}$/)
     .default("sicwe_session"),
   AUTH_SESSION_TTL_HOURS: z.coerce.number().int().positive().default(12),
+  PARTICIPANT_SESSION_COOKIE_NAME: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{1,100}$/)
+    .default("sicwe_participant_session"),
+  PARTICIPANT_SESSION_TTL_HOURS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(168)
+    .default(8),
   AUTH_LOGIN_FAILURE_LIMIT: z.coerce.number().int().min(2).max(100).default(5),
   AUTH_LOGIN_WINDOW_MINUTES: z.coerce.number().int().positive().max(1440).default(15),
   AUTH_LOGIN_BLOCK_MINUTES: z.coerce.number().int().positive().max(1440).default(15),
@@ -51,6 +61,10 @@ export const env = schema.parse({
   APP_BASE_URL: process.env.APP_BASE_URL,
   AUTH_SESSION_COOKIE_NAME: process.env.AUTH_SESSION_COOKIE_NAME,
   AUTH_SESSION_TTL_HOURS: process.env.AUTH_SESSION_TTL_HOURS,
+  PARTICIPANT_SESSION_COOKIE_NAME:
+    process.env.PARTICIPANT_SESSION_COOKIE_NAME,
+  PARTICIPANT_SESSION_TTL_HOURS:
+    process.env.PARTICIPANT_SESSION_TTL_HOURS,
   AUTH_LOGIN_FAILURE_LIMIT: process.env.AUTH_LOGIN_FAILURE_LIMIT,
   AUTH_LOGIN_WINDOW_MINUTES: process.env.AUTH_LOGIN_WINDOW_MINUTES,
   AUTH_LOGIN_BLOCK_MINUTES: process.env.AUTH_LOGIN_BLOCK_MINUTES,
