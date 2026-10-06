@@ -1,0 +1,45 @@
+import { getRuntimeDatabase } from "@/db/runtime";
+import {
+  findCaseById,
+  listCaseTags,
+} from "@/modules/cases/repository";
+import {
+  apiJson,
+  authorizeApiRequest,
+} from "@/modules/api/http";
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ caseId: string }> },
+) {
+  const auth = await authorizeApiRequest(request, ["case:view"]);
+  if (!auth.ok) return auth.response;
+
+  const { caseId } = await params;
+  const db = getRuntimeDatabase();
+  const record = await findCaseById(
+    db,
+    auth.context.tenantScope,
+    caseId,
+  );
+  if (!record) {
+    return apiJson(
+      auth.context,
+      { error: { code: "not_found", message: "Case not found." } },
+      { status: 404 },
+    );
+  }
+
+  const tags = await listCaseTags(
+    db,
+    auth.context.tenantScope,
+    caseId,
+  );
+
+  return apiJson(auth.context, {
+    data: {
+      ...record,
+      tags: tags.map((tag) => tag.tag),
+    },
+  });
+}
