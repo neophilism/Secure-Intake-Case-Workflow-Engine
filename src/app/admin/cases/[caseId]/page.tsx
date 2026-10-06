@@ -32,6 +32,16 @@ import {
   listDeadlineHistory,
 } from "@/modules/deadlines/repository";
 import {
+  listCaseCorrespondence,
+  listCaseCorrespondenceAttachments,
+  listCaseNoteAttachments,
+  listCaseNotes,
+  listCommunicationTemplates,
+} from "@/modules/communications/repository";
+import { listCaseTimeline } from "@/modules/timeline/repository";
+import { CaseCommunicationsPanel } from "./communications-panel";
+import { CaseTimelinePanel } from "./timeline-panel";
+import {
   findWorkflowState,
   parseWorkflowDefinition,
   transitionsFromState,
@@ -82,6 +92,12 @@ export default async function CaseDetailPage({
     caseDocuments,
     documentTypes,
     deadlines,
+    notes,
+    noteAttachments,
+    correspondence,
+    correspondenceAttachments,
+    communicationTemplates,
+    timeline,
   ] = await Promise.all([
     listCaseStatusHistory(db, scope, record.id),
     listCaseTags(db, scope, record.id),
@@ -101,6 +117,28 @@ export default async function CaseDetailPage({
     hasPermission(context, "deadline:view")
       ? listCaseDeadlines(db, scope, record.id)
       : Promise.resolve([]),
+    hasPermission(context, "note:view")
+      ? listCaseNotes(db, scope, record.id)
+      : Promise.resolve([]),
+    hasPermission(context, "note:view")
+      ? listCaseNoteAttachments(db, scope, record.id)
+      : Promise.resolve([]),
+    hasPermission(context, "correspondence:view")
+      ? listCaseCorrespondence(db, scope, record.id)
+      : Promise.resolve([]),
+    hasPermission(context, "correspondence:view")
+      ? listCaseCorrespondenceAttachments(db, scope, record.id)
+      : Promise.resolve([]),
+    hasPermission(context, "correspondence:view")
+      ? listCommunicationTemplates(db, scope)
+      : Promise.resolve([]),
+    listCaseTimeline(db, scope, record.id, {
+      includeNotes: hasPermission(context, "note:view"),
+      includeCorrespondence: hasPermission(
+        context,
+        "correspondence:view",
+      ),
+    }),
   ]);
 
   const workflow = parseWorkflowDefinition(record.workflowDefinition);
@@ -119,6 +157,23 @@ export default async function CaseDetailPage({
   const canOperateDeadlines = hasPermission(
     context,
     "deadline:operate",
+  );
+  const canViewNotes = hasPermission(context, "note:view");
+  const canViewCorrespondence = hasPermission(
+    context,
+    "correspondence:view",
+  );
+  const canCreateInternalNote = hasPermission(
+    context,
+    "note:create_internal",
+  );
+  const canCreateParticipantNote = hasPermission(
+    context,
+    "note:create_participant",
+  );
+  const canManageCorrespondence = hasPermission(
+    context,
+    "correspondence:manage",
   );
   const visibleDocuments = caseDocuments.filter(({ document }) =>
     canViewDocumentVisibility(
@@ -205,6 +260,8 @@ export default async function CaseDetailPage({
         {" · "}
         <Link href="/admin/deadlines">Deadlines</Link>
         {" · "}
+        <Link href="/admin/communications">Communications</Link>
+        {" · "}
         <Link href="/admin/audit">Audit</Link>
       </nav>
 
@@ -276,6 +333,23 @@ export default async function CaseDetailPage({
           <h2>Summary</h2>
           <p>{record.summary}</p>
         </section>
+      ) : null}
+
+      {canViewNotes || canViewCorrespondence ? (
+        <CaseCommunicationsPanel
+          caseId={record.id}
+          notes={notes}
+          noteAttachments={noteAttachments}
+          correspondence={correspondence}
+          correspondenceAttachments={correspondenceAttachments}
+          templates={communicationTemplates}
+          caseDocuments={visibleDocuments}
+          canViewNotes={canViewNotes}
+          canViewCorrespondence={canViewCorrespondence}
+          canCreateInternalNote={canCreateInternalNote}
+          canCreateParticipantNote={canCreateParticipantNote}
+          canManageCorrespondence={canManageCorrespondence}
+        />
       ) : null}
 
       {canViewDeadlines ? (
@@ -961,6 +1035,8 @@ export default async function CaseDetailPage({
           </details>
         </section>
       ) : null}
+
+      <CaseTimelinePanel items={timeline} />
 
       <section>
         <h2>Status history</h2>
