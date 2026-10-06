@@ -72,6 +72,13 @@ export async function createDocumentType(
   if (!input.name.trim()) {
     throw new Error("Document type name is required.");
   }
+  if (
+    input.maxBytes !== undefined &&
+    input.maxBytes !== null &&
+    (!Number.isSafeInteger(input.maxBytes) || input.maxBytes < 1)
+  ) {
+    throw new Error("Document type maxBytes must be a positive integer.");
+  }
 
   const [row] = await db
     .insert(documentTypes)
@@ -80,9 +87,13 @@ export async function createDocumentType(
       key,
       name: input.name.trim(),
       description: input.description?.trim() || null,
-      acceptedMimeTypes: (input.acceptedMimeTypes ?? [])
-        .map((value) => value.trim())
-        .filter(Boolean),
+      acceptedMimeTypes: [
+        ...new Set(
+          (input.acceptedMimeTypes ?? [])
+            .map((value) => value.trim().toLowerCase())
+            .filter(Boolean),
+        ),
+      ],
       maxBytes:
         input.maxBytes !== undefined && input.maxBytes !== null
           ? input.maxBytes
@@ -694,7 +705,8 @@ function validateTypeRestrictions(
   mimeType: string,
   sizeBytes: number,
 ) {
-  const normalizedMime = mimeType.trim() || "application/octet-stream";
+  const normalizedMime =
+    mimeType.trim().toLowerCase() || "application/octet-stream";
 
   if (
     type.acceptedMimeTypes.length > 0 &&
