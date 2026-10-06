@@ -120,6 +120,7 @@ export const defaultRoleTemplates: readonly RoleTemplate[] = [
       "document:view_private",
       "note:create_internal",
       "audit:view",
+      "application:view",
     ],
   },
   {
@@ -226,6 +227,7 @@ export const defaultRoleTemplates: readonly RoleTemplate[] = [
       "document:view",
       "document:view_private",
       "audit:view",
+      "application:view",
     ],
   },
   {
