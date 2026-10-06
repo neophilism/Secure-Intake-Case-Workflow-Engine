@@ -1,12 +1,14 @@
 import { and, desc, eq, max } from "drizzle-orm";
 import type { Database } from "@/db/client";
 import {
+  auditEvents,
   intakeForms,
   intakeFormVersions,
   intakeSubmissions,
   organizations,
 } from "@/db/schema";
 import type { TenantScope } from "@/lib/tenancy";
+import { auditEventValues } from "@/modules/audit/event";
 import {
   parseFormDefinition,
   type FormDefinition,
@@ -65,6 +67,23 @@ export async function createForm(
     })
     .returning();
 
+
+  await db.insert(auditEvents).values(
+    auditEventValues({
+      organizationId: scope.organizationId,
+      actorType: input.createdByUserId ? "user" : "system",
+      actorUserId: input.createdByUserId ?? null,
+      action: "form.created",
+      resourceType: "intake_form",
+      resourceId: form.id,
+      newState: {
+        accessMode: form.accessMode,
+        status: form.status,
+      },
+      metadata: { slug: form.slug },
+    }),
+  );
+
   return form;
 }
 
@@ -89,6 +108,7 @@ export async function findFormVersionById(
   db: Database,
   scope: TenantScope,
   versionId: string,
+  actorUserId: string,
 ) {
   const [version] = await db
     .select()
@@ -143,6 +163,24 @@ export async function createDraftFormVersion(
       createdByUserId: input.createdByUserId ?? null,
     })
     .returning();
+
+
+  await db.insert(auditEvents).values(
+    auditEventValues({
+      organizationId: scope.organizationId,
+      actorType: input.createdByUserId ? "user" : "system",
+      actorUserId: input.createdByUserId ?? null,
+      action: "form.version_created",
+      resourceType: "intake_form_version",
+      resourceId: version.id,
+      parentResourceType: "intake_form",
+      parentResourceId: form.id,
+      newState: {
+        versionNumber: version.versionNumber,
+        status: version.status,
+      },
+    }),
+  );
 
   return version;
 }
@@ -211,6 +249,24 @@ export async function publishFormVersion(
       .update(intakeForms)
       .set({ updatedAt: new Date() })
       .where(eq(intakeForms.id, version.formId));
+
+    await tx.insert(auditEvents).values(
+      auditEventValues({
+        organizationId: scope.organizationId,
+        actorType: "user",
+        actorUserId,
+        action: "form.version_published",
+        resourceType: "intake_form_version",
+        resourceId: published.id,
+        parentResourceType: "intake_form",
+        parentResourceId: version.formId,
+        previousState: { status: version.status },
+        newState: {
+          status: published.status,
+          versionNumber: published.versionNumber,
+        },
+      }),
+    );
 
     return published;
   });
@@ -360,6 +416,27 @@ export async function insertSubmission(
     })
     .returning();
 
+  await db.insert(auditEvents).values(
+    auditEventValues({
+      organizationId: input.organizationId,
+      actorType: input.submitterUserId ? "user" : "anonymous",
+      actorUserId: input.submitterUserId ?? null,
+      action:
+        input.status === "submitted"
+          ? "submission.received"
+          : "submission.draft_created",
+      resourceType: "submission",
+      resourceId: submission.id,
+      parentResourceType: "intake_form",
+      parentResourceId: input.formId,
+      newState: { status: submission.status },
+      metadata: {
+        formVersionId: input.formVersionId,
+        answerFieldCount: Object.keys(input.answers).length,
+      },
+    }),
+  );
+
   return submission;
 }
 
@@ -381,6 +458,24 @@ export async function updateDraftSubmission(
       ),
     )
     .returning();
+
+
+  if (submission) {
+    await db.insert(auditEvents).values(
+      auditEventValues({
+        organizationId: submission.organizationId,
+        actorType: submission.submitterUserId ? "user" : "anonymous",
+        actorUserId: submission.submitterUserId ?? null,
+        action: "submission.draft_updated",
+        resourceType: "submission",
+        resourceId: submission.id,
+        newState: { status: submission.status },
+        metadata: {
+          answerFieldCount: Object.keys(answers).length,
+        },
+      }),
+    );
+  }
 
   return submission ?? null;
 }
@@ -408,6 +503,28 @@ export async function finalizeDraftSubmission(
       ),
     )
     .returning();
+
+
+  if (submission) {
+    await db.insert(auditEvents).values(
+      auditEventValues({
+        organizationId: submission.organizationId,
+        actorType: submission.submitterUserId ? "user" : "anonymous",
+        actorUserId: submission.submitterUserId ?? null,
+        action: "submission.received",
+        resourceType: "submission",
+        resourceId: submission.id,
+        parentResourceType: "intake_form",
+        parentResourceId: submission.formId,
+        previousState: { status: "draft" },
+        newState: { status: submission.status },
+        metadata: {
+          formVersionId: submission.formVersionId,
+          answerFieldCount: Object.keys(answers).length,
+        },
+      }),
+    );
+  }
 
   return submission ?? null;
 }
