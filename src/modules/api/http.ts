@@ -8,6 +8,11 @@ import {
   type ApiAuthorizationContext,
 } from "./auth";
 
+const noStoreHeaders = {
+  "Cache-Control": "private, no-store",
+  Pragma: "no-cache",
+} as const;
+
 function bearerToken(request: Request) {
   const header = request.headers.get("authorization") ?? "";
   const match = /^Bearer\s+(.+)$/i.exec(header);
@@ -37,7 +42,13 @@ export async function authorizeApiRequest(
       ok: false,
       response: NextResponse.json(
         { error: { code: "unauthorized", message: "Bearer token required." } },
-        { status: 401 },
+        {
+          status: 401,
+          headers: {
+            ...noStoreHeaders,
+            "WWW-Authenticate": 'Bearer realm="sicwe-api"',
+          },
+        },
       ),
     };
   }
@@ -65,8 +76,13 @@ export async function authorizeApiRequest(
         },
         {
           status,
-          headers:
-            status === 429 ? { "Retry-After": "60" } : undefined,
+          headers: {
+            ...noStoreHeaders,
+            ...(status === 429 ? { "Retry-After": "60" } : {}),
+            ...(status === 401
+              ? { "WWW-Authenticate": 'Bearer realm="sicwe-api"' }
+              : {}),
+          },
         },
       ),
     };
@@ -85,7 +101,13 @@ export async function authorizeApiRequest(
             message: "API credential lacks the required scope.",
           },
         },
-        { status: 403, headers: apiRateHeaders(context) },
+        {
+          status: 403,
+          headers: {
+            ...noStoreHeaders,
+            ...apiRateHeaders(context),
+          },
+        },
       ),
     };
   }
@@ -101,6 +123,7 @@ export function apiJson(
   return NextResponse.json(body, {
     ...init,
     headers: {
+      ...noStoreHeaders,
       ...apiRateHeaders(context),
       ...(init.headers ?? {}),
     },
