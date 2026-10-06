@@ -79,14 +79,17 @@ describe("submission validation", () => {
     expect(result.success).toBe(false);
   });
 
-  it("strips unknown answers before persistence", () => {
+  it("strips unknown and conditionally hidden answers before persistence", () => {
     const result = validateSubmissionAnswers(definition, {
       email: "person@example.test",
+      urgent: false,
+      urgent_reason: "A malicious client tried to force hidden data.",
       unexpected_admin_flag: true,
     });
 
     expect(result.answers).toEqual({
       email: "person@example.test",
+      urgent: false,
     });
   });
 
