@@ -102,6 +102,31 @@ npm run auth:sync-roles
 
 Document guards are modeled now but intentionally fail closed until the document/evidence subsystem is connected in PR 8.
 
+## Assignment and routing
+
+Operational routing is configured at:
+
+```text
+/admin/routing
+```
+
+The model separates offices, teams, queues, and individual assignments. Routing rules are evaluated in ascending priority order and the first active match wins.
+
+Supported queue strategies:
+
+- `manual`: assign the queue only;
+- `round_robin`: select the next active, available member of the queue's team.
+
+Creating a case immediately invokes routing. If no rule matches, the case remains unassigned. If routing fails because the target configuration is unavailable, the case remains durable and staff can correct or manually assign it.
+
+Users with `case:assign` can manually reassign and escalate cases from the case detail page. Escalations may change queue and priority, increment the escalation level, and are recorded in assignment history.
+
+Existing installations should synchronize the new routing permissions:
+
+```bash
+npm run auth:sync-roles
+```
+
 ## Verification
 
 ```bash
