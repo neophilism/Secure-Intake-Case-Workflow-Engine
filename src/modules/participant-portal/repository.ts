@@ -54,10 +54,6 @@ export async function findExternalParticipantCredentialForLogin(
     .select({
       credential: externalParticipantCredentials,
       submission: intakeSubmissions,
-      formVersion: {
-        id: intakeFormVersions.id,
-        definition: intakeFormVersions.definition,
-      },
       organization: {
         id: organizations.id,
         slug: organizations.slug,
