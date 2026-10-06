@@ -4,6 +4,8 @@ CREATE TABLE IF NOT EXISTS "document_types" (
   "key" text NOT NULL,
   "name" text NOT NULL,
   "description" text,
+  "accepted_mime_types" jsonb DEFAULT '[]'::jsonb NOT NULL,
+  "max_bytes" integer,
   "status" text DEFAULT 'active' NOT NULL,
   "created_by_user_id" uuid REFERENCES "users"("id") ON DELETE SET NULL,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
