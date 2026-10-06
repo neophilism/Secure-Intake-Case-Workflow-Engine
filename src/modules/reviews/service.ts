@@ -17,7 +17,9 @@ import {
   caseStatusHistory,
   deadlineCalendarExclusions,
   deadlineCalendars,
+  membershipRoles,
   organizationMemberships,
+  rolePermissions,
   reviewPolicies,
   reviewPolicyPrerequisites,
   users,
@@ -665,6 +667,40 @@ export async function assignReview(
     if (!reviewer) {
       throw new ReviewEligibilityError(
         "Reviewer must be an active organization member.",
+      );
+    }
+
+    const [reviewPermission] = await tx
+      .select({ id: rolePermissions.id })
+      .from(membershipRoles)
+      .innerJoin(
+        rolePermissions,
+        and(
+          eq(rolePermissions.roleId, membershipRoles.roleId),
+          eq(
+            rolePermissions.organizationId,
+            scope.organizationId,
+          ),
+          eq(rolePermissions.permission, "review:decide"),
+        ),
+      )
+      .where(
+        and(
+          eq(
+            membershipRoles.organizationMembershipId,
+            reviewer.membershipId,
+          ),
+          eq(
+            membershipRoles.organizationId,
+            scope.organizationId,
+          ),
+        ),
+      )
+      .limit(1);
+
+    if (!reviewPermission) {
+      throw new ReviewEligibilityError(
+        "Assigned reviewer lacks review decision authority.",
       );
     }
 
