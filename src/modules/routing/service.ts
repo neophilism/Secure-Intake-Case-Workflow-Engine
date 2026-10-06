@@ -809,7 +809,7 @@ export async function escalateCase(
   scope: TenantScope,
   input: {
     caseId: string;
-    actorUserId: string;
+    actorUserId?: string | null;
     reason: string;
     targetQueueId?: string | null;
     priority?: "low" | "normal" | "high" | "critical";
@@ -989,8 +989,8 @@ export async function escalateCase(
     await tx.insert(auditEvents).values(
       auditEventValues({
         organizationId: scope.organizationId,
-        actorType: "user",
-        actorUserId: input.actorUserId,
+        actorType: input.actorUserId ? "user" : "system",
+        actorUserId: input.actorUserId ?? null,
         action: "case.escalated",
         resourceType: "case",
         resourceId: record.id,
