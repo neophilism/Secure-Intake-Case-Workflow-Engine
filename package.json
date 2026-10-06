@@ -1,6 +1,6 @@
 {
   "name": "secure-intake-case-workflow-engine",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -20,7 +20,8 @@
     "worker": "tsx scripts/run-worker.ts",
     "worker:once": "tsx scripts/run-worker.ts --once",
     "jobs:seed-schedules": "tsx scripts/seed-background-schedules.ts",
-    "app:manifest": "tsx scripts/apply-application-manifest.ts"
+    "app:manifest": "tsx scripts/apply-application-manifest.ts",
+    "test:a11y": "vitest run src/accessibility"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
@@ -40,7 +41,10 @@
     "eslint-config-next": "^15.5.4",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "axe-core": "^4.10.3",
+    "jsdom": "^26.1.0",
+    "@types/jsdom": "^21.1.7"
   },
   "overrides": {
     "postcss": "^8.5.23"
