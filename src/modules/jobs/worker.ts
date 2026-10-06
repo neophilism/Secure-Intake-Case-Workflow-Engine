@@ -3,6 +3,7 @@ import type { TenantScope } from "@/lib/tenancy";
 import { createTrustedTenantScope } from "@/lib/tenancy";
 import { sweepOrganizationDeadlines } from "@/modules/deadlines/service";
 import { sweepReviewDeadlines } from "@/modules/reviews/service";
+import { deliverWebhookJob } from "@/modules/webhooks/worker";
 import {
   claimBackgroundJobs,
   completeBackgroundJob,
@@ -45,6 +46,7 @@ export function createCoreBackgroundJobHandlers(): Map<
         await sweepReviewDeadlines(db, scope);
       },
     ],
+    ["webhook.deliver", deliverWebhookJob],
   ]);
 }
 

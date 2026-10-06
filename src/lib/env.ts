@@ -13,6 +13,8 @@ const schema = z.object({
   BACKGROUND_JOB_POLL_MS: z.coerce.number().int().positive().default(1000),
   BACKGROUND_JOB_BATCH_SIZE: z.coerce.number().int().positive().max(100).default(10),
   BACKGROUND_DEADLINE_SWEEP_SECONDS: z.coerce.number().int().positive().default(60),
+  API_DEFAULT_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().max(10000).default(120),
+  WEBHOOK_ENCRYPTION_KEY: z.string().regex(/^[a-f0-9]{64}$/i).optional(),
 });
 
 export const env = schema.parse({
@@ -25,4 +27,8 @@ export const env = schema.parse({
   BACKGROUND_JOB_BATCH_SIZE: process.env.BACKGROUND_JOB_BATCH_SIZE,
   BACKGROUND_DEADLINE_SWEEP_SECONDS:
     process.env.BACKGROUND_DEADLINE_SWEEP_SECONDS,
+  API_DEFAULT_RATE_LIMIT_PER_MINUTE:
+    process.env.API_DEFAULT_RATE_LIMIT_PER_MINUTE,
+  WEBHOOK_ENCRYPTION_KEY:
+    process.env.WEBHOOK_ENCRYPTION_KEY || undefined,
 });

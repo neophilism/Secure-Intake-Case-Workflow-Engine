@@ -493,3 +493,60 @@ npm run build
 
 ## Pull request rule
 Each milestone is delivered through a focused pull request. Core abstractions must remain reusable and must not encode one bill's terminology or workflow.
+
+
+## Integration API and webhooks
+
+PR 16 adds the versioned integration API at:
+
+```text
+/api/v1
+```
+
+OpenAPI documentation:
+
+```text
+/api/v1/openapi
+```
+
+Manage credentials and webhook subscriptions at:
+
+```text
+/admin/integrations
+```
+
+Existing installations should run:
+
+```bash
+npm run db:migrate
+npm run auth:sync-roles
+```
+
+The new human-session permissions are:
+
+```text
+api:manage
+webhook:manage
+```
+
+API credentials are shown once when created and should be stored in a secrets manager.
+
+To enable webhook subscription creation and delivery, configure a 32-byte AES key as 64 hexadecimal characters:
+
+```bash
+WEBHOOK_ENCRYPTION_KEY=<64 hex characters>
+```
+
+Webhook deliveries are processed by the normal worker:
+
+```bash
+npm run worker
+```
+
+Webhook receivers verify:
+
+```text
+HMAC-SHA256(secret, "<X-SICWE-Timestamp>.<raw request body>")
+```
+
+against the hexadecimal value in `X-SICWE-Signature`.

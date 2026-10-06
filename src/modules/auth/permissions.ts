@@ -49,6 +49,8 @@ export const corePermissions = [
   "job:view",
   "job:manage",
   "audit:view",
+  "api:manage",
+  "webhook:manage",
 ] as const;
 
 export type CorePermission = (typeof corePermissions)[number];

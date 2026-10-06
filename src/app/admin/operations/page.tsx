@@ -149,6 +149,8 @@ export default async function OperationsPage({
         <Link href="/admin/disclosures">Disclosures</Link>
         {" · "}
         <Link href="/notifications">Notifications</Link>
+        {" · "}
+        <Link href="/admin/integrations">Integrations</Link>
       </nav>
 
       <h1>Operations</h1>

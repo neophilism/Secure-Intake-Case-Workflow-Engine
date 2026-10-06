@@ -11,6 +11,7 @@ export async function listAuditEvents(
     resourceType?: string | null;
     resourceId?: string | null;
     limit?: number;
+    offset?: number;
   } = {},
 ) {
   const conditions = [
@@ -43,5 +44,6 @@ export async function listAuditEvents(
     .from(auditEvents)
     .where(and(...conditions))
     .orderBy(desc(auditEvents.occurredAt), desc(auditEvents.id))
-    .limit(limit);
+    .limit(limit)
+    .offset(Math.min(Math.max(input.offset ?? 0, 0), 10000));
 }
