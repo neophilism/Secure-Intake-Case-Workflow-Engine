@@ -1,7 +1,6 @@
 import {
   canStaffViewInformationClass,
   informationClasses,
-  parseInformationClass,
   type InformationClass,
 } from "@/modules/disclosures/policy";
 
@@ -31,12 +30,9 @@ export type DocumentContentStatus =
 export function isDocumentVisibility(
   value: string,
 ): value is DocumentVisibility {
-  try {
-    parseInformationClass(value);
-    return true;
-  } catch {
-    return false;
-  }
+  return (informationClasses as readonly string[]).includes(
+    value,
+  );
 }
 
 export function isTrustedDocumentContent(input: {
