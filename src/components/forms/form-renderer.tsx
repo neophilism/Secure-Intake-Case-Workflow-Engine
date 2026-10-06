@@ -1,10 +1,20 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type {
   FormDefinition,
   FormField,
 } from "@/modules/forms/definition";
+import {
+  initialPublicFormActionState,
+  type PublicFormActionState,
+} from "@/modules/forms/public-action-state";
 import { visibleFieldIdsForDefinition } from "@/modules/forms/visibility";
 
 export function FormRenderer({
@@ -12,9 +22,17 @@ export function FormRenderer({
   action,
 }: {
   definition: FormDefinition;
-  action: (formData: FormData) => void | Promise<void>;
+  action: (
+    previousState: PublicFormActionState,
+    formData: FormData,
+  ) => Promise<PublicFormActionState>;
 }) {
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
+  const [state, formAction, pending] = useActionState(
+    action,
+    initialPublicFormActionState,
+  );
+  const errorSummaryRef = useRef<HTMLDivElement>(null);
 
   const record = (fieldId: string, value: unknown) => {
     setAnswers((current) => ({ ...current, [fieldId]: value }));
@@ -23,14 +41,49 @@ export function FormRenderer({
     definition,
     answers,
   );
+  const errorsByField = new Map(
+    state.errors.map((error) => [error.fieldId, error.message]),
+  );
+
+  useEffect(() => {
+    if (state.status === "validation_error") {
+      errorSummaryRef.current?.focus();
+    }
+  }, [state]);
 
   return (
-    <form action={action}>
+    <form action={formAction}>
       {definition.intro ? <p>{definition.intro}</p> : null}
+      <p className="hint">
+        Fields marked <span aria-hidden="true">*</span> are required.
+      </p>
+
+      {state.status === "validation_error" && state.errors.length ? (
+        <div
+          className="error-summary"
+          role="alert"
+          tabIndex={-1}
+          ref={errorSummaryRef}
+          aria-labelledby="form-error-heading"
+        >
+          <h2 id="form-error-heading">Check your answers</h2>
+          <p>
+            Correct the following {state.errors.length === 1 ? "item" : "items"} and
+            submit the form again.
+          </p>
+          <ul>
+            {state.errors.map((error) => (
+              <li key={error.fieldId}>
+                <a href={`#field-${error.fieldId}`}>{error.message}</a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {definition.sections.map((section) => (
-        <section key={section.id}>
-          <h2>{section.title}</h2>
+        <section key={section.id} aria-labelledby={`section-${section.id}`}>
+          <h2 id={`section-${section.id}`}>{section.title}</h2>
           {section.description ? <p>{section.description}</p> : null}
 
           {section.fields.map((field) =>
@@ -38,6 +91,7 @@ export function FormRenderer({
               <FormFieldControl
                 key={field.id}
                 field={field}
+                error={errorsByField.get(field.id)}
                 onValueChange={(value) => record(field.id, value)}
               />
             ) : null,
@@ -45,36 +99,97 @@ export function FormRenderer({
         </section>
       ))}
 
-      <button type="submit">{definition.submitLabel}</button>
+      <button type="submit" disabled={pending} aria-disabled={pending}>
+        {pending ? "Submitting…" : definition.submitLabel}
+      </button>
+      <span className="sr-only" aria-live="polite">
+        {pending ? "Form submission in progress." : ""}
+      </span>
     </form>
+  );
+}
+
+function RequiredIndicator({ required }: { required: boolean }) {
+  if (!required) return null;
+  return (
+    <>
+      <span className="required-marker" aria-hidden="true">
+        {" "}*
+      </span>
+      <span className="sr-only"> (required)</span>
+    </>
+  );
+}
+
+function descriptionIds(
+  field: FormField,
+  error?: string,
+) {
+  return [
+    field.helpText ? `help-${field.id}` : null,
+    error ? `error-${field.id}` : null,
+  ]
+    .filter(Boolean)
+    .join(" ") || undefined;
+}
+
+function FieldMessages({
+  field,
+  error,
+}: {
+  field: FormField;
+  error?: string;
+}) {
+  return (
+    <>
+      {field.helpText ? (
+        <small id={`help-${field.id}`} className="help-text">
+          {field.helpText}
+        </small>
+      ) : null}
+      {error ? (
+        <span id={`error-${field.id}`} className="field-error">
+          {error}
+        </span>
+      ) : null}
+    </>
   );
 }
 
 function FormFieldControl({
   field,
+  error,
   onValueChange,
 }: {
   field: FormField;
+  error?: string;
   onValueChange: (value: unknown) => void;
 }) {
-  const help = field.helpText ? <small>{field.helpText}</small> : null;
   const required = field.required;
+  const controlId = `field-${field.id}`;
+  const describedBy = descriptionIds(field, error);
 
   switch (field.type) {
     case "long_text":
       return (
-        <label>
-          {field.label}
+        <div>
+          <label htmlFor={controlId}>
+            {field.label}
+            <RequiredIndicator required={required} />
+          </label>
           <textarea
+            id={controlId}
             name={field.id}
             placeholder={field.placeholder}
             required={required}
             minLength={field.validation?.minLength}
             maxLength={field.validation?.maxLength}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={describedBy}
             onChange={(event) => onValueChange(event.currentTarget.value)}
           />
-          {help}
-        </label>
+          <FieldMessages field={field} error={error} />
+        </div>
       );
 
     case "email":
@@ -90,9 +205,13 @@ function FormFieldControl({
             : field.type;
 
       return (
-        <label>
-          {field.label}
+        <div>
+          <label htmlFor={controlId}>
+            {field.label}
+            <RequiredIndicator required={required} />
+          </label>
           <input
+            id={controlId}
             name={field.id}
             type={type}
             placeholder={field.placeholder}
@@ -102,6 +221,8 @@ function FormFieldControl({
             min={field.validation?.min}
             max={field.validation?.max}
             pattern={field.validation?.pattern}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={describedBy}
             onChange={(event) =>
               onValueChange(
                 field.type === "number"
@@ -112,48 +233,66 @@ function FormFieldControl({
               )
             }
           />
-          {help}
-        </label>
+          <FieldMessages field={field} error={error} />
+        </div>
       );
     }
 
     case "boolean":
       return (
-        <label>
-          <input
-            name={field.id}
-            type="checkbox"
-            value="true"
-            onChange={(event) => onValueChange(event.currentTarget.checked)}
-          />
-          {field.label}
-          {help}
-        </label>
+        <div>
+          <label htmlFor={controlId}>
+            <input
+              id={controlId}
+              name={field.id}
+              type="checkbox"
+              value="true"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={describedBy}
+              onChange={(event) => onValueChange(event.currentTarget.checked)}
+            />
+            {field.label}
+            <RequiredIndicator required={required} />
+          </label>
+          <FieldMessages field={field} error={error} />
+        </div>
       );
 
     case "attestation":
       return (
-        <label>
-          <input
-            name={field.id}
-            type="checkbox"
-            value="true"
-            required={required}
-            onChange={(event) => onValueChange(event.currentTarget.checked)}
-          />
-          {field.attestationText ?? field.label}
-          {help}
-        </label>
+        <div>
+          <label htmlFor={controlId}>
+            <input
+              id={controlId}
+              name={field.id}
+              type="checkbox"
+              value="true"
+              required={required}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={describedBy}
+              onChange={(event) => onValueChange(event.currentTarget.checked)}
+            />
+            {field.attestationText ?? field.label}
+            <RequiredIndicator required={required} />
+          </label>
+          <FieldMessages field={field} error={error} />
+        </div>
       );
 
     case "select":
       return (
-        <label>
-          {field.label}
+        <div>
+          <label htmlFor={controlId}>
+            {field.label}
+            <RequiredIndicator required={required} />
+          </label>
           <select
+            id={controlId}
             name={field.id}
             required={required}
             defaultValue=""
+            aria-invalid={error ? true : undefined}
+            aria-describedby={describedBy}
             onChange={(event) => onValueChange(event.currentTarget.value)}
           >
             <option value="" disabled={required}>
@@ -165,14 +304,21 @@ function FormFieldControl({
               </option>
             ))}
           </select>
-          {help}
-        </label>
+          <FieldMessages field={field} error={error} />
+        </div>
       );
 
     case "multiselect":
       return (
-        <fieldset>
-          <legend>{field.label}</legend>
+        <fieldset
+          id={controlId}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
+        >
+          <legend>
+            {field.label}
+            <RequiredIndicator required={required} />
+          </legend>
           {(field.options ?? []).map((option) => (
             <label key={option.value}>
               <input
@@ -191,7 +337,7 @@ function FormFieldControl({
               {option.label}
             </label>
           ))}
-          {help}
+          <FieldMessages field={field} error={error} />
         </fieldset>
       );
 
@@ -200,23 +346,29 @@ function FormFieldControl({
         <AddressFieldControl
           field={field}
           required={required}
-          help={help}
+          error={error}
           onValueChange={onValueChange}
         />
       );
 
     case "file":
       return (
-        <fieldset>
-          <legend>{field.label}</legend>
+        <fieldset
+          id={controlId}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
+        >
+          <legend>
+            {field.label}
+            <RequiredIndicator required={required} />
+          </legend>
           <input type="file" disabled multiple={(field.maxFiles ?? 1) > 1} />
           <small>
-            The document subsystem supports immutable submission attachments, but
-            the generic anonymous browser renderer does not enable binary upload by
-            default. Deployments may connect a vetted public-upload transport to the
-            submission attachment service.
+            Secure attachment upload is not available in this generic public
+            form. The form administrator must enable a vetted public-upload
+            service before this required field can be used.
           </small>
-          {help}
+          <FieldMessages field={field} error={error} />
         </fieldset>
       );
   }
@@ -239,15 +391,17 @@ function addressLabel(
 function AddressFieldControl({
   field,
   required,
-  help,
+  error,
   onValueChange,
 }: {
   field: FormField;
   required: boolean;
-  help: ReactNode;
+  error?: string;
   onValueChange: (value: unknown) => void;
 }) {
   const [address, setAddress] = useState<Record<string, string>>({});
+  const controlId = `field-${field.id}`;
+  const describedBy = descriptionIds(field, error);
 
   const updatePart = (part: string, value: string) => {
     const next = { ...address, [part]: value };
@@ -256,26 +410,49 @@ function AddressFieldControl({
   };
 
   return (
-    <fieldset>
-      <legend>{field.label}</legend>
+    <fieldset
+      id={controlId}
+      aria-invalid={error ? true : undefined}
+      aria-describedby={describedBy}
+    >
+      <legend>
+        {field.label}
+        <RequiredIndicator required={required} />
+      </legend>
       {(["line1", "line2", "city", "region", "postalCode", "country"] as const).map(
-        (part) => (
-          <label key={part}>
-            {addressLabel(part)}
-            <input
-              name={`${field.id}.${part}`}
-              required={
-                required &&
-                ["line1", "city", "region", "postalCode", "country"].includes(part)
-              }
-              onChange={(event) =>
-                updatePart(part, event.currentTarget.value)
-              }
-            />
-          </label>
-        ),
+        (part) => {
+          const inputId = `${controlId}-${part}`;
+          return (
+            <div key={part}>
+              <label htmlFor={inputId}>
+                {addressLabel(part)}
+                <RequiredIndicator
+                  required={
+                    required &&
+                    ["line1", "city", "region", "postalCode", "country"].includes(
+                      part,
+                    )
+                  }
+                />
+              </label>
+              <input
+                id={inputId}
+                name={`${field.id}.${part}`}
+                required={
+                  required &&
+                  ["line1", "city", "region", "postalCode", "country"].includes(
+                    part,
+                  )
+                }
+                onChange={(event) =>
+                  updatePart(part, event.currentTarget.value)
+                }
+              />
+            </div>
+          );
+        },
       )}
-      {help}
+      <FieldMessages field={field} error={error} />
     </fieldset>
   );
 }
