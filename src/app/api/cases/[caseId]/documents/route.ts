@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRuntimeDatabase } from "@/db/runtime";
+import { rejectUntrustedBrowserMutation } from "@/lib/request-security";
 import {
   hasPermission,
   requireTenantScope,
@@ -20,6 +21,9 @@ export async function POST(
     params: Promise<{ caseId: string }>;
   },
 ) {
+  const originRejection = rejectUntrustedBrowserMutation(request);
+  if (originRejection) return originRejection;
+
   const context = await getCurrentAuthorizationContext();
   if (!context) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
