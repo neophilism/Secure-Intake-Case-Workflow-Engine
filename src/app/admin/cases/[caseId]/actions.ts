@@ -28,6 +28,18 @@ import {
   pauseDeadline,
   resumeDeadline,
 } from "@/modules/deadlines/service";
+import {
+  createCaseNote,
+  createOutboundCorrespondenceDraft,
+  queueOutboundCorrespondence,
+  recordInboundCorrespondence,
+  recordOutboundCorrespondenceSent,
+} from "@/modules/communications/service";
+import {
+  parseCommunicationChannel,
+  parseCommunicationVisibility,
+  parseRecipientText,
+} from "@/modules/communications/policy";
 
 async function requireCaseContext() {
   const context = await getCurrentAuthorizationContext();
@@ -450,4 +462,238 @@ export async function cancelDeadlineAction(
     formData,
     "cancel",
   );
+}
+
+
+export async function createCaseNoteAction(
+  caseId: string,
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  const visibility = parseCommunicationVisibility(
+    String(formData.get("visibility") ?? "internal"),
+  );
+
+  const permission =
+    visibility === "internal"
+      ? "note:create_internal"
+      : "note:create_participant";
+  if (!hasPermission(context, permission)) {
+    redirect("/forbidden");
+  }
+
+  const body = String(formData.get("body") ?? "").trim();
+  const documentVersionIds = formData
+    .getAll("documentVersionIds")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+
+  if (!body) {
+    redirect(`/admin/cases/${caseId}?error=note_body_required`);
+  }
+
+  try {
+    await createCaseNote(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        caseId,
+        visibility,
+        body,
+        documentVersionIds,
+        actorUserId: context.user.id,
+      },
+    );
+  } catch {
+    redirect(`/admin/cases/${caseId}?error=note_create_failed`);
+  }
+
+  redirect(`/admin/cases/${caseId}`);
+}
+
+export async function createOutboundCorrespondenceAction(
+  caseId: string,
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (!hasPermission(context, "correspondence:manage")) {
+    redirect("/forbidden");
+  }
+
+  const channel = parseCommunicationChannel(
+    String(formData.get("channel") ?? "email"),
+  );
+  const visibility = parseCommunicationVisibility(
+    String(
+      formData.get("visibility") ?? "case_participants",
+    ),
+  );
+  const recipients = parseRecipientText(channel, {
+    to: String(formData.get("to") ?? ""),
+    cc: String(formData.get("cc") ?? ""),
+    bcc: String(formData.get("bcc") ?? ""),
+  });
+  const documentVersionIds = formData
+    .getAll("documentVersionIds")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+
+  try {
+    await createOutboundCorrespondenceDraft(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        caseId,
+        threadId:
+          String(formData.get("threadId") ?? "").trim() || null,
+        channel,
+        visibility,
+        subject:
+          String(formData.get("subject") ?? "").trim() || null,
+        body: String(formData.get("body") ?? "").trim() || null,
+        senderAddress:
+          String(formData.get("senderAddress") ?? "").trim() || null,
+        recipients,
+        templateId:
+          String(formData.get("templateId") ?? "").trim() || null,
+        documentVersionIds,
+        actorUserId: context.user.id,
+      },
+    );
+  } catch {
+    redirect(
+      `/admin/cases/${caseId}?error=correspondence_draft_failed`,
+    );
+  }
+
+  redirect(`/admin/cases/${caseId}`);
+}
+
+export async function queueCorrespondenceAction(
+  caseId: string,
+  messageId: string,
+  _formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (!hasPermission(context, "correspondence:manage")) {
+    redirect("/forbidden");
+  }
+
+  try {
+    await queueOutboundCorrespondence(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        messageId,
+        actorUserId: context.user.id,
+      },
+    );
+  } catch {
+    redirect(
+      `/admin/cases/${caseId}?error=correspondence_queue_failed`,
+    );
+  }
+
+  redirect(`/admin/cases/${caseId}`);
+}
+
+export async function recordCorrespondenceSentAction(
+  caseId: string,
+  messageId: string,
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (!hasPermission(context, "correspondence:manage")) {
+    redirect("/forbidden");
+  }
+
+  const externalMessageId = String(
+    formData.get("externalMessageId") ?? "",
+  ).trim();
+
+  try {
+    await recordOutboundCorrespondenceSent(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        messageId,
+        actorUserId: context.user.id,
+        provider: "manual-record",
+        externalMessageId: externalMessageId || null,
+        deliveryMetadata: {
+          recordedThrough: "case_admin",
+        },
+      },
+    );
+  } catch {
+    redirect(
+      `/admin/cases/${caseId}?error=correspondence_sent_failed`,
+    );
+  }
+
+  redirect(`/admin/cases/${caseId}`);
+}
+
+export async function recordInboundCorrespondenceAction(
+  caseId: string,
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (!hasPermission(context, "correspondence:manage")) {
+    redirect("/forbidden");
+  }
+
+  const channel = parseCommunicationChannel(
+    String(formData.get("channel") ?? "email"),
+  );
+  const visibility = parseCommunicationVisibility(
+    String(
+      formData.get("visibility") ?? "case_participants",
+    ),
+  );
+  const recipients = parseRecipientText(channel, {
+    to: String(formData.get("to") ?? ""),
+    cc: String(formData.get("cc") ?? ""),
+    bcc: String(formData.get("bcc") ?? ""),
+  });
+  const documentVersionIds = formData
+    .getAll("documentVersionIds")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+
+  try {
+    await recordInboundCorrespondence(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        caseId,
+        threadId:
+          String(formData.get("threadId") ?? "").trim() || null,
+        inReplyToMessageId:
+          String(formData.get("inReplyToMessageId") ?? "").trim() ||
+          null,
+        channel,
+        visibility,
+        subject:
+          String(formData.get("subject") ?? "").trim() || null,
+        body: String(formData.get("body") ?? "").trim(),
+        senderAddress:
+          String(formData.get("senderAddress") ?? "").trim() || null,
+        recipients,
+        externalMessageId:
+          String(formData.get("externalMessageId") ?? "").trim() ||
+          null,
+        provider:
+          String(formData.get("provider") ?? "").trim() || "manual-record",
+        documentVersionIds,
+        actorUserId: context.user.id,
+      },
+    );
+  } catch {
+    redirect(
+      `/admin/cases/${caseId}?error=correspondence_inbound_failed`,
+    );
+  }
+
+  redirect(`/admin/cases/${caseId}`);
 }
