@@ -296,3 +296,29 @@ CREATE TRIGGER disclosure_publications_preserve_identity
 BEFORE UPDATE ON "disclosure_publications"
 FOR EACH ROW
 EXECUTE FUNCTION preserve_disclosure_publication_identity();
+
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION preserve_document_derivative_provenance()
+RETURNS trigger AS $$
+BEGIN
+  IF NEW.organization_id IS DISTINCT FROM OLD.organization_id
+    OR NEW.source_document_version_id IS DISTINCT FROM OLD.source_document_version_id
+    OR NEW.derivative_document_version_id IS DISTINCT FROM OLD.derivative_document_version_id
+    OR NEW.audience IS DISTINCT FROM OLD.audience
+    OR NEW.redaction_summary IS DISTINCT FROM OLD.redaction_summary
+    OR NEW.created_by_user_id IS DISTINCT FROM OLD.created_by_user_id
+    OR NEW.created_at IS DISTINCT FROM OLD.created_at
+  THEN
+    RAISE EXCEPTION 'Document derivative provenance is immutable';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+--> statement-breakpoint
+DROP TRIGGER IF EXISTS document_derivatives_preserve_provenance
+  ON "document_derivatives";
+--> statement-breakpoint
+CREATE TRIGGER document_derivatives_preserve_provenance
+BEFORE UPDATE ON "document_derivatives"
+FOR EACH ROW
+EXECUTE FUNCTION preserve_document_derivative_provenance();
