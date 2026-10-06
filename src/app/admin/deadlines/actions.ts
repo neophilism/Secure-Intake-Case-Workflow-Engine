@@ -101,16 +101,17 @@ export async function addDeadlineCalendarExclusionAction(
 export async function runDeadlineSweepAction() {
   const context = await requireDeadlineManager();
 
+  let result;
   try {
-    const result = await sweepOrganizationDeadlines(
+    result = await sweepOrganizationDeadlines(
       getRuntimeDatabase(),
       requireTenantScope(context),
-    );
-
-    redirect(
-      `/admin/deadlines?sweep=warnings:${result.warnings},overdue:${result.overdue},escalated:${result.escalated},failed:${result.escalationFailures}`,
     );
   } catch {
     redirect("/admin/deadlines?error=sweep_failed");
   }
+
+  redirect(
+    `/admin/deadlines?sweep=warnings:${result.warnings},overdue:${result.overdue},escalated:${result.escalated},failed:${result.escalationFailures}`,
+  );
 }
