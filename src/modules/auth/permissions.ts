@@ -128,6 +128,7 @@ export const defaultRoleTemplates: readonly RoleTemplate[] = [
       "submission:view",
       "case:view",
       "case:appeal",
+      "document:view",
       "document:view_private",
       "audit:view",
     ],
