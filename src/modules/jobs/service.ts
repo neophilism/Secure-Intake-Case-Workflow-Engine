@@ -1,0 +1,509 @@
+import {
+  and,
+  asc,
+  eq,
+  inArray,
+  isNull,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
+import type {
+  Database,
+  DatabaseTransaction,
+} from "@/db/client";
+import {
+  backgroundJobAttempts,
+  backgroundJobs,
+  backgroundSchedules,
+  organizations,
+} from "@/db/schema";
+import type { TenantScope } from "@/lib/tenancy";
+import { createTrustedTenantScope } from "@/lib/tenancy";
+import { retryDelaySeconds, nextScheduleRunAt } from "./backoff";
+
+const jobTypePattern = /^[a-z][a-z0-9_.:-]*$/;
+const maxPayloadBytes = 64 * 1024;
+
+export type BackgroundJob = typeof backgroundJobs.$inferSelect;
+
+export interface EnqueueBackgroundJobInput {
+  jobType: string;
+  payload?: Record<string, unknown>;
+  priority?: number;
+  dedupeKey?: string | null;
+  availableAt?: Date;
+  maxAttempts?: number;
+}
+
+export interface ClaimedJob extends BackgroundJob {
+  attemptNumber: number;
+}
+
+export async function enqueueBackgroundJob(
+  db: Database,
+  scope: TenantScope,
+  input: EnqueueBackgroundJobInput,
+) {
+  return db.transaction((tx) =>
+    enqueueBackgroundJobInTransaction(tx, scope, input),
+  );
+}
+
+export async function enqueueBackgroundJobInTransaction(
+  tx: DatabaseTransaction,
+  scope: TenantScope,
+  input: EnqueueBackgroundJobInput,
+) {
+  validateJobInput(input);
+  const payload = input.payload ?? {};
+  const dedupeKey = input.dedupeKey?.trim() || null;
+
+  const [created] = await tx
+    .insert(backgroundJobs)
+    .values({
+      organizationId: scope.organizationId,
+      jobType: input.jobType,
+      payload,
+      priority: input.priority ?? 100,
+      dedupeKey,
+      availableAt: input.availableAt ?? new Date(),
+      maxAttempts: input.maxAttempts ?? 5,
+    })
+    .onConflictDoNothing()
+    .returning();
+
+  if (created) return created;
+  if (!dedupeKey) {
+    throw new Error("Background job could not be enqueued.");
+  }
+
+  const [existing] = await tx
+    .select()
+    .from(backgroundJobs)
+    .where(
+      and(
+        eq(backgroundJobs.organizationId, scope.organizationId),
+        eq(backgroundJobs.jobType, input.jobType),
+        eq(backgroundJobs.dedupeKey, dedupeKey),
+      ),
+    )
+    .limit(1);
+
+  if (!existing) {
+    throw new Error("Background job deduplication lookup failed.");
+  }
+
+  return existing;
+}
+
+export async function claimBackgroundJobs(
+  db: Database,
+  input: {
+    workerId: string;
+    acceptedTypes: readonly string[];
+    limit: number;
+    leaseSeconds: number;
+    now?: Date;
+  },
+): Promise<ClaimedJob[]> {
+  if (
+    !input.workerId.trim() ||
+    input.acceptedTypes.length === 0 ||
+    !Number.isInteger(input.limit) ||
+    input.limit < 1 ||
+    !Number.isInteger(input.leaseSeconds) ||
+    input.leaseSeconds < 1
+  ) {
+    return [];
+  }
+
+  const now = input.now ?? new Date();
+  const candidates = await db
+    .select({ id: backgroundJobs.id })
+    .from(backgroundJobs)
+    .where(
+      and(
+        inArray(backgroundJobs.jobType, [...input.acceptedTypes]),
+        lte(backgroundJobs.availableAt, now),
+        or(
+          eq(backgroundJobs.status, "pending"),
+          and(
+            eq(backgroundJobs.status, "running"),
+            lte(backgroundJobs.leaseUntil, now),
+          ),
+        ),
+      ),
+    )
+    .orderBy(
+      asc(backgroundJobs.priority),
+      asc(backgroundJobs.availableAt),
+      asc(backgroundJobs.createdAt),
+    )
+    .limit(Math.max(input.limit * 3, input.limit));
+
+  const claimed: ClaimedJob[] = [];
+
+  for (const candidate of candidates) {
+    if (claimed.length >= input.limit) break;
+
+    const result = await db.transaction(async (tx) => {
+      await tx
+        .update(backgroundJobAttempts)
+        .set({
+          outcome: "lease_expired",
+          errorMessage: "Worker lease expired before completion.",
+          completedAt: now,
+        })
+        .where(
+          and(
+            eq(backgroundJobAttempts.jobId, candidate.id),
+            isNull(backgroundJobAttempts.completedAt),
+          ),
+        );
+
+      const leaseUntil = new Date(
+        now.getTime() + input.leaseSeconds * 1000,
+      );
+      const [job] = await tx
+        .update(backgroundJobs)
+        .set({
+          status: "running",
+          attempts: sql`${backgroundJobs.attempts} + 1`,
+          lockedBy: input.workerId,
+          lockedAt: now,
+          leaseUntil,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(backgroundJobs.id, candidate.id),
+            lte(backgroundJobs.availableAt, now),
+            or(
+              eq(backgroundJobs.status, "pending"),
+              and(
+                eq(backgroundJobs.status, "running"),
+                lte(backgroundJobs.leaseUntil, now),
+              ),
+            ),
+          ),
+        )
+        .returning();
+
+      if (!job) return null;
+
+      await tx.insert(backgroundJobAttempts).values({
+        organizationId: job.organizationId,
+        jobId: job.id,
+        attemptNumber: job.attempts,
+        workerId: input.workerId,
+        startedAt: now,
+      });
+
+      return {
+        ...job,
+        attemptNumber: job.attempts,
+      } satisfies ClaimedJob;
+    });
+
+    if (result) claimed.push(result);
+  }
+
+  return claimed;
+}
+
+export async function completeBackgroundJob(
+  db: Database,
+  job: ClaimedJob,
+  workerId: string,
+  now = new Date(),
+) {
+  return db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(backgroundJobs)
+      .set({
+        status: "succeeded",
+        lockedBy: null,
+        lockedAt: null,
+        leaseUntil: null,
+        lastError: null,
+        completedAt: now,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(backgroundJobs.id, job.id),
+          eq(backgroundJobs.status, "running"),
+          eq(backgroundJobs.lockedBy, workerId),
+        ),
+      )
+      .returning();
+
+    if (!updated) {
+      throw new Error("Background job lease is no longer owned by this worker.");
+    }
+
+    await tx
+      .update(backgroundJobAttempts)
+      .set({
+        outcome: "succeeded",
+        completedAt: now,
+      })
+      .where(
+        and(
+          eq(backgroundJobAttempts.jobId, job.id),
+          eq(
+            backgroundJobAttempts.attemptNumber,
+            job.attemptNumber,
+          ),
+          eq(backgroundJobAttempts.workerId, workerId),
+          isNull(backgroundJobAttempts.completedAt),
+        ),
+      );
+
+    return updated;
+  });
+}
+
+export async function failBackgroundJob(
+  db: Database,
+  job: ClaimedJob,
+  workerId: string,
+  error: unknown,
+  now = new Date(),
+) {
+  const message =
+    error instanceof Error
+      ? error.message.slice(0, 2000)
+      : "Unknown background job failure.";
+  const terminal = job.attemptNumber >= job.maxAttempts;
+  const availableAt = terminal
+    ? job.availableAt
+    : new Date(
+        now.getTime() +
+          retryDelaySeconds(job.attemptNumber) * 1000,
+      );
+
+  return db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(backgroundJobs)
+      .set({
+        status: terminal ? "dead" : "pending",
+        availableAt,
+        lockedBy: null,
+        lockedAt: null,
+        leaseUntil: null,
+        lastError: message,
+        completedAt: terminal ? now : null,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(backgroundJobs.id, job.id),
+          eq(backgroundJobs.status, "running"),
+          eq(backgroundJobs.lockedBy, workerId),
+        ),
+      )
+      .returning();
+
+    if (!updated) {
+      throw new Error("Background job lease is no longer owned by this worker.");
+    }
+
+    await tx
+      .update(backgroundJobAttempts)
+      .set({
+        outcome: terminal ? "dead" : "retry",
+        errorMessage: message,
+        completedAt: now,
+      })
+      .where(
+        and(
+          eq(backgroundJobAttempts.jobId, job.id),
+          eq(
+            backgroundJobAttempts.attemptNumber,
+            job.attemptNumber,
+          ),
+          eq(backgroundJobAttempts.workerId, workerId),
+          isNull(backgroundJobAttempts.completedAt),
+        ),
+      );
+
+    return updated;
+  });
+}
+
+export async function retryDeadBackgroundJob(
+  db: Database,
+  scope: TenantScope,
+  jobId: string,
+  additionalAttempts = 5,
+) {
+  if (!Number.isInteger(additionalAttempts) || additionalAttempts < 1) {
+    throw new Error("Additional attempts must be positive.");
+  }
+
+  const [updated] = await db
+    .update(backgroundJobs)
+    .set({
+      status: "pending",
+      maxAttempts: sql`${backgroundJobs.attempts} + ${additionalAttempts}`,
+      availableAt: new Date(),
+      completedAt: null,
+      lastError: null,
+      lockedBy: null,
+      lockedAt: null,
+      leaseUntil: null,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(backgroundJobs.id, jobId),
+        eq(backgroundJobs.organizationId, scope.organizationId),
+        eq(backgroundJobs.status, "dead"),
+      ),
+    )
+    .returning();
+
+  return updated ?? null;
+}
+
+export async function ensureBuiltinSchedules(
+  db: Database,
+  intervalSeconds: number,
+  now = new Date(),
+) {
+  if (!Number.isInteger(intervalSeconds) || intervalSeconds < 1) {
+    throw new Error("Deadline sweep interval must be positive.");
+  }
+
+  const activeOrganizations = await db
+    .select({ id: organizations.id })
+    .from(organizations)
+    .where(eq(organizations.status, "active"));
+
+  for (const organization of activeOrganizations) {
+    await db
+      .insert(backgroundSchedules)
+      .values({
+        organizationId: organization.id,
+        key: "deadline-sweep",
+        jobType: "deadline.sweep",
+        payload: {},
+        intervalSeconds,
+        priority: 20,
+        maxAttempts: 5,
+        nextRunAt: now,
+      })
+      .onConflictDoUpdate({
+        target: [
+          backgroundSchedules.organizationId,
+          backgroundSchedules.key,
+        ],
+        set: {
+          intervalSeconds,
+          updatedAt: now,
+        },
+      });
+  }
+}
+
+export async function enqueueDueSchedules(
+  db: Database,
+  now = new Date(),
+) {
+  const due = await db
+    .select()
+    .from(backgroundSchedules)
+    .where(
+      and(
+        eq(backgroundSchedules.status, "active"),
+        lte(backgroundSchedules.nextRunAt, now),
+      ),
+    )
+    .orderBy(asc(backgroundSchedules.nextRunAt))
+    .limit(100);
+
+  let enqueued = 0;
+
+  for (const schedule of due) {
+    const didEnqueue = await db.transaction(async (tx) => {
+      const nextRunAt = nextScheduleRunAt(
+        schedule.nextRunAt,
+        schedule.intervalSeconds,
+        now,
+      );
+
+      const [claimed] = await tx
+        .update(backgroundSchedules)
+        .set({
+          nextRunAt,
+          lastEnqueuedAt: now,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(backgroundSchedules.id, schedule.id),
+            eq(backgroundSchedules.status, "active"),
+            eq(backgroundSchedules.nextRunAt, schedule.nextRunAt),
+          ),
+        )
+        .returning();
+
+      if (!claimed) return false;
+
+      await enqueueBackgroundJobInTransaction(
+        tx,
+        createTrustedTenantScope(schedule.organizationId),
+        {
+          jobType: schedule.jobType,
+          payload: schedule.payload,
+          priority: schedule.priority,
+          maxAttempts: schedule.maxAttempts,
+          dedupeKey:
+            `schedule:${schedule.id}:${schedule.nextRunAt.toISOString()}`,
+          availableAt: now,
+        },
+      );
+
+      return true;
+    });
+
+    if (didEnqueue) enqueued += 1;
+  }
+
+  return enqueued;
+}
+
+function validateJobInput(input: EnqueueBackgroundJobInput) {
+  if (!jobTypePattern.test(input.jobType)) {
+    throw new Error("Background job type is invalid.");
+  }
+  if (
+    input.maxAttempts !== undefined &&
+    (!Number.isInteger(input.maxAttempts) ||
+      input.maxAttempts < 1 ||
+      input.maxAttempts > 100)
+  ) {
+    throw new Error("Background job max attempts are invalid.");
+  }
+  if (
+    input.priority !== undefined &&
+    (!Number.isInteger(input.priority) ||
+      input.priority < 0 ||
+      input.priority > 10000)
+  ) {
+    throw new Error("Background job priority is invalid.");
+  }
+  if (
+    input.dedupeKey &&
+    (input.dedupeKey.length > 500 || !input.dedupeKey.trim())
+  ) {
+    throw new Error("Background job dedupe key is invalid.");
+  }
+
+  const encoded = JSON.stringify(input.payload ?? {});
+  if (Buffer.byteLength(encoded, "utf8") > maxPayloadBytes) {
+    throw new Error("Background job payload exceeds 64 KiB.");
+  }
+}
