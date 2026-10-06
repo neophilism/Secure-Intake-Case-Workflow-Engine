@@ -14,7 +14,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "auth:bootstrap": "tsx scripts/bootstrap-admin.ts",
-    "check": "npm run typecheck && npm run test && npm run build"
+    "check": "npm run typecheck && npm run test && npm run build",
+    "auth:sync-roles": "tsx scripts/sync-default-roles.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
