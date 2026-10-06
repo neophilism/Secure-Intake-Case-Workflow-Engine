@@ -256,6 +256,49 @@ export const authSessions = pgTable(
 );
 
 
+export const apiClients = pgTable(
+  "api_clients",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    keyPrefix: text("key_prefix").notNull(),
+    keyHash: text("key_hash").notNull(),
+    permissions: jsonb("permissions")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    status: text("status").notNull().default("active"),
+    rateLimitPerMinute: integer("rate_limit_per_minute")
+      .notNull()
+      .default(120),
+    rateWindowStartedAt: timestamp("rate_window_started_at", {
+      withTimezone: true,
+    }),
+    rateWindowCount: integer("rate_window_count").notNull().default(0),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("api_clients_organization_idx").on(table.organizationId),
+    uniqueIndex("api_clients_key_prefix_idx").on(table.keyPrefix),
+    uniqueIndex("api_clients_key_hash_idx").on(table.keyHash),
+  ],
+);
+
+
 export const intakeForms = pgTable(
   "intake_forms",
   {
@@ -1036,6 +1079,42 @@ export const documentAccessEvents = pgTable(
 
 
 
+export const webhookSubscriptions = pgTable(
+  "webhook_subscriptions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    endpointUrl: text("endpoint_url").notNull(),
+    eventTypes: jsonb("event_types")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    signingSecretCiphertext: text("signing_secret_ciphertext").notNull(),
+    status: text("status").notNull().default("active"),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    disabledAt: timestamp("disabled_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("webhook_subscriptions_organization_idx").on(table.organizationId),
+    uniqueIndex("webhook_subscriptions_org_name_idx").on(
+      table.organizationId,
+      table.name,
+    ),
+  ],
+);
+
+
 export const auditEvents = pgTable(
   "audit_events",
   {
@@ -1091,6 +1170,51 @@ export const auditEvents = pgTable(
       table.organizationId,
       table.action,
       table.occurredAt,
+    ),
+  ],
+);
+
+
+export const webhookDeliveries = pgTable(
+  "webhook_deliveries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    subscriptionId: uuid("subscription_id")
+      .notNull()
+      .references(() => webhookSubscriptions.id, {
+        onDelete: "cascade",
+      }),
+    auditEventId: uuid("audit_event_id")
+      .notNull()
+      .references(() => auditEvents.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("pending"),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    responseStatus: integer("response_status"),
+    lastError: text("last_error"),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("webhook_deliveries_status_idx").on(
+      table.organizationId,
+      table.status,
+      table.createdAt,
+    ),
+    index("webhook_deliveries_subscription_idx").on(
+      table.subscriptionId,
+      table.createdAt,
+    ),
+    uniqueIndex("webhook_deliveries_event_subscription_idx").on(
+      table.subscriptionId,
+      table.auditEventId,
     ),
   ],
 );
