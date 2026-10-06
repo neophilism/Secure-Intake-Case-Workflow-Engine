@@ -1,3 +1,4 @@
+import React from "react";
 import { describe, expect, it } from "vitest";
 import { JSDOM } from "jsdom";
 import axe from "axe-core";
