@@ -10,6 +10,10 @@ import {
   listCases,
   listSubmittedIntakeAwaitingCase,
 } from "@/modules/cases/repository";
+import {
+  listOrganizationMembers,
+  listQueues,
+} from "@/modules/routing/repository";
 import { createCaseFromSubmissionAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +30,17 @@ export default async function CasesPage({
 
   const scope = requireTenantScope(context);
   const db = getRuntimeDatabase();
-  const records = await listCases(db, scope);
+  const [records, queues, members] = await Promise.all([
+    listCases(db, scope),
+    listQueues(db, scope),
+    listOrganizationMembers(db, scope),
+  ]);
+  const queueById = new Map(
+    queues.map((queue) => [queue.id, queue]),
+  );
+  const memberById = new Map(
+    members.map((member) => [member.membershipId, member]),
+  );
   const canReviewIntake =
     hasPermission(context, "case:create") &&
     hasPermission(context, "submission:view");
@@ -41,6 +55,10 @@ export default async function CasesPage({
         <Link href="/admin/organizations">Organization</Link>
         {" · "}
         <Link href="/admin/forms">Forms</Link>
+        {" · "}
+        <Link href="/admin/workflows">Workflows</Link>
+        {" · "}
+        <Link href="/admin/routing">Routing</Link>
       </nav>
 
       <h1>Cases</h1>
@@ -112,6 +130,8 @@ export default async function CasesPage({
                 <th>Title</th>
                 <th>Status</th>
                 <th>Priority</th>
+                <th>Queue</th>
+                <th>Assignee</th>
                 <th>Updated</th>
               </tr>
             </thead>
@@ -126,6 +146,21 @@ export default async function CasesPage({
                   <td>{record.title}</td>
                   <td>{record.status}</td>
                   <td>{record.priority}</td>
+                  <td>
+                    {record.assignedQueueId
+                      ? queueById.get(record.assignedQueueId)?.name ??
+                        record.assignedQueueId
+                      : "—"}
+                  </td>
+                  <td>
+                    {record.assignedMembershipId
+                      ? memberById.get(record.assignedMembershipId)
+                          ?.displayName ??
+                        memberById.get(record.assignedMembershipId)
+                          ?.email ??
+                        record.assignedMembershipId
+                      : "—"}
+                  </td>
                   <td>{record.updatedAt.toISOString()}</td>
                 </tr>
               ))}
