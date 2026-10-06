@@ -105,6 +105,7 @@ export async function claimBackgroundJobs(
     limit: number;
     leaseSeconds: number;
     now?: Date;
+    organizationId?: string;
   },
 ): Promise<ClaimedJob[]> {
   if (
@@ -125,6 +126,14 @@ export async function claimBackgroundJobs(
     .where(
       and(
         inArray(backgroundJobs.jobType, [...input.acceptedTypes]),
+        ...(input.organizationId
+          ? [
+              eq(
+                backgroundJobs.organizationId,
+                input.organizationId,
+              ),
+            ]
+          : []),
         lte(backgroundJobs.availableAt, now),
         or(
           eq(backgroundJobs.status, "pending"),
@@ -378,7 +387,9 @@ export async function setBackgroundScheduleStatus(
     .update(backgroundSchedules)
     .set({
       status,
-      nextRunAt: status === "active" ? new Date() : undefined,
+      ...(status === "active"
+        ? { nextRunAt: new Date() }
+        : {}),
       updatedAt: new Date(),
     })
     .where(
@@ -399,6 +410,7 @@ export async function ensureBuiltinSchedules(
   db: Database,
   intervalSeconds: number,
   now = new Date(),
+  organizationId?: string,
 ) {
   if (!Number.isInteger(intervalSeconds) || intervalSeconds < 1) {
     throw new Error("Deadline sweep interval must be positive.");
@@ -407,7 +419,14 @@ export async function ensureBuiltinSchedules(
   const activeOrganizations = await db
     .select({ id: organizations.id })
     .from(organizations)
-    .where(eq(organizations.status, "active"));
+    .where(
+      and(
+        eq(organizations.status, "active"),
+        ...(organizationId
+          ? [eq(organizations.id, organizationId)]
+          : []),
+      ),
+    );
 
   for (const organization of activeOrganizations) {
     await db
@@ -438,6 +457,7 @@ export async function ensureBuiltinSchedules(
 export async function enqueueDueSchedules(
   db: Database,
   now = new Date(),
+  organizationId?: string,
 ) {
   const due = await db
     .select()
@@ -445,6 +465,14 @@ export async function enqueueDueSchedules(
     .where(
       and(
         eq(backgroundSchedules.status, "active"),
+        ...(organizationId
+          ? [
+              eq(
+                backgroundSchedules.organizationId,
+                organizationId,
+              ),
+            ]
+          : []),
         lte(backgroundSchedules.nextRunAt, now),
       ),
     )
