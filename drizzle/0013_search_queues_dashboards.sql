@@ -41,13 +41,10 @@ CREATE INDEX IF NOT EXISTS "cases_full_text_search_idx"
   ON "cases"
   USING gin (
     to_tsvector(
-      'simple',
-      concat_ws(
-        ' ',
-        "case_number",
-        "title",
-        coalesce("summary", ''),
-        "case_type"
-      )
+      'simple'::regconfig,
+      "case_number" || ' ' ||
+      "title" || ' ' ||
+      coalesce("summary", '') || ' ' ||
+      "case_type"
     )
   );
