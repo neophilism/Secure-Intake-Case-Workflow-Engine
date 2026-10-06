@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq } from "drizzle-orm";
 import { createDatabase } from "../src/db/client";
 import {
+  auditEvents,
   caseQueues,
   caseTeams,
   caseWorkflowVersions,
@@ -294,6 +295,35 @@ async function main() {
           actorUserId: actor.userId,
         }),
       /not available/i,
+    );
+
+    const protectedAuditEvents = await db
+      .select({
+        action: auditEvents.action,
+        previousState: auditEvents.previousState,
+        newState: auditEvents.newState,
+        metadata: auditEvents.metadata,
+      })
+      .from(auditEvents)
+      .where(
+        and(
+          eq(auditEvents.organizationId, scope.organizationId),
+          eq(auditEvents.resourceType, "protected_compartment"),
+        ),
+      );
+    assert.deepEqual(
+      new Set(protectedAuditEvents.map((event) => event.action)),
+      new Set([
+        "protected_data.reveal_requested",
+        "protected_data.reveal_approved",
+        "protected_data.revealed",
+      ]),
+    );
+    assert.equal(
+      JSON.stringify(protectedAuditEvents).includes(
+        "protected submitted value",
+      ),
+      false,
     );
 
     let record = await createCaseFromSubmission(db, scope, {
