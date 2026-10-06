@@ -350,8 +350,11 @@ export function CaseCommunicationsPanel({
                   Visibility
                   <select
                     name="visibility"
-                    defaultValue="case_participants"
+                    defaultValue=""
                   >
+                    <option value="">
+                      template default / case participants
+                    </option>
                     <option value="case_participants">
                       case participants
                     </option>
