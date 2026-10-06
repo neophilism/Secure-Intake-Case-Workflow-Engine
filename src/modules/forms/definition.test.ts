@@ -224,4 +224,31 @@ describe("form definition", () => {
     ).toThrow(/same protected compartment/);
   });
 
+  it("parses an opt-in participant portal policy", () => {
+    const definition = parseFormDefinition({
+      schemaVersion: 1,
+      participantPortal: {
+        enabled: true,
+      },
+      sections: [
+        {
+          id: "details",
+          title: "Details",
+          fields: [
+            {
+              id: "value",
+              type: "short_text",
+              label: "Value",
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(definition.participantPortal).toEqual({
+      enabled: true,
+      allowMessaging: true,
+    });
+  });
+
 });
