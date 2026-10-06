@@ -37,6 +37,7 @@ const focusLabels: Record<
   string
 > = {
   all: "All cases",
+  open: "Open",
   mine: "Assigned to me",
   unassigned: "Unassigned",
   overdue: "Overdue",
@@ -115,7 +116,7 @@ export default async function OperationsPage({
     : params.saved;
 
   const cards = [
-    ["all", "Open", dashboard.open],
+    ["open", "Open", dashboard.open],
     ["mine", "Assigned to me", dashboard.mine],
     ["unassigned", "Unassigned", dashboard.unassigned],
     ["overdue", "Overdue", dashboard.overdue],
