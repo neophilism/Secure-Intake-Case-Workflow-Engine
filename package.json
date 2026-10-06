@@ -1,6 +1,6 @@
 {
   "name": "secure-intake-case-workflow-engine",
-  "version": "0.19.0",
+  "version": "1.0.0-rc.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -21,7 +21,9 @@
     "worker:once": "tsx scripts/run-worker.ts --once",
     "jobs:seed-schedules": "tsx scripts/seed-background-schedules.ts",
     "app:manifest": "tsx scripts/apply-application-manifest.ts",
-    "test:a11y": "vitest run src/accessibility"
+    "test:a11y": "vitest run src/accessibility",
+    "reference:validate": "tsx examples/reference-app/validate.ts",
+    "reference:seed": "tsx examples/reference-app/seed.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
