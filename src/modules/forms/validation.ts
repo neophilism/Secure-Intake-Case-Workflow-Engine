@@ -1,7 +1,10 @@
 import { z } from "zod";
 import type { FormDefinition, FormField } from "./definition";
 import { fieldsInDefinition } from "./definition";
-import { isFieldVisible, type AnswerMap } from "./visibility";
+import {
+  type AnswerMap,
+  visibleFieldIdsForDefinition,
+} from "./visibility";
 
 export interface ValidationError {
   fieldId: string;
@@ -22,8 +25,10 @@ export function validateSubmissionAnswers(
   const answers = filterKnownAnswers(definition, rawAnswers);
   const errors: ValidationError[] = [];
 
+  const visibleFieldIds = visibleFieldIdsForDefinition(definition, answers);
+
   for (const field of fieldsInDefinition(definition)) {
-    if (!isFieldVisible(field, answers)) continue;
+    if (!visibleFieldIds.has(field.id)) continue;
 
     const value = answers[field.id];
     const empty = isEmpty(value);
@@ -52,12 +57,15 @@ export function filterKnownAnswers(
   const declaredAnswers = Object.fromEntries(
     Object.entries(rawAnswers).filter(([fieldId]) => known.has(fieldId)),
   );
+  const visible = visibleFieldIdsForDefinition(
+    definition,
+    declaredAnswers,
+  );
 
   return Object.fromEntries(
-    Object.entries(declaredAnswers).filter(([fieldId]) => {
-      const field = fields.find((candidate) => candidate.id === fieldId);
-      return field ? isFieldVisible(field, declaredAnswers) : false;
-    }),
+    Object.entries(declaredAnswers).filter(([fieldId]) =>
+      visible.has(fieldId),
+    ),
   );
 }
 
