@@ -283,7 +283,7 @@ export async function createOutboundCorrespondenceDraft(
       throw new Error("Correspondence body is required.");
     }
     if (!visibility) {
-      visibility = "case_participants";
+      visibility = "participant";
     }
 
     const thread = await resolveThread(

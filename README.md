@@ -14,11 +14,11 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 13 — review, reconsideration, and appeals**
+**PR 14 — public/private data separation and redaction**
 
-This milestone adds configurable review hierarchies, filing-window enforcement, immutable challenged-decision and policy snapshots, independent reviewer assignment, written decisions and configurable outcomes, review decision clocks, withdrawal, explicit remand/reopen-style case effects, review notifications, organization-wide review operations, and review history in the unified case timeline.
+This milestone centralizes PUBLIC / PARTICIPANT / INTERNAL / RESTRICTED classification, adds immutable disclosure publication revisions, independent disclosure review, explicit publication/withdrawal, provenance-linked redacted document derivatives, and anonymous public routes that read only from approved publication records.
 
-The engine deliberately does not assign hidden semantics to labels such as appeal, reconsideration, or remand; downstream applications define their lawful hierarchy, outcomes, and terminology.
+Public classification alone never exposes a source record. Anonymous users can see only a separately reviewed and published public-safe representation and explicitly linked scan-clean public derivatives.
 
 See [docs/development.md](docs/development.md) for local setup and [docs/architecture](docs/architecture) for architectural decisions.
 

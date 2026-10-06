@@ -1275,7 +1275,7 @@ export const communicationTemplates = pgTable(
     bodyTemplate: text("body_template").notNull(),
     defaultVisibility: text("default_visibility")
       .notNull()
-      .default("case_participants"),
+      .default("participant"),
     status: text("status").notNull().default("active"),
     createdByUserId: uuid("created_by_user_id").references(() => users.id, {
       onDelete: "set null",
@@ -1331,7 +1331,7 @@ export const caseCorrespondenceMessages = pgTable(
       .references(() => caseCommunicationThreads.id, { onDelete: "cascade" }),
     direction: text("direction").notNull(),
     channel: text("channel").notNull().default("email"),
-    visibility: text("visibility").notNull().default("case_participants"),
+    visibility: text("visibility").notNull().default("participant"),
     status: text("status").notNull(),
     subject: text("subject"),
     body: text("body").notNull(),
@@ -1829,6 +1829,189 @@ export const caseReviewHistory = pgTable(
     index("case_review_history_review_idx").on(
       table.reviewId,
       table.occurredAt,
+    ),
+  ],
+);
+
+
+export const disclosurePublications = pgTable(
+  "disclosure_publications",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    sourceType: text("source_type").notNull(),
+    sourceId: uuid("source_id").notNull(),
+    slug: text("slug").notNull(),
+    status: text("status").notNull().default("draft"),
+    withdrawnAt: timestamp("withdrawn_at", { withTimezone: true }),
+    withdrawnByUserId: uuid("withdrawn_by_user_id").references(
+      () => users.id,
+      { onDelete: "set null" },
+    ),
+    withdrawalReason: text("withdrawal_reason"),
+    createdByUserId: uuid("created_by_user_id").references(
+      () => users.id,
+      { onDelete: "set null" },
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("disclosure_publications_organization_idx").on(
+      table.organizationId,
+    ),
+    uniqueIndex("disclosure_publications_org_slug_idx").on(
+      table.organizationId,
+      table.slug,
+    ),
+    uniqueIndex("disclosure_publications_source_idx").on(
+      table.organizationId,
+      table.sourceType,
+      table.sourceId,
+    ),
+  ],
+);
+
+export const disclosurePublicationVersions = pgTable(
+  "disclosure_publication_versions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    publicationId: uuid("publication_id")
+      .notNull()
+      .references(() => disclosurePublications.id, {
+        onDelete: "cascade",
+      }),
+    versionNumber: integer("version_number").notNull(),
+    publicTitle: text("public_title").notNull(),
+    publicSummary: text("public_summary"),
+    publicData: jsonb("public_data")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    redactionSummary: text("redaction_summary"),
+    status: text("status").notNull().default("draft"),
+    preparedByUserId: uuid("prepared_by_user_id").references(
+      () => users.id,
+      { onDelete: "set null" },
+    ),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    reviewedByUserId: uuid("reviewed_by_user_id").references(
+      () => users.id,
+      { onDelete: "set null" },
+    ),
+    reviewNote: text("review_note"),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("disclosure_publication_versions_org_idx").on(
+      table.organizationId,
+    ),
+    index("disclosure_publication_versions_status_idx").on(
+      table.organizationId,
+      table.status,
+    ),
+    uniqueIndex("disclosure_publication_versions_number_idx").on(
+      table.publicationId,
+      table.versionNumber,
+    ),
+    uniqueIndex("disclosure_publication_versions_published_idx")
+      .on(table.publicationId)
+      .where(sql`${table.status} = 'published'`),
+  ],
+);
+
+export const documentDerivatives = pgTable(
+  "document_derivatives",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    sourceDocumentVersionId: uuid("source_document_version_id")
+      .notNull()
+      .references(() => documentVersions.id, {
+        onDelete: "restrict",
+      }),
+    derivativeDocumentVersionId: uuid("derivative_document_version_id")
+      .notNull()
+      .references(() => documentVersions.id, {
+        onDelete: "restrict",
+      }),
+    audience: text("audience").notNull(),
+    redactionSummary: text("redaction_summary"),
+    createdByUserId: uuid("created_by_user_id").references(
+      () => users.id,
+      { onDelete: "set null" },
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("document_derivatives_source_idx").on(
+      table.organizationId,
+      table.sourceDocumentVersionId,
+    ),
+    uniqueIndex("document_derivatives_derived_idx").on(
+      table.derivativeDocumentVersionId,
+    ),
+  ],
+);
+
+export const disclosurePublicationDocuments = pgTable(
+  "disclosure_publication_documents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    publicationVersionId: uuid("publication_version_id")
+      .notNull()
+      .references(() => disclosurePublicationVersions.id, {
+        onDelete: "cascade",
+      }),
+    documentDerivativeId: uuid("document_derivative_id")
+      .notNull()
+      .references(() => documentDerivatives.id, {
+        onDelete: "restrict",
+      }),
+    label: text("label"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    attachedByUserId: uuid("attached_by_user_id").references(
+      () => users.id,
+      { onDelete: "set null" },
+    ),
+    attachedAt: timestamp("attached_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("disclosure_publication_documents_org_idx").on(
+      table.organizationId,
+    ),
+    index("disclosure_publication_documents_version_idx").on(
+      table.publicationVersionId,
+      table.sortOrder,
+    ),
+    uniqueIndex("disclosure_publication_documents_unique_idx").on(
+      table.publicationVersionId,
+      table.documentDerivativeId,
     ),
   ],
 );

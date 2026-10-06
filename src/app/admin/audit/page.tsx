@@ -46,9 +46,13 @@ export default async function AuditPage({
         {" · "}
         <Link href="/admin/documents">Documents</Link>
         {" · "}
-        <Link href="/admin/cases">Cases</Link>\n        {" · "}\n        <Link href="/admin/deadlines">Deadlines</Link>
+        <Link href="/admin/cases">Cases</Link>
+        {" · "}
+        <Link href="/admin/deadlines">Deadlines</Link>
         {" · "}
         <Link href="/admin/reviews">Reviews</Link>
+        {" · "}
+        <Link href="/admin/disclosures">Disclosures</Link>
         {" · "}
         <Link href="/admin/communications">Communications</Link>
         {" · "}
