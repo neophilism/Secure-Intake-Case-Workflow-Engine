@@ -42,6 +42,14 @@ import {
   parseCommunicationVisibility,
   parseRecipientText,
 } from "@/modules/communications/policy";
+import {
+  applyReviewDecisionToCase,
+  assignReview,
+  beginReview,
+  decideReview,
+  fileCaseReview,
+  withdrawReview,
+} from "@/modules/reviews/service";
 
 async function requireCaseContext() {
   const context = await getCurrentAuthorizationContext();
@@ -756,6 +764,257 @@ export async function recordInboundCorrespondenceAction(
   } catch {
     redirect(
       `/admin/cases/${caseId}?error=correspondence_inbound_failed`,
+    );
+  }
+
+  redirect(`/admin/cases/${caseId}`);
+}
+
+
+export async function fileCaseReviewAction(
+  caseId: string,
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (
+    !hasPermission(context, "case:view") ||
+    !hasPermission(context, "review:file")
+  ) {
+    redirect("/forbidden");
+  }
+
+  const policyId = String(
+    formData.get("policyId") ?? "",
+  ).trim();
+  const parentReviewId = String(
+    formData.get("parentReviewId") ?? "",
+  ).trim();
+  const grounds = String(
+    formData.get("grounds") ?? "",
+  ).trim();
+  const requestedRelief = String(
+    formData.get("requestedRelief") ?? "",
+  ).trim();
+
+  if (!policyId || !grounds) {
+    redirect(
+      `/admin/cases/${caseId}?error=review_filing_invalid`,
+    );
+  }
+
+  try {
+    await fileCaseReview(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        caseId,
+        policyId,
+        parentReviewId: parentReviewId || null,
+        grounds,
+        requestedRelief: requestedRelief || null,
+        actorUserId: context.user.id,
+      },
+    );
+  } catch {
+    redirect(
+      `/admin/cases/${caseId}?error=review_filing_failed`,
+    );
+  }
+
+  redirect(`/admin/cases/${caseId}`);
+}
+
+export async function assignReviewAction(
+  caseId: string,
+  reviewId: string,
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (!hasPermission(context, "review:assign")) {
+    redirect("/forbidden");
+  }
+
+  const reviewerMembershipId = String(
+    formData.get("reviewerMembershipId") ?? "",
+  ).trim();
+  if (!reviewerMembershipId) {
+    redirect(
+      `/admin/cases/${caseId}?error=review_assignment_invalid`,
+    );
+  }
+
+  try {
+    await assignReview(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        reviewId,
+        reviewerMembershipId,
+        actorUserId: context.user.id,
+      },
+    );
+  } catch {
+    redirect(
+      `/admin/cases/${caseId}?error=review_assignment_failed`,
+    );
+  }
+
+  redirect(`/admin/cases/${caseId}`);
+}
+
+export async function beginReviewAction(
+  caseId: string,
+  reviewId: string,
+  _formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (
+    !context.membership ||
+    !hasPermission(context, "review:decide")
+  ) {
+    redirect("/forbidden");
+  }
+
+  try {
+    await beginReview(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        reviewId,
+        actorMembershipId: context.membership.id,
+        actorUserId: context.user.id,
+      },
+    );
+  } catch {
+    redirect(
+      `/admin/cases/${caseId}?error=review_start_failed`,
+    );
+  }
+
+  redirect(`/admin/cases/${caseId}`);
+}
+
+export async function decideReviewAction(
+  caseId: string,
+  reviewId: string,
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (
+    !context.membership ||
+    !hasPermission(context, "review:decide")
+  ) {
+    redirect("/forbidden");
+  }
+
+  const outcome = String(
+    formData.get("outcome") ?? "",
+  ).trim();
+  const writtenDecision = String(
+    formData.get("writtenDecision") ?? "",
+  ).trim();
+  const remandInstructions = String(
+    formData.get("remandInstructions") ?? "",
+  ).trim();
+
+  if (!outcome || !writtenDecision) {
+    redirect(
+      `/admin/cases/${caseId}?error=review_decision_invalid`,
+    );
+  }
+
+  try {
+    await decideReview(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        reviewId,
+        actorMembershipId: context.membership.id,
+        actorUserId: context.user.id,
+        outcome,
+        writtenDecision,
+        remandInstructions: remandInstructions || null,
+      },
+    );
+  } catch {
+    redirect(
+      `/admin/cases/${caseId}?error=review_decision_failed`,
+    );
+  }
+
+  redirect(`/admin/cases/${caseId}`);
+}
+
+export async function withdrawReviewAction(
+  caseId: string,
+  reviewId: string,
+  _formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (
+    !hasPermission(context, "review:file") &&
+    !hasPermission(context, "review:manage")
+  ) {
+    redirect("/forbidden");
+  }
+
+  try {
+    await withdrawReview(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        reviewId,
+        actorUserId: context.user.id,
+        allowManage: hasPermission(
+          context,
+          "review:manage",
+        ),
+      },
+    );
+  } catch {
+    redirect(
+      `/admin/cases/${caseId}?error=review_withdraw_failed`,
+    );
+  }
+
+  redirect(`/admin/cases/${caseId}`);
+}
+
+export async function applyReviewDecisionAction(
+  caseId: string,
+  reviewId: string,
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (
+    !hasPermission(context, "review:decide") ||
+    !hasPermission(context, "case:update")
+  ) {
+    redirect("/forbidden");
+  }
+
+  const targetStatus = String(
+    formData.get("targetStatus") ?? "",
+  ).trim();
+  if (!targetStatus) {
+    redirect(
+      `/admin/cases/${caseId}?error=review_effect_invalid`,
+    );
+  }
+
+  try {
+    await applyReviewDecisionToCase(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        reviewId,
+        targetStatus,
+        actorUserId: context.user.id,
+      },
+    );
+  } catch {
+    redirect(
+      `/admin/cases/${caseId}?error=review_effect_failed`,
     );
   }
 
