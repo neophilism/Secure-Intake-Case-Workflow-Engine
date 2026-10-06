@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq, max } from "drizzle-orm";
 import type { Database } from "@/db/client";
 import {
+  auditEvents,
   cases,
   documentAccessEvents,
   documentCaseLinks,
@@ -13,6 +14,7 @@ import {
   intakeSubmissions,
 } from "@/db/schema";
 import type { TenantScope } from "@/lib/tenancy";
+import { auditEventValues } from "@/modules/audit/event";
 import { sha256Hex } from "./hash";
 import {
   isDocumentVisibility,
@@ -101,6 +103,26 @@ export async function createDocumentType(
       createdByUserId: input.actorUserId ?? null,
     })
     .returning();
+
+
+  await db.insert(auditEvents).values(
+    auditEventValues({
+      organizationId: scope.organizationId,
+      actorType: input.actorUserId ? "user" : "system",
+      actorUserId: input.actorUserId ?? null,
+      action: "document.type_created",
+      resourceType: "document_type",
+      resourceId: row.id,
+      newState: {
+        key: row.key,
+        status: row.status,
+        maxBytes: row.maxBytes,
+      },
+      metadata: {
+        acceptedMimeTypes: row.acceptedMimeTypes,
+      },
+    }),
+  );
 
   return row;
 }
@@ -212,6 +234,60 @@ export async function uploadDocumentToCase(
           storageDriver: storage.driver,
         },
       });
+
+      await tx.insert(auditEvents).values(
+        auditEventValues({
+          organizationId: scope.organizationId,
+          actorType: "user",
+          actorUserId: input.actorUserId,
+          action: "document.uploaded",
+          resourceType: "document_version",
+          resourceId: version.id,
+          parentResourceType: "case",
+          parentResourceId: input.caseId,
+          newState: {
+            contentStatus: version.contentStatus,
+            malwareScanStatus: version.malwareScanStatus,
+          },
+          metadata: {
+            documentId: document.id,
+            documentTypeId: document.documentTypeId,
+            versionNumber: version.versionNumber,
+            sha256: version.sha256,
+            mimeType: version.mimeType,
+            sizeBytes: version.sizeBytes,
+            visibility: document.visibility,
+            relationship: link.relationship,
+          },
+        }),
+      );
+
+      await tx.insert(auditEvents).values(
+        auditEventValues({
+          organizationId: scope.organizationId,
+          actorType: input.actorUserId ? "user" : "anonymous",
+          actorUserId: input.actorUserId ?? null,
+          action: "document.uploaded",
+          resourceType: "document_version",
+          resourceId: version.id,
+          parentResourceType: "submission",
+          parentResourceId: input.submissionId,
+          newState: {
+            contentStatus: version.contentStatus,
+            malwareScanStatus: version.malwareScanStatus,
+          },
+          metadata: {
+            documentId: document.id,
+            documentTypeId: document.documentTypeId,
+            versionNumber: version.versionNumber,
+            sha256: version.sha256,
+            mimeType: version.mimeType,
+            sizeBytes: version.sizeBytes,
+            visibility: document.visibility,
+            formFieldId: link.formFieldId,
+          },
+        }),
+      );
 
       return { document, version, link };
     });
@@ -448,6 +524,29 @@ export async function addDocumentVersion(
       note: `SHA-256 ${prepared.sha256}`,
     });
 
+    await db.insert(auditEvents).values(
+      auditEventValues({
+        organizationId: scope.organizationId,
+        actorType: "user",
+        actorUserId: input.actorUserId,
+        action: "document.version_created",
+        resourceType: "document_version",
+        resourceId: version.id,
+        parentResourceType: "document",
+        parentResourceId: document.id,
+        newState: {
+          versionNumber: version.versionNumber,
+          contentStatus: version.contentStatus,
+          malwareScanStatus: version.malwareScanStatus,
+        },
+        metadata: {
+          sha256: version.sha256,
+          mimeType: version.mimeType,
+          sizeBytes: version.sizeBytes,
+        },
+      }),
+    );
+
     return version;
   } catch (error) {
     await storage.remove(key).catch(() => undefined);
@@ -508,6 +607,27 @@ export async function attachDocumentVersionToCase(
     .onConflictDoNothing()
     .returning();
 
+
+  if (link) {
+    await db.insert(auditEvents).values(
+      auditEventValues({
+        organizationId: scope.organizationId,
+        actorType: "user",
+        actorUserId: input.actorUserId,
+        action: "document.attached_to_case",
+        resourceType: "document_version",
+        resourceId: version.id,
+        parentResourceType: "case",
+        parentResourceId: caseRecord.id,
+        metadata: {
+          linkId: link.id,
+          relationship: link.relationship,
+          exhibitLabelPresent: Boolean(link.exhibitLabel),
+        },
+      }),
+    );
+  }
+
   return link ?? null;
 }
 
@@ -564,6 +684,24 @@ export async function recordMalwareScanResult(
       },
     });
 
+    await tx.insert(auditEvents).values(
+      auditEventValues({
+        organizationId: scope.organizationId,
+        actorType: "user",
+        actorUserId: input.actorUserId,
+        action: "document.scan_recorded",
+        resourceType: "document_version",
+        resourceId: version.id,
+        newState: {
+          malwareScanStatus: version.malwareScanStatus,
+          contentStatus: version.contentStatus,
+        },
+        metadata: {
+          provider: version.malwareScanProvider,
+        },
+      }),
+    );
+
     return version;
   });
 }
@@ -614,6 +752,25 @@ export async function recordCustodyEvent(
     })
     .returning();
 
+
+  await db.insert(auditEvents).values(
+    auditEventValues({
+      organizationId: scope.organizationId,
+      actorType: "user",
+      actorUserId: input.actorUserId,
+      action: "document.custody_recorded",
+      resourceType: "document_version",
+      resourceId: version.id,
+      metadata: {
+        custodyEventId: event.id,
+        action: event.action,
+        fromCustodian: event.fromCustodian,
+        toCustodian: event.toCustodian,
+        location: event.location,
+      },
+    }),
+  );
+
   return event;
 }
 
@@ -662,6 +819,23 @@ export async function downloadDocumentVersion(
     actorUserId: input.actorUserId,
     metadata: {},
   });
+
+  await db.insert(auditEvents).values(
+    auditEventValues({
+      organizationId: scope.organizationId,
+      actorType: "user",
+      actorUserId: input.actorUserId,
+      action: "document.downloaded",
+      resourceType: "document_version",
+      resourceId: version.id,
+      metadata: {
+        documentId: version.documentId,
+        versionNumber: version.versionNumber,
+        sha256: version.sha256,
+        sizeBytes: version.sizeBytes,
+      },
+    }),
+  );
 
   return { version, data };
 }
