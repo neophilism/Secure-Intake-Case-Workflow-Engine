@@ -954,6 +954,7 @@ export async function withdrawReviewAction(
   const context = await requireCaseContext();
   if (
     !hasPermission(context, "review:file") &&
+    !hasPermission(context, "case:appeal") &&
     !hasPermission(context, "review:manage")
   ) {
     redirect("/forbidden");
