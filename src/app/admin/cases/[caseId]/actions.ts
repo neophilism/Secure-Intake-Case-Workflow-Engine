@@ -171,6 +171,7 @@ export async function applyRoutingRulesAction(
     redirect("/forbidden");
   }
 
+  let matched = false;
   try {
     const result = await applyRoutingRules(
       getRuntimeDatabase(),
@@ -180,15 +181,16 @@ export async function applyRoutingRulesAction(
         actorUserId: context.user.id,
       },
     );
-
-    if (!result.matched) {
-      redirect(`/admin/cases/${caseId}?error=no_routing_match`);
-    }
+    matched = result.matched;
   } catch {
     redirect(`/admin/cases/${caseId}?error=routing_failed`);
   }
 
-  redirect(`/admin/cases/${caseId}`);
+  redirect(
+    matched
+      ? `/admin/cases/${caseId}`
+      : `/admin/cases/${caseId}?error=no_routing_match`,
+  );
 }
 
 export async function escalateCaseAction(
