@@ -30,7 +30,7 @@ export function getDocumentStorageAdapter(): DocumentStorageAdapter {
   if (driver === "local") {
     return new LocalFilesystemStorageAdapter(
       process.env.DOCUMENT_STORAGE_ROOT ??
-        "/tmp/secure-intake-case-documents",
+        ".data/documents",
     );
   }
 
