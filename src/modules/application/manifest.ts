@@ -19,7 +19,22 @@ const labelPairSchema = z.object({
 });
 
 const brandingSchema = z.object({
-  logoUrl: z.string().url().max(2000).optional(),
+  logoUrl: z
+    .string()
+    .max(2000)
+    .refine(
+      (value) =>
+        value.startsWith("/") ||
+        (() => {
+          try {
+            return new URL(value).protocol === "https:";
+          } catch {
+            return false;
+          }
+        })(),
+      "logoUrl must be a root-relative path or HTTPS URL.",
+    )
+    .optional(),
   accentColor: z
     .string()
     .regex(/^#[0-9a-f]{6}$/i)
