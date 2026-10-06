@@ -63,7 +63,7 @@ export default async function OrganizationAdministrationPage({
         {" · "}
         <a href="/admin/cases">Cases</a>
         {" · "}
-        <a href="/admin/audit">Audit</a>
+        <a href="/admin/deadlines">Deadlines</a>\n        {" · "}\n        <a href="/admin/audit">Audit</a>
       </nav>
 
       <section>
