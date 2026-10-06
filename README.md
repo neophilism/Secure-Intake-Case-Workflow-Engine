@@ -14,11 +14,11 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 4 — configurable intake and form engine**
+**PR 5 — submission-to-case lifecycle**
 
-This milestone adds schema-driven intake definitions, immutable published versions, conditional fields, validation, public form rendering, anonymous resumable drafts, confirmation codes, form administration, and submission persistence pinned to the exact form version used.
+This milestone converts completed intake into durable tenant-scoped cases with human-readable case numbers, priority and tags, controlled intake review and disposition states, source-submission linkage, and status history.
 
-Form behavior now lives primarily in validated configuration rather than statute-specific application code.
+The lifecycle is intentionally a small default state machine. PR 6 will make workflows and transition rules fully configurable.
 
 See [docs/development.md](docs/development.md) for local setup and [docs/architecture](docs/architecture) for architectural decisions.
 
