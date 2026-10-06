@@ -808,3 +808,108 @@ thin-app branding.
 
 Automated checks supplement rather than replace keyboard, screen-reader,
 zoom/reflow, and human usability testing.
+
+
+## Generic 1.0 release contract
+
+PR 21 completes the upstream engine's release-candidate contract without
+bundling any specific application.
+
+The neutral fixture is:
+
+```text
+examples/application-manifest.example.json
+```
+
+It intentionally uses only generic identifiers such as:
+
+```text
+Example Application
+example_form
+example_workflow
+state_a
+example_queue
+example_review
+```
+
+### Database-backed integration verification
+
+CI starts PostgreSQL 16 and runs all migrations from an empty database:
+
+```bash
+npm run db:migrate
+```
+
+It then runs:
+
+```bash
+npm run test:integration
+```
+
+The integration contract proves:
+
+- application-manifest reconciliation;
+- identical-manifest idempotency;
+- public intake;
+- case creation;
+- round-robin routing;
+- workflow transitions;
+- business-day deadline creation and completion;
+- independent review;
+- explicit review effect;
+- final closure;
+- form/workflow version increments after manifest changes;
+- preservation of historical submission/form and case/workflow references;
+- refusal to take ownership of unmanaged resource collisions.
+
+The normal PR gate also verifies the release contract:
+
+```bash
+npm run verify:release-contract
+```
+
+### Distribution
+
+The package version for this milestone is:
+
+```text
+1.0.0-rc.1
+```
+
+A Git tag whose version exactly matches `package.json` triggers the release
+workflow. For example:
+
+```text
+v1.0.0-rc.1
+```
+
+The verified image is published as:
+
+```text
+ghcr.io/neophilism/secure-intake-case-workflow-engine:1.0.0-rc.1
+```
+
+Stable non-prerelease tags additionally receive `latest`.
+
+Downstream applications should pin an explicit version or immutable digest and
+keep their application manifest/configuration in their own repository.
+
+See:
+
+```text
+docs/downstream-application-contract.md
+docs/architecture/0023-generic-1.0-release-contract.md
+```
+
+### Release boundary
+
+This repository owns reusable engine behavior and neutral contract fixtures
+only.
+
+Application-specific terminology, statutory policy, forms, workflows, routing,
+deadlines, review policy, branding, and specialized code belong in downstream
+repositories.
+
+When downstream development exposes a reusable gap, implement the neutral
+capability upstream, issue a new engine release, and update the downstream
+repository to that release.
