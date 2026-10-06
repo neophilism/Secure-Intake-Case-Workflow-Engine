@@ -17,7 +17,7 @@ export function normalizeLoginIdentifier(value: string) {
 }
 
 export function loginBucketHash(
-  kind: "account" | "source",
+  kind: "account" | "source" | "participant",
   value: string,
 ) {
   return createHash("sha256")
@@ -150,11 +150,18 @@ export async function recordLoginFailure(
   }
 }
 
+export async function clearLoginFailuresForKey(
+  db: Database,
+  keyHash: string,
+) {
+  await db
+    .delete(authLoginThrottles)
+    .where(eq(authLoginThrottles.keyHash, keyHash));
+}
+
 export async function clearAccountLoginFailures(
   db: Database,
   accountKey: string,
 ) {
-  await db
-    .delete(authLoginThrottles)
-    .where(eq(authLoginThrottles.keyHash, accountKey));
+  return clearLoginFailuresForKey(db, accountKey);
 }
