@@ -50,9 +50,29 @@ export async function setNotificationPreferenceAction(
   );
   const enabled =
     String(formData.get("enabled") ?? "false") === "true";
-  const destination = String(
+  let destination = String(
     formData.get("destination") ?? "",
   ).trim();
+
+  const canManageExternal = hasPermission(
+    context,
+    "notification:manage",
+  );
+
+  if (channel === "webhook" && !canManageExternal) {
+    redirect("/forbidden");
+  }
+
+  if (channel === "email" && !canManageExternal) {
+    if (
+      destination &&
+      destination.toLowerCase() !==
+        context.user.email.toLowerCase()
+    ) {
+      redirect("/forbidden");
+    }
+    destination = context.user.email;
+  }
 
   try {
     await setNotificationPreference(
