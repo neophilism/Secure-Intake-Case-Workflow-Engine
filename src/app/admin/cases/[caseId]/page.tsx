@@ -42,6 +42,7 @@ import { listCaseTimeline } from "@/modules/timeline/repository";
 import {
   listCaseReviewHistory,
   listCaseReviews,
+  listEligibleReviewers,
   listReviewPolicies,
 } from "@/modules/reviews/repository";
 import { CaseCommunicationsPanel } from "./communications-panel";
@@ -105,6 +106,7 @@ export default async function CaseDetailPage({
     communicationTemplates,
     reviews,
     reviewPolicies,
+    eligibleReviewers,
     timeline,
   ] = await Promise.all([
     listCaseStatusHistory(db, scope, record.id),
@@ -147,6 +149,9 @@ export default async function CaseDetailPage({
     hasPermission(context, "review:file") ||
     hasPermission(context, "case:appeal")
       ? listReviewPolicies(db, scope)
+      : Promise.resolve([]),
+    hasPermission(context, "review:assign")
+      ? listEligibleReviewers(db, scope)
       : Promise.resolve([]),
     listCaseTimeline(db, scope, record.id, {
       includeNotes: hasPermission(context, "note:view"),
@@ -1115,6 +1120,7 @@ export default async function CaseDetailPage({
           history={reviewHistory}
           policies={reviewPolicies}
           members={members}
+          eligibleReviewers={eligibleReviewers}
           workflowStates={workflow.states}
           currentMembershipId={context.membership?.id ?? null}
           currentUserId={context.user.id}
