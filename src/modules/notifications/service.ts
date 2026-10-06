@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type {
   Database,
   DatabaseTransaction,
@@ -433,7 +433,7 @@ export async function recordNotificationDeliverySuccess(
       status: "delivered",
       provider: input.provider.trim(),
       externalMessageId: input.externalMessageId?.trim() || null,
-      attempts: 1,
+      attempts: sql`${notificationDeliveries.attempts} + 1`,
       lastError: null,
       deliveredAt: new Date(),
       updatedAt: new Date(),
@@ -476,7 +476,7 @@ export async function recordNotificationDeliveryFailure(
     .set({
       status: input.final ? "failed" : "pending",
       provider: input.provider.trim(),
-      attempts: 1,
+      attempts: sql`${notificationDeliveries.attempts} + 1`,
       lastError: message,
       updatedAt: new Date(),
     })
