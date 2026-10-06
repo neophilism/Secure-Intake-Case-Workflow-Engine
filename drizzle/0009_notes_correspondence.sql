@@ -112,8 +112,9 @@ CREATE INDEX IF NOT EXISTS "case_correspondence_messages_case_idx"
 CREATE INDEX IF NOT EXISTS "case_correspondence_messages_thread_idx"
   ON "case_correspondence_messages" ("thread_id", "created_at");
 --> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "case_correspondence_messages_external_idx"
-  ON "case_correspondence_messages" ("organization_id", "delivery_provider", "external_message_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "case_correspondence_messages_external_idx"
+  ON "case_correspondence_messages" ("organization_id", "delivery_provider", "external_message_id")
+  WHERE "external_message_id" IS NOT NULL;
 --> statement-breakpoint
 
 CREATE TABLE IF NOT EXISTS "correspondence_message_document_links" (
