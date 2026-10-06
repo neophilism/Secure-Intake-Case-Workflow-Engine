@@ -577,10 +577,7 @@ export async function recordOutboundCorrespondenceSent(
     await tx.insert(auditEvents).values(
       auditEventValues({
         organizationId: scope.organizationId,
-        actorType:
-          input.actorUserId
-            ? "user"
-            : input.actorType ?? "system",
+        actorType: input.actorUserId ? "user" : "system",
         actorUserId: input.actorUserId ?? null,
         action: "correspondence.sent",
         resourceType: "correspondence_message",
@@ -902,7 +899,10 @@ export async function recordInboundCorrespondence(
     await tx.insert(auditEvents).values(
       auditEventValues({
         organizationId: scope.organizationId,
-        actorType: input.actorUserId ? "user" : "system",
+        actorType:
+          input.actorUserId
+            ? "user"
+            : input.actorType ?? "system",
         actorUserId: input.actorUserId ?? null,
         action: "correspondence.received",
         resourceType: "correspondence_message",
