@@ -66,6 +66,7 @@ export async function updateCaseMetadataAction(
         disposition: disposition || null,
         priority: parseCasePriority(rawPriority),
         tags,
+        actorUserId: context.user.id,
       },
     );
   } catch {
