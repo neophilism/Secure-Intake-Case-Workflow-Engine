@@ -368,6 +368,33 @@ export async function retryDeadBackgroundJob(
   return updated ?? null;
 }
 
+export async function setBackgroundScheduleStatus(
+  db: Database,
+  scope: TenantScope,
+  scheduleId: string,
+  status: "active" | "paused",
+) {
+  const [updated] = await db
+    .update(backgroundSchedules)
+    .set({
+      status,
+      nextRunAt: status === "active" ? new Date() : undefined,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(backgroundSchedules.id, scheduleId),
+        eq(
+          backgroundSchedules.organizationId,
+          scope.organizationId,
+        ),
+      ),
+    )
+    .returning();
+
+  return updated ?? null;
+}
+
 export async function ensureBuiltinSchedules(
   db: Database,
   intervalSeconds: number,
