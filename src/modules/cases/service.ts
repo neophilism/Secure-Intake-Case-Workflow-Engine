@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { Database } from "@/db/client";
 import {
+  auditEvents,
   caseNumberSequences,
   caseStatusHistory,
   cases,
@@ -15,6 +16,7 @@ import {
   intakeSubmissions,
 } from "@/db/schema";
 import type { TenantScope } from "@/lib/tenancy";
+import { auditEventValues } from "@/modules/audit/event";
 import { formatCaseNumber } from "./case-number";
 import {
   isCasePriority,
@@ -256,6 +258,28 @@ export async function createCaseFromSubmission(
       },
     });
 
+    await tx.insert(auditEvents).values(
+      auditEventValues({
+        organizationId: scope.organizationId,
+        actorType: "user",
+        actorUserId: input.actorUserId,
+        action: "case.created",
+        resourceType: "case",
+        resourceId: record.id,
+        parentResourceType: "submission",
+        parentResourceId: source.submission.id,
+        newState: {
+          status: record.status,
+          priority: record.priority,
+        },
+        metadata: {
+          caseNumber: record.caseNumber,
+          caseType: record.caseType,
+          workflowVersionId: record.workflowVersionId,
+        },
+      }),
+    );
+
     return record;
   });
 }
@@ -493,6 +517,33 @@ export async function transitionCase(
       },
     });
 
+    await tx.insert(auditEvents).values(
+      auditEventValues({
+        organizationId: scope.organizationId,
+        actorType: "user",
+        actorUserId: input.actorUserId,
+        action: "case.transitioned",
+        resourceType: "case",
+        resourceId: current.id,
+        previousState: {
+          status: current.status,
+          priority: current.priority,
+          disposition: current.disposition,
+        },
+        newState: {
+          status: updated.status,
+          priority: updated.priority,
+          disposition: updated.disposition,
+        },
+        metadata: {
+          transitionKey: transition.key,
+          workflowVersionId: current.workflowVersionId,
+          automaticActions: transition.actions,
+          commentProvided: Boolean(input.comment?.trim()),
+        },
+      }),
+    );
+
     return updated;
   });
 }
@@ -507,6 +558,7 @@ export async function updateCaseMetadata(
     priority: CasePriority;
     disposition?: string | null;
     tags?: readonly string[];
+    actorUserId: string;
   },
 ) {
   if (!input.title.trim()) {
@@ -552,8 +604,9 @@ export async function updateCaseMetadata(
       )
       .returning();
 
+    let normalizedTags: string[] | undefined;
     if (input.tags !== undefined) {
-      const normalizedTags = normalizeCaseTags(input.tags);
+      normalizedTags = normalizeCaseTags(input.tags);
 
       await tx
         .delete(caseTags)
@@ -574,6 +627,31 @@ export async function updateCaseMetadata(
         );
       }
     }
+
+    await tx.insert(auditEvents).values(
+      auditEventValues({
+        organizationId: scope.organizationId,
+        actorType: "user",
+        actorUserId: input.actorUserId,
+        action: "case.updated",
+        resourceType: "case",
+        resourceId: current.id,
+        previousState: {
+          priority: current.priority,
+          disposition: current.disposition,
+        },
+        newState: {
+          priority: updated.priority,
+          disposition: updated.disposition,
+          tagsChanged: input.tags !== undefined,
+        },
+        metadata: {
+          titleChanged: current.title !== updated.title,
+          summaryChanged: current.summary !== updated.summary,
+          tags: normalizedTags ?? null,
+        },
+      }),
+    );
 
     return updated;
   });
