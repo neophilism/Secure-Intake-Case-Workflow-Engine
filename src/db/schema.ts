@@ -498,6 +498,7 @@ export const cases = pgTable(
   (table) => [
     index("cases_organization_idx").on(table.organizationId),
     index("cases_status_idx").on(table.organizationId, table.status),
+    index("cases_workflow_version_idx").on(table.workflowVersionId),
     uniqueIndex("cases_org_number_idx").on(
       table.organizationId,
       table.caseNumber,
