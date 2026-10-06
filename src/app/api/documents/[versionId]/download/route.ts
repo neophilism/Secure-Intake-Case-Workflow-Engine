@@ -65,7 +65,9 @@ export async function GET(
 
     const filename = version.originalFilename.replace(/["\r\n]/g, "_");
 
-    return new Response(data, {
+    const body = data.slice().buffer as ArrayBuffer;
+
+    return new Response(body, {
       status: 200,
       headers: {
         "Content-Type": version.mimeType,
