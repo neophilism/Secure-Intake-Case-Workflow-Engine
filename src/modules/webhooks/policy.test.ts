@@ -17,6 +17,8 @@ describe("webhook policy", () => {
       "https://example.com/hook",
     );
     expect(isPrivateAddress("8.8.8.8")).toBe(false);
+    expect(isPrivateAddress("100.64.0.1")).toBe(true);
+    expect(isPrivateAddress("::1")).toBe(true);
   });
 
   it("normalizes event types", () => {
