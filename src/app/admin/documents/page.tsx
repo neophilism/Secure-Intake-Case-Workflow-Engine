@@ -42,6 +42,8 @@ export default async function DocumentAdministrationPage({
         <Link href="/admin/routing">Routing</Link>
         {" · "}
         <Link href="/admin/cases">Cases</Link>
+        {" · "}
+        <Link href="/admin/audit">Audit</Link>
       </nav>
 
       <h1>Documents & evidence</h1>

@@ -129,6 +129,7 @@ export async function publishWorkflowVersionAction(
       getRuntimeDatabase(),
       requireTenantScope(context),
       versionId,
+      context.user.id,
     );
   } catch {
     redirect("/admin/workflows?error=publish_failed");
@@ -154,7 +155,7 @@ export async function bindWorkflowToFormAction(
     await bindWorkflowToForm(
       getRuntimeDatabase(),
       requireTenantScope(context),
-      { formId, workflowId },
+      { formId, workflowId, actorUserId: context.user.id },
     );
   } catch {
     redirect("/admin/workflows?error=binding_failed");

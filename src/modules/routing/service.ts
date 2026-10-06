@@ -1,6 +1,7 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import type { Database } from "@/db/client";
 import {
+  auditEvents,
   caseAssignmentHistory,
   caseQueues,
   caseRoutingRules,
@@ -15,6 +16,7 @@ import {
   users,
 } from "@/db/schema";
 import type { TenantScope } from "@/lib/tenancy";
+import { auditEventValues } from "@/modules/audit/event";
 import {
   parseRoutingRuleDefinition,
   type RoutingRuleDefinition,
@@ -79,6 +81,23 @@ export async function createTeam(
     })
     .returning();
 
+
+  await db.insert(auditEvents).values(
+    auditEventValues({
+      organizationId: scope.organizationId,
+      actorType: input.actorUserId ? "user" : "system",
+      actorUserId: input.actorUserId ?? null,
+      action: "routing.team_created",
+      resourceType: "routing_team",
+      resourceId: team.id,
+      newState: {
+        officeId: team.officeId,
+        status: team.status,
+      },
+      metadata: { slug: team.slug },
+    }),
+  );
+
   return team;
 }
 
@@ -88,6 +107,7 @@ export async function addTeamMember(
   input: {
     teamId: string;
     membershipId: string;
+    actorUserId: string;
   },
 ) {
   const [[team], [membership]] = await Promise.all([
@@ -151,6 +171,24 @@ export async function addTeamMember(
     })
     .returning();
 
+
+  await db.insert(auditEvents).values(
+    auditEventValues({
+      organizationId: scope.organizationId,
+      actorType: "user",
+      actorUserId: input.actorUserId,
+      action: "routing.team_member_added",
+      resourceType: "routing_team_membership",
+      resourceId: row.id,
+      parentResourceType: "routing_team",
+      parentResourceId: team.id,
+      newState: {
+        organizationMembershipId: membership.id,
+        isAvailable: row.isAvailable,
+      },
+    }),
+  );
+
   return row;
 }
 
@@ -205,6 +243,24 @@ export async function createQueue(
     })
     .returning();
 
+
+  await db.insert(auditEvents).values(
+    auditEventValues({
+      organizationId: scope.organizationId,
+      actorType: input.actorUserId ? "user" : "system",
+      actorUserId: input.actorUserId ?? null,
+      action: "routing.queue_created",
+      resourceType: "routing_queue",
+      resourceId: queue.id,
+      newState: {
+        teamId: queue.teamId,
+        assignmentStrategy: queue.assignmentStrategy,
+        status: queue.status,
+      },
+      metadata: { slug: queue.slug },
+    }),
+  );
+
   return queue;
 }
 
@@ -248,6 +304,25 @@ export async function createRoutingRule(
     })
     .returning();
 
+
+  await db.insert(auditEvents).values(
+    auditEventValues({
+      organizationId: scope.organizationId,
+      actorType: input.actorUserId ? "user" : "system",
+      actorUserId: input.actorUserId ?? null,
+      action: "routing.rule_created",
+      resourceType: "routing_rule",
+      resourceId: rule.id,
+      parentResourceType: "routing_queue",
+      parentResourceId: rule.targetQueueId,
+      newState: {
+        priority: rule.priority,
+        status: rule.status,
+      },
+      metadata: { name: rule.name },
+    }),
+  );
+
   return rule;
 }
 
@@ -257,6 +332,7 @@ export async function setTeamMemberAvailability(
   input: {
     teamMembershipId: string;
     isAvailable: boolean;
+    actorUserId: string;
   },
 ) {
   const [updated] = await db
@@ -276,9 +352,27 @@ export async function setTeamMemberAvailability(
     )
     .returning();
 
+
   if (!updated) {
     throw new RoutingTargetUnavailableError();
   }
+
+  await db.insert(auditEvents).values(
+    auditEventValues({
+      organizationId: scope.organizationId,
+      actorType: "user",
+      actorUserId: input.actorUserId,
+      action: "routing.team_member_availability_changed",
+      resourceType: "routing_team_membership",
+      resourceId: updated.id,
+      newState: { isAvailable: updated.isAvailable },
+      metadata: {
+        teamId: updated.teamId,
+        organizationMembershipId:
+          updated.organizationMembershipId,
+      },
+    }),
+  );
 
   return updated;
 }
@@ -416,6 +510,29 @@ export async function manualAssignCase(
       reason: input.reason?.trim() || null,
       metadata: {},
     });
+
+    await tx.insert(auditEvents).values(
+      auditEventValues({
+        organizationId: scope.organizationId,
+        actorType: "user",
+        actorUserId: input.actorUserId,
+        action: "case.assigned",
+        resourceType: "case",
+        resourceId: record.id,
+        previousState: {
+          assignedQueueId: record.assignedQueueId,
+          assignedMembershipId: record.assignedMembershipId,
+        },
+        newState: {
+          assignedQueueId: updated.assignedQueueId,
+          assignedMembershipId: updated.assignedMembershipId,
+        },
+        metadata: {
+          source: "manual",
+          reasonProvided: Boolean(input.reason?.trim()),
+        },
+      }),
+    );
 
     return updated;
   });
@@ -656,6 +773,29 @@ export async function applyRoutingRules(
       },
     });
 
+    await tx.insert(auditEvents).values(
+      auditEventValues({
+        organizationId: scope.organizationId,
+        actorType: "user",
+        actorUserId: input.actorUserId,
+        action: "case.routed",
+        resourceType: "case",
+        resourceId: record.id,
+        previousState: {
+          assignedQueueId: record.assignedQueueId,
+          assignedMembershipId: record.assignedMembershipId,
+        },
+        newState: {
+          assignedQueueId: updated.assignedQueueId,
+          assignedMembershipId: updated.assignedMembershipId,
+        },
+        metadata: {
+          routingRuleId: match.id,
+          assignmentStrategy: queue.assignmentStrategy,
+        },
+      }),
+    );
+
     return {
       matched: true as const,
       case: updated,
@@ -845,6 +985,30 @@ export async function escalateCase(
         priority: input.priority ?? record.priority,
       },
     });
+
+    await tx.insert(auditEvents).values(
+      auditEventValues({
+        organizationId: scope.organizationId,
+        actorType: "user",
+        actorUserId: input.actorUserId,
+        action: "case.escalated",
+        resourceType: "case",
+        resourceId: record.id,
+        previousState: {
+          assignedQueueId: record.assignedQueueId,
+          assignedMembershipId: record.assignedMembershipId,
+          priority: record.priority,
+          escalationLevel: record.escalationLevel,
+        },
+        newState: {
+          assignedQueueId: updated.assignedQueueId,
+          assignedMembershipId: updated.assignedMembershipId,
+          priority: updated.priority,
+          escalationLevel: updated.escalationLevel,
+        },
+        metadata: { reasonProvided: true },
+      }),
+    );
 
     return updated;
   });

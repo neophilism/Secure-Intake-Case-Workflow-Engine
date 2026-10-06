@@ -14,11 +14,11 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 8 — document and evidence subsystem**
+**PR 9 — immutable audit event system**
 
-This milestone adds immutable document versions, SHA-256 integrity metadata, provider-neutral storage, malware quarantine/scan state, case and submission attachment links, evidence descriptions, custody history, verified downloads, and access history.
+This milestone adds a tenant-scoped append-only audit envelope across intake, workflow configuration, case lifecycle, assignment/routing, and document/evidence operations.
 
-Workflow required-document guards now derive their trusted document context directly from clean, available case evidence in the database.
+Audit rows include actor/resource/correlation metadata and bounded state deltas. PostgreSQL rejects audit-row updates or deletes, and the protected admin viewer is read-only.
 
 See [docs/development.md](docs/development.md) for local setup and [docs/architecture](docs/architecture) for architectural decisions.
 

@@ -991,3 +991,63 @@ export const documentAccessEvents = pgTable(
   ],
 );
 
+
+
+export const auditEvents = pgTable(
+  "audit_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "restrict" }),
+    occurredAt: timestamp("occurred_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    actorType: text("actor_type").notNull(),
+    actorUserId: uuid("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    action: text("action").notNull(),
+    resourceType: text("resource_type").notNull(),
+    resourceId: text("resource_id").notNull(),
+    parentResourceType: text("parent_resource_type"),
+    parentResourceId: text("parent_resource_id"),
+    correlationId: uuid("correlation_id").notNull(),
+    source: text("source").notNull().default("application"),
+    previousState: jsonb("previous_state")
+      .$type<Record<string, unknown> | null>()
+      .default(null),
+    newState: jsonb("new_state")
+      .$type<Record<string, unknown> | null>()
+      .default(null),
+    metadata: jsonb("metadata")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+  },
+  (table) => [
+    index("audit_events_organization_time_idx").on(
+      table.organizationId,
+      table.occurredAt,
+    ),
+    index("audit_events_resource_idx").on(
+      table.organizationId,
+      table.resourceType,
+      table.resourceId,
+    ),
+    index("audit_events_actor_idx").on(
+      table.organizationId,
+      table.actorUserId,
+      table.occurredAt,
+    ),
+    index("audit_events_correlation_idx").on(
+      table.organizationId,
+      table.correlationId,
+    ),
+    index("audit_events_action_idx").on(
+      table.organizationId,
+      table.action,
+      table.occurredAt,
+    ),
+  ],
+);

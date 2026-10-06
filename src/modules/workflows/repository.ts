@@ -1,12 +1,14 @@
 import { and, desc, eq, max } from "drizzle-orm";
 import type { Database } from "@/db/client";
 import {
+  auditEvents,
   caseWorkflows,
   caseWorkflowVersions,
   intakeForms,
   intakeFormWorkflowBindings,
 } from "@/db/schema";
 import type { TenantScope } from "@/lib/tenancy";
+import { auditEventValues } from "@/modules/audit/event";
 import {
   parseWorkflowDefinition,
   type WorkflowDefinition,
@@ -62,6 +64,20 @@ export async function createWorkflow(
       createdByUserId: input.createdByUserId ?? null,
     })
     .returning();
+
+
+  await db.insert(auditEvents).values(
+    auditEventValues({
+      organizationId: scope.organizationId,
+      actorType: input.createdByUserId ? "user" : "system",
+      actorUserId: input.createdByUserId ?? null,
+      action: "workflow.created",
+      resourceType: "workflow",
+      resourceId: workflow.id,
+      newState: { status: workflow.status },
+      metadata: { slug: workflow.slug },
+    }),
+  );
 
   return workflow;
 }
@@ -123,6 +139,24 @@ export async function createDraftWorkflowVersion(
     })
     .returning();
 
+
+  await db.insert(auditEvents).values(
+    auditEventValues({
+      organizationId: scope.organizationId,
+      actorType: input.createdByUserId ? "user" : "system",
+      actorUserId: input.createdByUserId ?? null,
+      action: "workflow.version_created",
+      resourceType: "workflow_version",
+      resourceId: version.id,
+      parentResourceType: "workflow",
+      parentResourceId: workflow.id,
+      newState: {
+        versionNumber: version.versionNumber,
+        status: version.status,
+      },
+    }),
+  );
+
   return version;
 }
 
@@ -130,6 +164,7 @@ export async function publishWorkflowVersion(
   db: Database,
   scope: TenantScope,
   versionId: string,
+  actorUserId: string,
 ) {
   return db.transaction(async (tx) => {
     const [version] = await tx
@@ -196,6 +231,24 @@ export async function publishWorkflowVersion(
       .where(eq(caseWorkflowVersions.id, version.id))
       .returning();
 
+    await tx.insert(auditEvents).values(
+      auditEventValues({
+        organizationId: scope.organizationId,
+        actorType: "user",
+        actorUserId,
+        action: "workflow.version_published",
+        resourceType: "workflow_version",
+        resourceId: published.id,
+        parentResourceType: "workflow",
+        parentResourceId: version.workflowId,
+        previousState: { status: version.status },
+        newState: {
+          status: published.status,
+          versionNumber: published.versionNumber,
+        },
+      }),
+    );
+
     return published;
   });
 }
@@ -231,6 +284,7 @@ export async function bindWorkflowToForm(
   input: {
     formId: string;
     workflowId: string;
+    actorUserId: string;
   },
 ) {
   const [[form], workflow] = await Promise.all([
@@ -278,6 +332,24 @@ export async function bindWorkflowToForm(
       },
     })
     .returning();
+
+
+  await db.insert(auditEvents).values(
+    auditEventValues({
+      organizationId: scope.organizationId,
+      actorType: "user",
+      actorUserId: input.actorUserId,
+      action: "workflow.bound_to_form",
+      resourceType: "workflow",
+      resourceId: workflow.id,
+      parentResourceType: "intake_form",
+      parentResourceId: form.id,
+      metadata: {
+        bindingId: binding.id,
+        publishedWorkflowVersionId: published.id,
+      },
+    }),
+  );
 
   return binding;
 }

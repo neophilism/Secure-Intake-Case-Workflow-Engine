@@ -68,6 +68,8 @@ export default async function RoutingAdministrationPage({
         <Link href="/admin/documents">Documents</Link>
         {" · "}
         <Link href="/admin/cases">Cases</Link>
+        {" · "}
+        <Link href="/admin/audit">Audit</Link>
       </nav>
 
       <h1>Assignment & routing</h1>

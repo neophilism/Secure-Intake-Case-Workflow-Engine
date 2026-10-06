@@ -176,6 +176,8 @@ export default async function CaseDetailPage({
         <Link href="/admin/routing">Routing</Link>
         {" · "}
         <Link href="/admin/documents">Documents</Link>
+        {" · "}
+        <Link href="/admin/audit">Audit</Link>
       </nav>
 
       <h1>
