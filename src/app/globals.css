@@ -276,10 +276,6 @@ button:disabled {
   display: none;
 }
 
-.no-print {
-  display: initial;
-}
-
 @media (max-width: 48rem) {
   main {
     width: 100%;
