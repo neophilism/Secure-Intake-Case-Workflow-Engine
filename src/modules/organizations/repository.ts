@@ -1,6 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import type { Database } from "@/db/client";
 import {
+  officeMemberships,
   offices,
   organizationInvitations,
   organizationMemberships,
@@ -73,6 +74,78 @@ export async function listOrganizationMemberships(
     .where(
       eq(organizationMemberships.organizationId, scope.organizationId),
     );
+}
+
+export async function findOrganizationMembershipById(
+  db: Database,
+  scope: TenantScope,
+  membershipId: string,
+) {
+  const [membership] = await db
+    .select()
+    .from(organizationMemberships)
+    .where(
+      and(
+        eq(organizationMemberships.id, membershipId),
+        eq(organizationMemberships.organizationId, scope.organizationId),
+      ),
+    )
+    .limit(1);
+
+  return membership ?? null;
+}
+
+export async function setOrganizationMembershipStatus(
+  db: Database,
+  scope: TenantScope,
+  membershipId: string,
+  status: "active" | "disabled",
+) {
+  const [membership] = await db
+    .update(organizationMemberships)
+    .set({ status, updatedAt: new Date() })
+    .where(
+      and(
+        eq(organizationMemberships.id, membershipId),
+        eq(organizationMemberships.organizationId, scope.organizationId),
+      ),
+    )
+    .returning();
+
+  return membership ?? null;
+}
+
+export async function assignMembershipToOffice(
+  db: Database,
+  scope: TenantScope,
+  input: {
+    membershipId: string;
+    officeId: string;
+    isPrimary?: boolean;
+  },
+) {
+  const [membership, office] = await Promise.all([
+    findOrganizationMembershipById(db, scope, input.membershipId),
+    findOfficeById(db, scope, input.officeId),
+  ]);
+
+  if (!membership || !office) {
+    throw new Error(
+      "Membership and office must both exist in the active organization.",
+    );
+  }
+
+  const [assignment] = await db
+    .insert(officeMemberships)
+    .values({
+      organizationId: scope.organizationId,
+      organizationMembershipId: membership.id,
+      officeId: office.id,
+      isPrimary: input.isPrimary ?? false,
+    })
+    .returning();
+
+  return assignment;
 }
 
 export async function createOrganizationInvitation(
