@@ -60,6 +60,10 @@ export async function createNotificationForMembershipInTransaction(
   const eventType = requireNotificationEventType(input.eventType);
   const title = input.title.trim().slice(0, 500);
   const body = input.body.trim().slice(0, 5000);
+  const link = input.link?.trim() || null;
+  if (link && (!link.startsWith("/") || link.startsWith("//"))) {
+    throw new Error("Notification links must be internal relative paths.");
+  }
   if (!title || !body) {
     throw new Error("Notification title and body are required.");
   }
@@ -168,7 +172,7 @@ export async function createNotificationForMembershipInTransaction(
       severity: input.severity ?? "info",
       title,
       body,
-      link: input.link?.trim() || null,
+      link,
       resourceType: input.resourceType?.trim() || null,
       resourceId: input.resourceId?.trim() || null,
       inAppVisible: inAppEnabled,
