@@ -70,9 +70,16 @@ export function createNotificationDeliveryJobHandler(
       delivery.delivery.channel,
     );
     if (!transport) {
-      throw new Error(
+      const error = new Error(
         `No notification transport is registered for ${delivery.delivery.channel}.`,
       );
+      await recordNotificationDeliveryFailure(db, scope, {
+        deliveryId: delivery.delivery.id,
+        provider: "unavailable",
+        error,
+        final: finalAttempt,
+      });
+      throw error;
     }
     if (transport.channel !== delivery.delivery.channel) {
       throw new Error("Resolved notification transport channel mismatch.");
