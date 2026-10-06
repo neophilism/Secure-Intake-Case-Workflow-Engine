@@ -616,10 +616,15 @@ export async function deliverQueuedCorrespondence(
   const message = await db.transaction((tx) =>
     requireMessage(tx, scope, messageId),
   );
-  if (
-    message.direction !== "outbound" ||
-    message.status !== "queued"
-  ) {
+  if (message.direction !== "outbound") {
+    throw new CommunicationStateError(
+      "Only outbound correspondence can be delivered.",
+    );
+  }
+  if (message.status === "sent") {
+    return message;
+  }
+  if (message.status !== "queued") {
     throw new CommunicationStateError(
       "Correspondence must be queued before delivery.",
     );
