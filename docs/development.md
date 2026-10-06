@@ -173,6 +173,53 @@ Audit state is intentionally data-minimized. Do not place passwords, session/res
 
 Where the domain operation is already transactional, its audit insert occurs in the same transaction so a failed audit write rolls back the state mutation.
 
+## Deadlines and statutory clocks
+
+Workflow definitions may include versioned `deadlinePolicies`. A policy can start at case creation or on a named transition, use hours/calendar/business days, issue a warning before due time, permit manual pause/resume, complete on named transitions, and configure overdue escalation.
+
+Example:
+
+```json
+{
+  "key": "initial-review",
+  "label": "Initial review deadline",
+  "trigger": { "type": "case_created" },
+  "duration": { "value": 30, "unit": "calendar_days" },
+  "warningBefore": { "value": 5, "unit": "calendar_days" },
+  "pausable": false,
+  "completeOnTransitions": ["accept_intake", "reject_intake"],
+  "escalation": { "priority": "high", "queueSlug": "supervisory-review" }
+}
+```
+
+Business-day policies require `calendarKey`. Calendars are configured at:
+
+```text
+/admin/deadlines
+```
+
+Each calendar explicitly defines its IANA timezone, weekend weekdays, and excluded local dates. The engine does not assume which holidays or closures count for a deployment.
+
+The dashboard also shows all instantiated case clocks and their warning, overdue, and escalation state.
+
+Authorized case staff may pause, resume, complete, or cancel eligible clocks from the case detail page. Pause/resume requires a reason and is retained in deadline history and immutable audit.
+
+Time-dependent evaluation is performed by the reusable sweep:
+
+```bash
+npm run deadline:sweep
+```
+
+The sweep processes all active organizations, issues warnings, marks clocks overdue, and applies configured priority/queue escalation through the existing case escalation service. A protected manual sweep control is also available at `/admin/deadlines`.
+
+PR 10 deliberately does not run a permanent scheduler process. The background-job milestone can invoke this same sweep service on a recurring cadence.
+
+Existing installations should synchronize the new deadline permissions:
+
+```bash
+npm run auth:sync-roles
+```
+
 ## Verification
 
 ```bash
