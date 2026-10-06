@@ -16,10 +16,11 @@ export async function writeSessionCookie(
 
   cookieStore.set(env.AUTH_SESSION_COOKIE_NAME, token, {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
     path: "/",
     expires: expiresAt,
+    priority: "high",
   });
 }
 
@@ -28,10 +29,11 @@ export async function clearSessionCookie(): Promise<void> {
 
   cookieStore.set(env.AUTH_SESSION_COOKIE_NAME, "", {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
     path: "/",
     expires: new Date(0),
+    priority: "high",
   });
 }
 
