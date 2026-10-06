@@ -78,9 +78,9 @@ export default async function PublicIntakePage({
           style={{ maxHeight: "64px", maxWidth: "240px" }}
         />
       ) : null}
-      {homeTitle ? <h1>{homeTitle}</h1> : null}
+      <h1>{homeTitle ?? published.form.name}</h1>
       {homeDescription ? <p>{homeDescription}</p> : null}
-      <h1>{published.form.name}</h1>
+      {homeTitle ? <h2>{published.form.name}</h2> : null}
       {published.form.description ? (
         <p>{published.form.description}</p>
       ) : null}
