@@ -253,6 +253,15 @@ export async function bindWorkflowToForm(
     );
   }
 
+  const published = await findPublishedWorkflowVersion(
+    db,
+    scope,
+    workflow.id,
+  );
+  if (!published) {
+    throw new Error("Only a workflow with a published version may be bound.");
+  }
+
   const [binding] = await db
     .insert(intakeFormWorkflowBindings)
     .values({
