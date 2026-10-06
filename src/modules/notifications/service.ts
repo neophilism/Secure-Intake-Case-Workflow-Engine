@@ -128,14 +128,28 @@ export async function createNotificationForMembershipInTransaction(
   const emailEnabled = emailPreference?.enabled ?? false;
   const webhookEnabled = webhookPreference?.enabled ?? false;
 
+  const safeDestination = (
+    channel: "email" | "webhook",
+    destination: string | null | undefined,
+  ) => {
+    try {
+      return validateNotificationDestination(
+        channel,
+        destination,
+      );
+    } catch {
+      return null;
+    }
+  };
+
   const emailDestination = emailEnabled
-    ? validateNotificationDestination(
+    ? safeDestination(
         "email",
         emailPreference?.destination ?? recipient.email,
       )
     : null;
   const webhookDestination = webhookEnabled
-    ? validateNotificationDestination(
+    ? safeDestination(
         "webhook",
         webhookPreference?.destination,
       )
