@@ -9,3 +9,5 @@ export function createDatabase(databaseUrl: string) {
 
   return { client, db: drizzle(client) };
 }
+
+export type Database = ReturnType<typeof createDatabase>["db"];
