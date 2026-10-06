@@ -1,13 +1,20 @@
 import { z } from "zod";
+import {
+  canExposeToAudience,
+  parseInformationClass,
+  type InformationClass,
+} from "@/modules/disclosures/policy";
 
 export const communicationVisibilities = [
   "internal",
-  "case_participants",
+  "participant",
   "public",
 ] as const;
 
 export type CommunicationVisibility =
-  (typeof communicationVisibilities)[number];
+  | "internal"
+  | "participant"
+  | "public";
 
 export const communicationChannels = [
   "email",
@@ -49,12 +56,17 @@ const emailSchema = z.string().trim().email().max(320);
 export function parseCommunicationVisibility(
   value: string,
 ): CommunicationVisibility {
+  const normalized = parseInformationClass(value);
   if (
-    !(communicationVisibilities as readonly string[]).includes(value)
+    normalized !== "internal" &&
+    normalized !== "participant" &&
+    normalized !== "public"
   ) {
-    throw new Error("Communication visibility is invalid.");
+    throw new Error(
+      "Restricted classification is not valid for participant-facing correspondence.",
+    );
   }
-  return value as CommunicationVisibility;
+  return normalized;
 }
 
 export function parseCommunicationChannel(
@@ -125,8 +137,13 @@ export function canExposeDocumentInCommunication(
   visibility: CommunicationVisibility,
   documentVisibility: string,
 ): boolean {
-  if (visibility === "internal") return true;
-  return documentVisibility === "participant";
+  return canExposeToAudience(
+    documentVisibility,
+    visibility as Exclude<
+      InformationClass,
+      "restricted"
+    >,
+  );
 }
 
 function normalizeRecipientAddress(
