@@ -79,7 +79,7 @@ export async function runBackgroundWorkerIteration(
     const scope = createTrustedTenantScope(job.organizationId);
 
     const heartbeatMs = Math.max(
-      1000,
+      250,
       Math.floor((input.leaseSeconds * 1000) / 2),
     );
     const heartbeat = setInterval(() => {
