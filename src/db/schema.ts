@@ -327,7 +327,7 @@ export const applicationManifestRevisions = pgTable(
       table.organizationId,
       table.appliedAt,
     ),
-    uniqueIndex("application_manifest_revisions_org_hash_idx").on(
+    index("application_manifest_revisions_org_hash_idx").on(
       table.organizationId,
       table.manifestHash,
     ),
