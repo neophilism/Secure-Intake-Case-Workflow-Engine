@@ -138,6 +138,11 @@ export default async function CaseDetailPage({
         context,
         "correspondence:view",
       ),
+      canViewDocuments: hasPermission(context, "document:view"),
+      canViewPrivateDocuments: hasPermission(
+        context,
+        "document:view_private",
+      ),
     }),
   ]);
 
@@ -181,6 +186,21 @@ export default async function CaseDetailPage({
       context.permissions,
     ),
   );
+  const visibleNoteAttachments = noteAttachments.filter(
+    ({ document }) =>
+      canViewDocumentVisibility(
+        document.visibility,
+        context.permissions,
+      ),
+  );
+  const visibleCorrespondenceAttachments =
+    correspondenceAttachments.filter(({ document }) =>
+      canViewDocumentVisibility(
+        document.visibility,
+        context.permissions,
+      ),
+    );
+
   const documentHistory = new Map(
     await Promise.all(
       visibleDocuments.map(async ({ version }) => [
@@ -339,9 +359,11 @@ export default async function CaseDetailPage({
         <CaseCommunicationsPanel
           caseId={record.id}
           notes={notes}
-          noteAttachments={noteAttachments}
+          noteAttachments={visibleNoteAttachments}
           correspondence={correspondence}
-          correspondenceAttachments={correspondenceAttachments}
+          correspondenceAttachments={
+            visibleCorrespondenceAttachments
+          }
           templates={communicationTemplates}
           caseDocuments={visibleDocuments}
           canViewNotes={canViewNotes}
