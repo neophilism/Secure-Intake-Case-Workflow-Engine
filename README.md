@@ -14,11 +14,11 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 16 — API and webhooks**
+**PR 17 — configuration and white-label application layer**
 
-This milestone adds scoped organization API clients, database-backed per-client rate limits, a versioned read API with OpenAPI 3.1 documentation, and durable signed webhooks fanned out from immutable audit events through the existing background-job engine.
+This milestone adds declarative, versioned application manifests that let downstream bill-specific projects configure branding, terminology, roles, document types, calendars, routing, communications, workflows, intake forms, review policies, and other portable policy resources without changing the reusable engine.
 
-API credentials are hashed at rest. Webhook signing secrets are AES-256-GCM encrypted, deliveries are HMAC-signed, redirects are disabled, and private/local webhook destinations are rejected at subscription creation and delivery.
+Manifest application is idempotent and non-destructive. The engine explicitly tracks which resources a manifest owns and refuses to silently take over unrelated local configuration.
 
 See [docs/development.md](docs/development.md) for local setup and [docs/architecture](docs/architecture) for architectural decisions.
 

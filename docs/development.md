@@ -550,3 +550,76 @@ HMAC-SHA256(secret, "<X-SICWE-Timestamp>.<raw request body>")
 ```
 
 against the hexadecimal value in `X-SICWE-Signature`.
+
+
+## Declarative thin applications
+
+PR 17 adds the portable application-manifest layer.
+
+A thin downstream project can keep its domain policy in a JSON manifest rather than forking engine behavior. A complete example is available at:
+
+```text
+examples/application-manifest.example.json
+```
+
+Validate a manifest without a database:
+
+```bash
+npm run app:manifest -- \
+  --file ./examples/application-manifest.example.json \
+  --validate-only
+```
+
+Apply it to an organization:
+
+```bash
+npm run app:manifest -- \
+  --file ./examples/application-manifest.example.json \
+  --organization example-office \
+  --actor-email admin@example.gov
+```
+
+The actor must be an active member of the target organization with:
+
+```text
+application:manage
+```
+
+The administration surface is:
+
+```text
+/admin/application
+```
+
+Existing installations should run:
+
+```bash
+npm run db:migrate
+npm run auth:sync-roles
+```
+
+The portable manifest may configure:
+
+- application name, short name, description, logo/accent, and public copy;
+- singular/plural terminology overrides;
+- application-specific roles using core permissions;
+- document types;
+- deadline calendars;
+- routing teams and queues;
+- communication templates;
+- workflows, transition guards/actions, and deadline policies;
+- intake forms and workflow bindings;
+- routing rules;
+- review policies and prerequisite hierarchy.
+
+The apply operation is intentionally non-destructive. It creates or updates declared manifest-owned resources but does not delete resources omitted from later manifests.
+
+If a stable key already exists but was not previously manifest-managed, reconciliation fails instead of taking that resource over.
+
+Forms and workflows keep immutable version histories. A changed definition creates a new published version; an unchanged definition does not.
+
+Staff membership in routing teams is deliberately not portable. A bill/application package can define the team and queue, while each deployment assigns its own people.
+
+Do not place secrets in application manifests. API keys, webhook signing secrets, provider credentials, object-storage credentials, or sensitive operational data belong in deployment configuration.
+
+The generic case type created from an intake is the intake form slug, so stable form slugs also provide portable routing keys without introducing a second case-type registry.

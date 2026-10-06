@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "application": {
+    "key": "public-integrity-demo",
+    "name": "Public Integrity Demonstration Office",
+    "shortName": "Integrity Office",
+    "description": "Example thin application built on the Secure Intake & Case Workflow Engine.",
+    "branding": {
+      "accentColor": "#334155",
+      "homeTitle": "Submit a public integrity matter",
+      "homeDescription": "Use this demonstration intake to exercise the reusable case-workflow engine."
+    },
+    "terminology": {
+      "case": { "singular": "Matter", "plural": "Matters" },
+      "submission": { "singular": "Report", "plural": "Reports" },
+      "submitter": { "singular": "Reporter", "plural": "Reporters" },
+      "review": { "singular": "Review", "plural": "Reviews" },
+      "deadline": { "singular": "Deadline", "plural": "Deadlines" },
+      "document": { "singular": "Document", "plural": "Documents" },
+      "queue": { "singular": "Queue", "plural": "Queues" }
+    }
+  },
+  "roles": [
+    {
+      "key": "integrity_investigator",
+      "name": "Integrity Investigator",
+      "description": "Processes assigned demonstration matters.",
+      "permissions": [
+        "case:view",
+        "case:update",
+        "deadline:view",
+        "deadline:operate",
+        "document:view",
+        "document:upload",
+        "note:view",
+        "note:create_internal"
+      ]
+    }
+  ],
+  "documentTypes": [
+    {
+      "key": "supporting_record",
+      "name": "Supporting Record",
+      "acceptedMimeTypes": ["application/pdf", "image/png", "image/jpeg"],
+      "maxBytes": 25000000
+    }
+  ],
+  "deadlineCalendars": [
+    {
+      "key": "standard_business",
+      "name": "Standard Business Calendar",
+      "timeZone": "America/New_York",
+      "weekendDays": [0, 6]
+    }
+  ],
+  "teams": [],
+  "queues": [
+    {
+      "slug": "integrity_intake",
+      "name": "Integrity Intake",
+      "assignmentStrategy": "manual"
+    }
+  ],
+  "communicationTemplates": [
+    {
+      "key": "received",
+      "name": "Report received",
+      "channel": "email",
+      "subjectTemplate": "Report {{case_number}} received",
+      "bodyTemplate": "Your report {{case_number}} has been received.",
+      "defaultVisibility": "participant"
+    }
+  ],
+  "workflows": [
+    {
+      "slug": "integrity_matter",
+      "name": "Integrity Matter",
+      "definition": {
+        "schemaVersion": 1,
+        "initialState": "submitted",
+        "states": [
+          { "key": "submitted", "label": "Submitted" },
+          { "key": "screening", "label": "Screening" },
+          { "key": "investigation", "label": "Investigation" },
+          { "key": "resolved", "label": "Resolved" },
+          { "key": "closed", "label": "Closed" }
+        ],
+        "transitions": [
+          {
+            "key": "begin_screening",
+            "label": "Begin screening",
+            "from": "submitted",
+            "to": "screening",
+            "requiredPermissions": ["case:update"]
+          },
+          {
+            "key": "open_investigation",
+            "label": "Open investigation",
+            "from": "screening",
+            "to": "investigation",
+            "requiredPermissions": ["case:update"],
+            "actions": [{ "type": "mark_open" }]
+          },
+          {
+            "key": "resolve",
+            "label": "Resolve",
+            "from": "investigation",
+            "to": "resolved",
+            "requiredPermissions": ["case:update"],
+            "actions": [{ "type": "mark_resolved" }]
+          },
+          {
+            "key": "close",
+            "label": "Close",
+            "from": "resolved",
+            "to": "closed",
+            "requiredPermissions": ["case:close"],
+            "actions": [{ "type": "mark_closed" }]
+          }
+        ],
+        "deadlinePolicies": [
+          {
+            "key": "screening_due",
+            "label": "Screening due",
+            "trigger": { "type": "transition", "transitionKey": "begin_screening" },
+            "duration": { "value": 10, "unit": "business_days" },
+            "warningBefore": { "value": 2, "unit": "business_days" },
+            "calendarKey": "standard_business",
+            "completeOnTransitions": ["open_investigation"]
+          }
+        ]
+      }
+    }
+  ],
+  "forms": [
+    {
+      "slug": "integrity-report",
+      "name": "Public Integrity Report",
+      "description": "Example public-facing intake.",
+      "accessMode": "public",
+      "workflowSlug": "integrity_matter",
+      "definition": {
+        "schemaVersion": 1,
+        "intro": "Provide enough information for an intake reviewer to understand the matter.",
+        "submitLabel": "Submit report",
+        "confirmationMessage": "Your report has been received.",
+        "sections": [
+          {
+            "id": "matter",
+            "title": "Matter",
+            "fields": [
+              {
+                "id": "summary",
+                "type": "long_text",
+                "label": "Describe the matter",
+                "required": true,
+                "validation": { "minLength": 20, "maxLength": 10000 }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "routingRules": [
+    {
+      "key": "default_intake",
+      "name": "Default integrity intake",
+      "priority": 100,
+      "targetQueueSlug": "integrity_intake",
+      "definition": {
+        "schemaVersion": 1,
+        "match": "all",
+        "conditions": [
+          {
+            "field": "case_type",
+            "operator": "equals",
+            "value": "general"
+          }
+        ]
+      }
+    }
+  ],
+  "reviewPolicies": []
+}

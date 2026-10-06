@@ -6,6 +6,8 @@ import {
   requireTenantScope,
 } from "@/modules/auth/authorization";
 import { getCurrentAuthorizationContext } from "@/modules/auth/server-session";
+import { findApplicationProfile } from "@/modules/application/repository";
+import { applicationTerm } from "@/modules/application/terminology";
 import {
   caseSearchDefinitionFromSearchParams,
   caseSearchQueryString,
@@ -31,20 +33,6 @@ import {
 } from "./actions";
 
 export const dynamic = "force-dynamic";
-
-const focusLabels: Record<
-  (typeof operationalFocuses)[number],
-  string
-> = {
-  all: "All cases",
-  open: "Open",
-  mine: "Assigned to me",
-  unassigned: "Unassigned",
-  overdue: "Overdue",
-  escalated: "Escalated",
-  open_review: "Open review",
-  recently_closed: "Recently closed",
-};
 
 function hrefFor(definition: CaseSearchDefinition) {
   const query = caseSearchQueryString(definition);
@@ -98,6 +86,7 @@ export default async function OperationsPage({
     memberWorkload,
     queues,
     members,
+    applicationProfile,
   ] = await Promise.all([
     getOperationalDashboard(db, scope, context.membership.id),
     searchCases(db, scope, definition, context.membership.id),
@@ -106,7 +95,58 @@ export default async function OperationsPage({
     listMemberWorkload(db, scope),
     listQueues(db, scope),
     listOrganizationMembers(db, scope),
+    findApplicationProfile(db, scope),
   ]);
+
+  const caseSingular = applicationTerm(
+    applicationProfile?.terminology,
+    "case",
+    1,
+  );
+  const casePlural = applicationTerm(
+    applicationProfile?.terminology,
+    "case",
+    2,
+  );
+  const queueSingular = applicationTerm(
+    applicationProfile?.terminology,
+    "queue",
+    1,
+  );
+  const queuePlural = applicationTerm(
+    applicationProfile?.terminology,
+    "queue",
+    2,
+  );
+  const reviewSingular = applicationTerm(
+    applicationProfile?.terminology,
+    "review",
+    1,
+  );
+  const reviewPlural = applicationTerm(
+    applicationProfile?.terminology,
+    "review",
+    2,
+  );
+  const deadlinePlural = applicationTerm(
+    applicationProfile?.terminology,
+    "deadline",
+    2,
+  );
+
+  const focusLabels: Record<
+    (typeof operationalFocuses)[number],
+    string
+  > = {
+    all: `All ${casePlural}`,
+    open: "Open",
+    mine: "Assigned to me",
+    unassigned: "Unassigned",
+    overdue: "Overdue",
+    escalated: "Escalated",
+    open_review: `Open ${reviewSingular}`,
+    recently_closed: "Recently closed",
+  };
 
   const error = Array.isArray(params.error)
     ? params.error[0]
@@ -140,23 +180,26 @@ export default async function OperationsPage({
         {" · "}
         <Link href="/admin/routing">Routing</Link>
         {" · "}
-        <Link href="/admin/cases">Cases</Link>
+        <Link href="/admin/cases">{casePlural}</Link>
         {" · "}
-        <Link href="/admin/deadlines">Deadlines</Link>
+        <Link href="/admin/deadlines">{deadlinePlural}</Link>
         {" · "}
-        <Link href="/admin/reviews">Reviews</Link>
+        <Link href="/admin/reviews">{reviewPlural}</Link>
         {" · "}
         <Link href="/admin/disclosures">Disclosures</Link>
         {" · "}
         <Link href="/notifications">Notifications</Link>
         {" · "}
         <Link href="/admin/integrations">Integrations</Link>
+        {" · "}
+        <Link href="/admin/application">Application</Link>
       </nav>
 
       <h1>Operations</h1>
       <p>
-        Tenant-scoped case search, personal saved views, workload queues,
-        and operational exception dashboards.
+        Tenant-scoped {caseSingular.toLowerCase()} search, personal saved
+        views, workload {queuePlural.toLowerCase()}, and operational
+        exception dashboards.
       </p>
 
       {error ? (
@@ -188,7 +231,7 @@ export default async function OperationsPage({
               name="q"
               defaultValue={definition.q ?? ""}
               maxLength={200}
-              placeholder="Case number, title, summary, type, or tag"
+              placeholder={`${caseSingular} number, title, summary, type, or tag`}
             />
           </label>
           <label>
@@ -208,12 +251,12 @@ export default async function OperationsPage({
             />
           </label>
           <label>
-            Queue
+            {queueSingular}
             <select
               name="queue"
               defaultValue={definition.queueIds[0] ?? ""}
             >
-              <option value="">Any queue</option>
+              <option value="">Any {queueSingular.toLowerCase()}</option>
               {queues.map((queue) => (
                 <option key={queue.id} value={queue.id}>
                   {queue.name}
@@ -282,16 +325,16 @@ export default async function OperationsPage({
         </form>
 
         {records.length === 0 ? (
-          <p>No cases match this operational view.</p>
+          <p>No {casePlural.toLowerCase()} match this operational view.</p>
         ) : (
           <table>
             <thead>
               <tr>
-                <th>Case</th>
+                <th>{caseSingular}</th>
                 <th>Title</th>
                 <th>Status</th>
                 <th>Priority</th>
-                <th>Queue</th>
+                <th>{queueSingular}</th>
                 <th>Assignee</th>
                 <th>Exceptions</th>
                 <th>Updated</th>
@@ -414,16 +457,16 @@ export default async function OperationsPage({
       </section>
 
       <section>
-        <h2>Queue workload</h2>
+        <h2>{queueSingular} workload</h2>
         {queueWorkload.length === 0 ? (
-          <p>No routing queues are configured.</p>
+          <p>No routing {queuePlural.toLowerCase()} are configured.</p>
         ) : (
           <table>
             <thead>
               <tr>
                 <th>Queue</th>
                 <th>Status</th>
-                <th>Open cases</th>
+                <th>Open {casePlural.toLowerCase()}</th>
               </tr>
             </thead>
             <tbody>
@@ -463,7 +506,7 @@ export default async function OperationsPage({
             <tr>
               <th>Staff member</th>
               <th>Title</th>
-              <th>Open assigned cases</th>
+              <th>Open assigned {casePlural.toLowerCase()}</th>
             </tr>
           </thead>
           <tbody>
