@@ -14,7 +14,18 @@ import {
   revokeSession,
   setSessionActiveOrganization,
 } from "./repository";
-import { verifyPassword } from "./password";
+import {
+  consumePasswordVerificationWork,
+  passwordExceedsBcryptLimit,
+  verifyPassword,
+} from "./password";
+import {
+  assertLoginAllowed,
+  clearAccountLoginFailures,
+  loginThrottleKeys,
+  normalizeLoginIdentifier,
+  recordLoginFailure,
+} from "./throttle";
 import {
   createSessionToken,
   hashSessionToken,
@@ -37,22 +48,43 @@ export async function authenticateWithLocalPassword(
   db: Database,
   email: string,
   password: string,
+  source?: string | null,
 ): Promise<NewSession> {
-  const user = await findActiveUserByEmail(db, email);
+  const throttle = loginThrottleKeys(email, source);
+  await assertLoginAllowed(db, throttle.all);
+
+  const normalizedEmail = normalizeLoginIdentifier(email);
+  if (
+    normalizedEmail.length < 3 ||
+    normalizedEmail.length > 320 ||
+    passwordExceedsBcryptLimit(password)
+  ) {
+    await consumePasswordVerificationWork("invalid-login-candidate");
+    await recordLoginFailure(db, throttle.all);
+    throw new InvalidCredentialsError();
+  }
+
+  const user = await findActiveUserByEmail(db, normalizedEmail);
   if (!user) {
+    await consumePasswordVerificationWork(password);
+    await recordLoginFailure(db, throttle.all);
     throw new InvalidCredentialsError();
   }
 
   const credential = await findCredentialForUser(db, user.id);
   if (!credential) {
+    await consumePasswordVerificationWork(password);
+    await recordLoginFailure(db, throttle.all);
     throw new InvalidCredentialsError();
   }
 
   const valid = await verifyPassword(password, credential.passwordHash);
   if (!valid) {
+    await recordLoginFailure(db, throttle.all);
     throw new InvalidCredentialsError();
   }
 
+  await clearAccountLoginFailures(db, throttle.account);
   return createSessionForUser(db, user.id);
 }
 

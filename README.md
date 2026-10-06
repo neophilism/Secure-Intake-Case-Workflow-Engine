@@ -14,11 +14,9 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 17 — configuration and white-label application layer**
+**PR 18 — security hardening**
 
-This milestone adds declarative, versioned application manifests that let downstream bill-specific projects configure branding, terminology, roles, document types, calendars, routing, communications, workflows, intake forms, review policies, and other portable policy resources without changing the reusable engine.
-
-Manifest application is idempotent and non-destructive. The engine explicitly tracks which resources a manifest owns and refuses to silently take over unrelated local configuration.
+This milestone hardens authentication, browser/session boundaries, integration responses, webhook egress validation, dependency checks, and the production container. It adds database-backed login throttling with enumeration-resistant bcrypt work, strict session cookies, same-origin guards for cookie-authenticated POST routes, baseline security headers, non-cacheable authenticated responses, stronger IPv4/IPv6 SSRF filtering, a non-root runtime image, and a high-severity production dependency audit gate.
 
 See [docs/development.md](docs/development.md) for local setup and [docs/architecture](docs/architecture) for architectural decisions.
 

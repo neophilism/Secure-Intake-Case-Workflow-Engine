@@ -623,3 +623,114 @@ Staff membership in routing teams is deliberately not portable. A bill/applicati
 Do not place secrets in application manifests. API keys, webhook signing secrets, provider credentials, object-storage credentials, or sensitive operational data belong in deployment configuration.
 
 The generic case type created from an intake is the intake form slug, so stable form slugs also provide portable routing keys without introducing a second case-type registry.
+
+
+## Security hardening baseline
+
+PR 18 adds a reusable application-layer hardening baseline.
+
+### Canonical public origin
+
+Set the exact public origin:
+
+```env
+APP_BASE_URL=https://casework.example.gov
+```
+
+It must be an HTTP(S) origin only: no credentials, path, query string, or
+fragment.
+
+Cookie-authenticated custom POST routes compare browser `Origin`/`Referer`
+against this value. An incorrect production value can therefore cause secure
+mutations such as document upload or API-key creation to be rejected.
+
+### Login throttling
+
+Defaults:
+
+```env
+AUTH_LOGIN_FAILURE_LIMIT=5
+AUTH_LOGIN_WINDOW_MINUTES=15
+AUTH_LOGIN_BLOCK_MINUTES=15
+AUTH_TRUST_PROXY_HEADERS=false
+```
+
+The account bucket is always enabled and is stored only as a SHA-256 identifier.
+
+Enable proxy source buckets only when the application is behind a trusted proxy
+that overwrites (rather than merely appends attacker-controlled values to)
+`X-Real-IP`/`X-Forwarded-For`:
+
+```env
+AUTH_TRUST_PROXY_HEADERS=true
+```
+
+Do not enable this setting on a directly reachable application server.
+
+Run the migration before deploying:
+
+```bash
+npm run db:migrate
+```
+
+### Session cookies
+
+Browser sessions use `HttpOnly`, `SameSite=Strict`, production `Secure`,
+root path scope, and high priority.
+
+HTTPS-only deployments may choose:
+
+```env
+AUTH_SESSION_COOKIE_NAME=__Host-sicwe_session
+```
+
+The engine never stores the raw session token in PostgreSQL.
+
+### Password bounds
+
+Local passwords must be at least 12 characters and at most 72 UTF-8 bytes.
+
+The upper bound avoids relying on bcrypt truncation. Unknown accounts still
+perform bcrypt work so the common login path does not expose an obvious
+user-existence timing distinction.
+
+### Browser headers and caching
+
+The Next.js configuration emits a baseline CSP plus clickjacking, MIME sniffing,
+referrer, browser-feature, opener/resource, and cross-domain-policy headers.
+
+Production builds also emit HSTS.
+
+Administrative pages are explicitly `private, no-store`. Authenticated REST
+API responses are also non-cacheable.
+
+The baseline CSP permits inline framework script/style execution for Next.js
+compatibility. A deployment may impose a stricter nonce/hash CSP after testing
+it against its exact frontend build.
+
+### Webhook network boundary
+
+Webhook destinations are validated at creation and again before delivery.
+
+Private/non-public IPv4 and IPv6 targets, IPv4-mapped private IPv6 addresses,
+6to4, Teredo, documentation, benchmarking, and similar special ranges are
+rejected.
+
+Application checks do not eliminate DNS-rebinding TOCTOU risk. Production
+deployments should block internal/private/metadata networks at the egress
+firewall as a second independent control.
+
+### Dependency and container baseline
+
+CI now rejects high/critical runtime dependency advisories:
+
+```bash
+npm audit --omit=dev --audit-level=high
+```
+
+The production Docker image runs as an unprivileged `nextjs` user and disables
+framework telemetry.
+
+See `SECURITY.md` and
+`docs/architecture/0021-security-hardening-baseline.md` for the full trust
+model and residual deployment responsibilities.

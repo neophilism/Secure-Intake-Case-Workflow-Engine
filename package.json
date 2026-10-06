@@ -1,6 +1,6 @@
 {
   "name": "secure-intake-case-workflow-engine",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
-    "drizzle-orm": "^0.44.5",
+    "drizzle-orm": "^0.45.3",
     "next": "^15.5.4",
     "postgres": "^3.4.7",
     "react": "^19.1.1",
@@ -41,5 +41,8 @@
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "postcss": "^8.5.23"
   }
 }

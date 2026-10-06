@@ -18,6 +18,11 @@ export default async function LoginPage({
       {error === "invalid_credentials" ? (
         <p role="alert">The email address or password was not accepted.</p>
       ) : null}
+      {error === "rate_limited" ? (
+        <p role="alert">
+          Too many failed sign-in attempts. Try again later.
+        </p>
+      ) : null}
 
       <form action={loginAction}>
         <label>

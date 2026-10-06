@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   hashPassword,
+  MAXIMUM_PASSWORD_BYTES,
   MINIMUM_PASSWORD_LENGTH,
   validatePassword,
   verifyPassword,
@@ -20,5 +21,9 @@ describe("password credentials", () => {
     expect(() => validatePassword("x".repeat(MINIMUM_PASSWORD_LENGTH - 1))).toThrow(
       /at least/,
     );
+  });
+  it("rejects passwords beyond bcrypt's effective input bound", () => {
+    expect(() => validatePassword("a".repeat(MAXIMUM_PASSWORD_BYTES + 1))).toThrow();
+    expect(() => validatePassword("é".repeat(37))).toThrow();
   });
 });
