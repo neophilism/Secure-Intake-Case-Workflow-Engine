@@ -120,6 +120,13 @@
       "when": 1791302400000,
       "tag": "0016_security_hardening",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791306000000,
+      "tag": "0017_protected_compartments",
+      "breakpoints": true
     }
   ]
 }
