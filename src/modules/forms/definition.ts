@@ -44,6 +44,11 @@ export const fieldValidationSchema = z.object({
   max: z.number().optional(),
 });
 
+const fieldProtectionSchema = z.object({
+  compartment: identifier,
+  revealPolicy: z.literal("dual_control").default("dual_control"),
+});
+
 export const formFieldSchema = z
   .object({
     id: identifier,
@@ -58,6 +63,7 @@ export const formFieldSchema = z
     attestationText: z.string().max(5000).optional(),
     acceptedMimeTypes: z.array(z.string().min(1).max(200)).max(100).optional(),
     maxFiles: z.number().int().positive().max(50).optional(),
+    protection: fieldProtectionSchema.optional(),
   })
   .superRefine((field, ctx) => {
     if (
@@ -76,6 +82,15 @@ export const formFieldSchema = z
         code: "custom",
         message: "Attestation fields require attestationText.",
         path: ["attestationText"],
+      });
+    }
+
+    if (field.type === "file" && field.protection) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "File fields cannot use protected compartments until protected document storage is configured.",
+        path: ["protection"],
       });
     }
 
@@ -164,6 +179,13 @@ export const formDefinitionSchema = z
       });
     });
 
+    const protectionByField = new Map(
+      fieldsInDefinition(definition).map((field) => [
+        field.id,
+        field.protection?.compartment ?? null,
+      ] as const),
+    );
+
     definition.sections.forEach((section, sectionIndex) => {
       section.fields.forEach((field, fieldIndex) => {
         if (!field.condition) return;
@@ -178,6 +200,22 @@ export const formDefinitionSchema = z
 
         const controllerIndex = fieldOrder.get(field.condition.fieldId);
         const dependentIndex = fieldOrder.get(field.id);
+        const controllerCompartment = protectionByField.get(
+          field.condition.fieldId,
+        );
+        const dependentCompartment = protectionByField.get(field.id);
+
+        if (
+          controllerCompartment &&
+          controllerCompartment !== dependentCompartment
+        ) {
+          ctx.addIssue({
+            code: "custom",
+            message:
+              "A protected field may control visibility only within the same protected compartment.",
+            path: ["sections", sectionIndex, "fields", fieldIndex, "condition"],
+          });
+        }
 
         if (
           controllerIndex !== undefined &&

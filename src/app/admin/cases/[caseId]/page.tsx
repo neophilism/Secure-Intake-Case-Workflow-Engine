@@ -48,6 +48,11 @@ import {
 import { CaseCommunicationsPanel } from "./communications-panel";
 import { CaseReviewsPanel } from "./reviews-panel";
 import { CaseTimelinePanel } from "./timeline-panel";
+import { CaseProtectedDataPanel } from "./protected-data-panel";
+import {
+  listProtectedCompartmentsForSubmission,
+  listRevealRequestsForCompartments,
+} from "@/modules/protected-data/repository";
 import {
   findWorkflowState,
   parseWorkflowDefinition,
@@ -219,6 +224,18 @@ export default async function CaseDetailPage({
     context,
     "review:manage",
   );
+  const canViewProtectedMetadata = hasPermission(
+    context,
+    "protected_data:view_metadata",
+  );
+  const canRequestProtectedReveal = hasPermission(
+    context,
+    "protected_data:request_reveal",
+  );
+  const canApproveProtectedReveal = hasPermission(
+    context,
+    "protected_data:approve_reveal",
+  );
   const canApplyReviewEffect =
     canDecideReviews && canUpdate;
   const visibleDocuments = caseDocuments.filter(({ document }) =>
@@ -241,6 +258,23 @@ export default async function CaseDetailPage({
         context.permissions,
       ),
     );
+
+  const protectedCompartments =
+    record.sourceSubmissionId && canViewProtectedMetadata
+      ? await listProtectedCompartmentsForSubmission(
+          db,
+          scope,
+          record.sourceSubmissionId,
+        )
+      : [];
+  const protectedRevealRequests =
+    protectedCompartments.length > 0
+      ? await listRevealRequestsForCompartments(
+          db,
+          scope,
+          protectedCompartments.map((entry) => entry.id),
+        )
+      : [];
 
   const documentHistory = new Map(
     await Promise.all(
@@ -1158,6 +1192,17 @@ export default async function CaseDetailPage({
           ))}
         </ol>
       </section>
+
+      {canViewProtectedMetadata && record.sourceSubmissionId ? (
+        <CaseProtectedDataPanel
+          caseId={record.id}
+          compartments={protectedCompartments}
+          requests={protectedRevealRequests}
+          currentUserId={context.user.id}
+          canRequest={canRequestProtectedReveal}
+          canApprove={canApproveProtectedReveal}
+        />
+      ) : null}
 
       {source ? (
         <section>

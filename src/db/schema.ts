@@ -530,6 +530,93 @@ export const intakeSubmissions = pgTable(
 );
 
 
+export const submissionProtectedCompartments = pgTable(
+  "submission_protected_compartments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    submissionId: uuid("submission_id")
+      .notNull()
+      .references(() => intakeSubmissions.id, { onDelete: "cascade" }),
+    compartmentKey: text("compartment_key").notNull(),
+    ciphertext: text("ciphertext").notNull(),
+    fieldIds: jsonb("field_ids")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("submission_protected_compartments_org_idx").on(
+      table.organizationId,
+    ),
+    index("submission_protected_compartments_submission_idx").on(
+      table.submissionId,
+    ),
+    uniqueIndex("submission_protected_compartments_unique_idx").on(
+      table.submissionId,
+      table.compartmentKey,
+    ),
+  ],
+);
+
+export const protectedRevealRequests = pgTable(
+  "protected_reveal_requests",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    compartmentId: uuid("compartment_id")
+      .notNull()
+      .references(() => submissionProtectedCompartments.id, {
+        onDelete: "cascade",
+      }),
+    requestedByUserId: uuid("requested_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    reason: text("reason").notNull(),
+    status: text("status").notNull().default("pending"),
+    decidedByUserId: uuid("decided_by_user_id").references(() => users.id, {
+      onDelete: "restrict",
+    }),
+    decisionReason: text("decision_reason"),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("protected_reveal_requests_org_idx").on(
+      table.organizationId,
+      table.createdAt,
+    ),
+    index("protected_reveal_requests_compartment_idx").on(
+      table.compartmentId,
+      table.createdAt,
+    ),
+    uniqueIndex("protected_reveal_requests_active_idx")
+      .on(table.compartmentId, table.requestedByUserId)
+      .where(
+        sql`${table.status} in ('pending','approved')`,
+      ),
+  ],
+);
+
+
+
 
 export const caseWorkflows = pgTable(
   "case_workflows",

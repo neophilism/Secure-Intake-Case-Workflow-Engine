@@ -11,13 +11,34 @@
       "homeDescription": "Submit an example value to exercise the generic engine contract."
     },
     "terminology": {
-      "case": { "singular": "Record", "plural": "Records" },
-      "submission": { "singular": "Submission", "plural": "Submissions" },
-      "submitter": { "singular": "Submitter", "plural": "Submitters" },
-      "review": { "singular": "Review", "plural": "Reviews" },
-      "deadline": { "singular": "Deadline", "plural": "Deadlines" },
-      "document": { "singular": "Document", "plural": "Documents" },
-      "queue": { "singular": "Queue", "plural": "Queues" }
+      "case": {
+        "singular": "Record",
+        "plural": "Records"
+      },
+      "submission": {
+        "singular": "Submission",
+        "plural": "Submissions"
+      },
+      "submitter": {
+        "singular": "Submitter",
+        "plural": "Submitters"
+      },
+      "review": {
+        "singular": "Review",
+        "plural": "Reviews"
+      },
+      "deadline": {
+        "singular": "Deadline",
+        "plural": "Deadlines"
+      },
+      "document": {
+        "singular": "Document",
+        "plural": "Documents"
+      },
+      "queue": {
+        "singular": "Queue",
+        "plural": "Queues"
+      }
     }
   },
   "roles": [
@@ -34,7 +55,9 @@
         "document:view",
         "document:upload",
         "review:view",
-        "review:file"
+        "review:file",
+        "protected_data:view_metadata",
+        "protected_data:request_reveal"
       ]
     }
   ],
@@ -42,7 +65,9 @@
     {
       "key": "example_document",
       "name": "Example Document",
-      "acceptedMimeTypes": ["application/pdf"],
+      "acceptedMimeTypes": [
+        "application/pdf"
+      ],
       "maxBytes": 10000000
     }
   ],
@@ -51,7 +76,10 @@
       "key": "example_calendar",
       "name": "Example Calendar",
       "timeZone": "UTC",
-      "weekendDays": [0, 6]
+      "weekendDays": [
+        0,
+        6
+      ]
     }
   ],
   "teams": [
@@ -87,11 +115,26 @@
         "schemaVersion": 1,
         "initialState": "state_a",
         "states": [
-          { "key": "state_a", "label": "State A" },
-          { "key": "state_b", "label": "State B" },
-          { "key": "state_c", "label": "State C" },
-          { "key": "state_d", "label": "State D" },
-          { "key": "state_closed", "label": "State Closed" }
+          {
+            "key": "state_a",
+            "label": "State A"
+          },
+          {
+            "key": "state_b",
+            "label": "State B"
+          },
+          {
+            "key": "state_c",
+            "label": "State C"
+          },
+          {
+            "key": "state_d",
+            "label": "State D"
+          },
+          {
+            "key": "state_closed",
+            "label": "State Closed"
+          }
         ],
         "transitions": [
           {
@@ -99,27 +142,45 @@
             "label": "Advance A to B",
             "from": "state_a",
             "to": "state_b",
-            "requiredPermissions": ["case:update"],
+            "requiredPermissions": [
+              "case:update"
+            ],
             "comment": "optional",
-            "actions": [{ "type": "mark_open" }]
+            "actions": [
+              {
+                "type": "mark_open"
+              }
+            ]
           },
           {
             "key": "advance_b_to_c",
             "label": "Advance B to C",
             "from": "state_b",
             "to": "state_c",
-            "requiredPermissions": ["case:update"],
+            "requiredPermissions": [
+              "case:update"
+            ],
             "comment": "optional",
-            "actions": [{ "type": "mark_resolved" }]
+            "actions": [
+              {
+                "type": "mark_resolved"
+              }
+            ]
           },
           {
             "key": "close_d",
             "label": "Close D",
             "from": "state_d",
             "to": "state_closed",
-            "requiredPermissions": ["case:close"],
+            "requiredPermissions": [
+              "case:close"
+            ],
             "comment": "optional",
-            "actions": [{ "type": "mark_closed" }]
+            "actions": [
+              {
+                "type": "mark_closed"
+              }
+            ]
           }
         ],
         "deadlinePolicies": [
@@ -130,10 +191,18 @@
               "type": "transition",
               "transitionKey": "advance_a_to_b"
             },
-            "duration": { "value": 2, "unit": "business_days" },
-            "warningBefore": { "value": 1, "unit": "business_days" },
+            "duration": {
+              "value": 2,
+              "unit": "business_days"
+            },
+            "warningBefore": {
+              "value": 1,
+              "unit": "business_days"
+            },
             "calendarKey": "example_calendar",
-            "completeOnTransitions": ["advance_b_to_c"]
+            "completeOnTransitions": [
+              "advance_b_to_c"
+            ]
           }
         ]
       }
@@ -164,6 +233,20 @@
                 "validation": {
                   "minLength": 5,
                   "maxLength": 1000
+                }
+              },
+              {
+                "id": "example_secret",
+                "type": "short_text",
+                "label": "Example protected value",
+                "required": true,
+                "validation": {
+                  "minLength": 3,
+                  "maxLength": 200
+                },
+                "protection": {
+                  "compartment": "example_secret",
+                  "revealPolicy": "dual_control"
                 }
               }
             ]
@@ -197,7 +280,9 @@
       "name": "Example Review",
       "description": "Neutral independent-review policy for contract testing.",
       "level": 1,
-      "eligibleCaseStatuses": ["state_c"],
+      "eligibleCaseStatuses": [
+        "state_c"
+      ],
       "filingWindow": {
         "value": 10,
         "unit": "business_days"
@@ -211,7 +296,10 @@
         "unit": "business_days"
       },
       "calendarKey": "example_calendar",
-      "allowedOutcomes": ["outcome_a", "outcome_b"],
+      "allowedOutcomes": [
+        "outcome_a",
+        "outcome_b"
+      ],
       "requireIndependentReviewer": true,
       "prerequisitePolicyKeys": []
     }

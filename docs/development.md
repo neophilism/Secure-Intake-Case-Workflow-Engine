@@ -483,6 +483,67 @@ npm run db:migrate
 npm run auth:sync-roles
 ```
 
+
+## Protected form compartments
+
+A form field may declare:
+
+```json
+{
+  "id": "protected_value",
+  "type": "short_text",
+  "label": "Protected value",
+  "protection": {
+    "compartment": "identity",
+    "revealPolicy": "dual_control"
+  }
+}
+```
+
+Protected fields are validated with the rest of the form, then removed from the ordinary `intake_submissions.answers` JSON before any draft or final submission is written. Values are grouped by compartment key and encrypted in `submission_protected_compartments`.
+
+Configure a 32-byte AES key as 64 hexadecimal characters before accepting a form that uses protected fields:
+
+```env
+PROTECTED_DATA_ENCRYPTION_KEY=<64 hex characters>
+```
+
+The key is optional for deployments whose forms contain no protected fields. A protected-form submission fails rather than falling back to plaintext if the key is absent.
+
+Encryption uses AES-256-GCM. The organization ID, submission ID, and compartment key are authenticated as additional data so ciphertext cannot be moved between tenants, submissions, or compartments and still decrypt successfully.
+
+Protected field names may be listed as metadata, but protected values are not displayed in the normal case page or copied into audit events.
+
+Permissions:
+
+```text
+protected_data:view_metadata
+protected_data:request_reveal
+protected_data:approve_reveal
+```
+
+Reveal lifecycle:
+
+```text
+request -> approved -> one-time consumed
+        \-> rejected
+```
+
+The requester cannot decide their own request. Approval is valid for 15 minutes. Only the original requester may consume it, and the database update makes the reveal one-time under concurrency.
+
+The case console exposes request/decision controls. The plaintext reveal is served only from a same-origin-checked POST endpoint with `Cache-Control: no-store`; it is never embedded in the ordinary case page.
+
+Protected file fields are deliberately rejected. Binary evidence requires a separate protected-document storage design rather than hiding a document reference while leaving the underlying file under ordinary document authorization.
+
+A protected field may control conditional visibility only for another field in the same protected compartment. This avoids persisting an ordinary answer whose presence itself leaks a protected value.
+
+Existing installations should run:
+
+```bash
+npm run db:migrate
+npm run auth:sync-roles
+```
+
 ## Verification
 
 ```bash

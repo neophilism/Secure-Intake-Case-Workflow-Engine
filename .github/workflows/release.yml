@@ -30,6 +30,7 @@ jobs:
     env:
       DATABASE_URL: postgres://casework:casework@localhost:5432/casework
       APP_BASE_URL: http://localhost:3000
+      PROTECTED_DATA_ENCRYPTION_KEY: "1111111111111111111111111111111111111111111111111111111111111111"
       IMAGE_NAME: ghcr.io/neophilism/secure-intake-case-workflow-engine
     steps:
       - uses: actions/checkout@v4

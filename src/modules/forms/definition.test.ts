@@ -142,4 +142,86 @@ describe("form definition", () => {
       }),
     ).toThrow(/Select fields require/);
   });
+
+  it("accepts dual-control protected form fields", () => {
+    const definition = parseFormDefinition({
+      schemaVersion: 1,
+      sections: [
+        {
+          id: "details",
+          title: "Details",
+          fields: [
+            {
+              id: "protected_value",
+              type: "short_text",
+              label: "Protected value",
+              protection: { compartment: "identity" },
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(
+      definition.sections[0].fields[0].protection,
+    ).toEqual({
+      compartment: "identity",
+      revealPolicy: "dual_control",
+    });
+  });
+
+  it("rejects protected file references until protected document storage exists", () => {
+    expect(() =>
+      parseFormDefinition({
+        schemaVersion: 1,
+        sections: [
+          {
+            id: "details",
+            title: "Details",
+            fields: [
+              {
+                id: "attachment",
+                type: "file",
+                label: "Attachment",
+                protection: { compartment: "identity" },
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(/File fields cannot use protected compartments/);
+  });
+
+  it("prevents protected values from controlling ordinary-field visibility", () => {
+    expect(() =>
+      parseFormDefinition({
+        schemaVersion: 1,
+        sections: [
+          {
+            id: "details",
+            title: "Details",
+            fields: [
+              {
+                id: "protected_controller",
+                type: "boolean",
+                label: "Protected controller",
+                protection: { compartment: "identity" },
+              },
+              {
+                id: "ordinary_dependent",
+                type: "short_text",
+                label: "Ordinary dependent",
+                condition: {
+                  fieldId: "protected_controller",
+                  operator: "equals",
+                  value: true,
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(/same protected compartment/);
+  });
+
 });
