@@ -548,7 +548,9 @@ export async function fileCaseReview(
         policyKeySnapshot: policy.key,
         policyNameSnapshot: policy.name,
         levelSnapshot: policy.level,
-        policySnapshot,
+        policySnapshot: JSON.parse(
+          JSON.stringify(policySnapshot),
+        ) as Record<string, unknown>,
         challengedSnapshot,
         status: "filed",
         grounds,
@@ -826,6 +828,12 @@ export async function beginReview(
   },
 ) {
   return db.transaction(async (tx) => {
+    await requireActorMembership(
+      tx,
+      scope,
+      input.actorMembershipId,
+      input.actorUserId,
+    );
     const review = await requireReview(tx, scope, input.reviewId);
     if (review.status !== "assigned") {
       throw new ReviewStateError(
@@ -915,6 +923,12 @@ export async function decideReview(
   }
 
   return db.transaction(async (tx) => {
+    await requireActorMembership(
+      tx,
+      scope,
+      input.actorMembershipId,
+      input.actorUserId,
+    );
     const review = await requireReview(tx, scope, input.reviewId);
     if (
       review.status !== "assigned" &&
@@ -1464,6 +1478,42 @@ export async function sweepReviewDeadlines(
   }
 
   return { warnings, overdue };
+}
+
+async function requireActorMembership(
+  tx: DatabaseTransaction,
+  scope: TenantScope,
+  membershipId: string,
+  userId: string,
+) {
+  const [membership] = await tx
+    .select({ id: organizationMemberships.id })
+    .from(organizationMemberships)
+    .innerJoin(
+      users,
+      and(
+        eq(users.id, organizationMemberships.userId),
+        eq(users.id, userId),
+        eq(users.status, "active"),
+      ),
+    )
+    .where(
+      and(
+        eq(organizationMemberships.id, membershipId),
+        eq(
+          organizationMemberships.organizationId,
+          scope.organizationId,
+        ),
+        eq(organizationMemberships.status, "active"),
+      ),
+    )
+    .limit(1);
+
+  if (!membership) {
+    throw new ReviewEligibilityError(
+      "Acting review membership does not belong to the authenticated user.",
+    );
+  }
 }
 
 async function requireReview(
