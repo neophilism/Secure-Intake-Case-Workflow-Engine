@@ -335,6 +335,17 @@ export async function uploadDocumentToSubmission(
         note: `SHA-256 ${prepared.sha256}`,
       });
 
+      await tx.insert(documentAccessEvents).values({
+        organizationId: scope.organizationId,
+        documentVersionId: versionId,
+        action: "upload",
+        actorUserId: input.actorUserId ?? null,
+        metadata: {
+          submissionId: input.submissionId,
+          storageDriver: storage.driver,
+        },
+      });
+
       return { document, version, link };
     });
   } catch (error) {
@@ -356,8 +367,20 @@ export async function addDocumentVersion(
   storage: DocumentStorageAdapter = getDocumentStorageAdapter(),
 ) {
   const [document] = await db
-    .select()
+    .select({
+      id: documents.id,
+      acceptedMimeTypes: documentTypes.acceptedMimeTypes,
+      maxBytes: documentTypes.maxBytes,
+    })
     .from(documents)
+    .innerJoin(
+      documentTypes,
+      and(
+        eq(documentTypes.id, documents.documentTypeId),
+        eq(documentTypes.organizationId, scope.organizationId),
+        eq(documentTypes.status, "active"),
+      ),
+    )
     .where(
       and(
         eq(documents.id, input.documentId),
@@ -368,6 +391,11 @@ export async function addDocumentVersion(
     .limit(1);
 
   if (!document) throw new DocumentNotFoundError();
+  validateTypeRestrictions(
+    document,
+    input.mimeType,
+    input.data.byteLength,
+  );
 
   const [current] = await db
     .select({ value: max(documentVersions.versionNumber) })
@@ -494,6 +522,10 @@ export async function recordMalwareScanResult(
     actorUserId: string;
   },
 ) {
+  if (!input.provider.trim()) {
+    throw new Error("Malware scan provider is required.");
+  }
+
   const contentStatus =
     input.status === "clean"
       ? "available"
@@ -550,6 +582,10 @@ export async function recordCustodyEvent(
     occurredAt?: Date;
   },
 ) {
+  if (!input.action.trim()) {
+    throw new Error("Custody action is required.");
+  }
+
   const [version] = await db
     .select({ id: documentVersions.id })
     .from(documentVersions)
