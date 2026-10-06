@@ -250,7 +250,7 @@ export const applicationManifestSchema = z
       }
     }
 
-    unique(
+    const documentTypeKeys = unique(
       manifest.documentTypes.map((item) => item.key),
       "documentTypes",
     );
@@ -307,6 +307,77 @@ export const applicationManifestSchema = z
       "reviewPolicies",
     );
 
+    manifest.workflows.forEach((workflow, workflowIndex) => {
+      workflow.definition.deadlinePolicies.forEach(
+        (policy, policyIndex) => {
+          if (
+            policy.calendarKey &&
+            !calendarKeys.has(policy.calendarKey)
+          ) {
+            ctx.addIssue({
+              code: "custom",
+              message:
+                `Workflow deadline references undeclared calendar: ${policy.calendarKey}`,
+              path: [
+                "workflows",
+                workflowIndex,
+                "definition",
+                "deadlinePolicies",
+                policyIndex,
+                "calendarKey",
+              ],
+            });
+          }
+          if (
+            policy.escalation?.queueSlug &&
+            !queueKeys.has(policy.escalation.queueSlug)
+          ) {
+            ctx.addIssue({
+              code: "custom",
+              message:
+                `Workflow deadline references undeclared queue: ${policy.escalation.queueSlug}`,
+              path: [
+                "workflows",
+                workflowIndex,
+                "definition",
+                "deadlinePolicies",
+                policyIndex,
+                "escalation",
+                "queueSlug",
+              ],
+            });
+          }
+        },
+      );
+
+      workflow.definition.transitions.forEach(
+        (transition, transitionIndex) => {
+          transition.guards.requiredDocuments.forEach(
+            (requirement, requirementIndex) => {
+              if (!documentTypeKeys.has(requirement.type)) {
+                ctx.addIssue({
+                  code: "custom",
+                  message:
+                    `Workflow guard references undeclared document type: ${requirement.type}`,
+                  path: [
+                    "workflows",
+                    workflowIndex,
+                    "definition",
+                    "transitions",
+                    transitionIndex,
+                    "guards",
+                    "requiredDocuments",
+                    requirementIndex,
+                    "type",
+                  ],
+                });
+              }
+            },
+          );
+        },
+      );
+    });
+
     manifest.forms.forEach((form, index) => {
       if (form.workflowSlug && !workflowKeys.has(form.workflowSlug)) {
         ctx.addIssue({
@@ -353,12 +424,29 @@ export const applicationManifestSchema = z
           path: ["reviewPolicies", index, "calendarKey"],
         });
       }
+      const policyLevels = new Map(
+        manifest.reviewPolicies.map((item) => [item.key, item.level]),
+      );
       for (const prerequisite of policy.prerequisitePolicyKeys) {
         if (!reviewKeys.has(prerequisite)) {
           ctx.addIssue({
             code: "custom",
             message:
               `Review policy references undeclared prerequisite: ${prerequisite}`,
+            path: [
+              "reviewPolicies",
+              index,
+              "prerequisitePolicyKeys",
+            ],
+          });
+        } else if (
+          (policyLevels.get(prerequisite) ?? policy.level) >=
+          policy.level
+        ) {
+          ctx.addIssue({
+            code: "custom",
+            message:
+              "Review prerequisites must have a lower hierarchy level.",
             path: [
               "reviewPolicies",
               index,
