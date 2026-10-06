@@ -582,7 +582,9 @@ export async function deliverQueuedCorrespondence(
   messageId: string,
   transport: CommunicationTransport,
 ) {
-  const message = await requireMessage(db, scope, messageId);
+  const message = await db.transaction((tx) =>
+    requireMessage(tx, scope, messageId),
+  );
   if (
     message.direction !== "outbound" ||
     message.status !== "queued"
@@ -836,7 +838,7 @@ async function requireCase(
 }
 
 async function requireMessage(
-  db: Database | DatabaseTransaction,
+  db: DatabaseTransaction,
   scope: TenantScope,
   messageId: string,
 ) {
