@@ -30,10 +30,12 @@ async function requireJobManager() {
 }
 
 export async function seedSchedulesAction() {
-  await requireJobManager();
+  const context = await requireJobManager();
   await ensureBuiltinSchedules(
     getRuntimeDatabase(),
     env.BACKGROUND_DEADLINE_SWEEP_SECONDS,
+    new Date(),
+    requireTenantScope(context).organizationId,
   );
   redirect("/admin/jobs?result=schedules_synced");
 }
@@ -47,6 +49,8 @@ export async function runCoreJobsOnceAction() {
       workerId: `admin-${context.user.id}-${randomUUID()}`,
       batchSize: env.BACKGROUND_JOB_BATCH_SIZE,
       leaseSeconds: env.BACKGROUND_JOB_LEASE_SECONDS,
+      organizationId:
+        requireTenantScope(context).organizationId,
     },
   );
 
