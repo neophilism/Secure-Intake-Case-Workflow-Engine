@@ -1,5 +1,10 @@
 import { and, desc, eq, max } from "drizzle-orm";
-import type { Database } from "@/db/client";
+import type {
+  Database,
+  DatabaseTransaction,
+} from "@/db/client";
+
+type DbExecutor = Database | DatabaseTransaction;
 import {
   auditEvents,
   intakeForms,
@@ -386,7 +391,7 @@ export async function findVersionForSubmission(
 }
 
 export async function insertSubmission(
-  db: Database,
+  db: DbExecutor,
   input: {
     organizationId: string;
     formId: string;
@@ -441,7 +446,7 @@ export async function insertSubmission(
 }
 
 export async function updateDraftSubmission(
-  db: Database,
+  db: DbExecutor,
   submissionId: string,
   answers: Record<string, unknown>,
 ) {
@@ -481,7 +486,7 @@ export async function updateDraftSubmission(
 }
 
 export async function finalizeDraftSubmission(
-  db: Database,
+  db: DbExecutor,
   submissionId: string,
   answers: Record<string, unknown>,
   confirmationCode: string,
