@@ -72,8 +72,8 @@ export function FormRenderer({
             submit the form again.
           </p>
           <ul>
-            {state.errors.map((error) => (
-              <li key={error.fieldId}>
+            {state.errors.map((error, index) => (
+              <li key={`${error.fieldId}-${index}`}>
                 <a href={`#field-${error.fieldId}`}>{error.message}</a>
               </li>
             ))}
@@ -91,6 +91,7 @@ export function FormRenderer({
               <FormFieldControl
                 key={field.id}
                 field={field}
+                value={answers[field.id]}
                 error={errorsByField.get(field.id)}
                 onValueChange={(value) => record(field.id, value)}
               />
@@ -158,10 +159,12 @@ function FieldMessages({
 
 function FormFieldControl({
   field,
+  value,
   error,
   onValueChange,
 }: {
   field: FormField;
+  value?: unknown;
   error?: string;
   onValueChange: (value: unknown) => void;
 }) {
@@ -186,6 +189,7 @@ function FormFieldControl({
             maxLength={field.validation?.maxLength}
             aria-invalid={error ? true : undefined}
             aria-describedby={describedBy}
+            value={typeof value === "string" ? value : ""}
             onChange={(event) => onValueChange(event.currentTarget.value)}
           />
           <FieldMessages field={field} error={error} />
@@ -223,6 +227,15 @@ function FormFieldControl({
             pattern={field.validation?.pattern}
             aria-invalid={error ? true : undefined}
             aria-describedby={describedBy}
+            value={
+              field.type === "number"
+                ? typeof value === "number"
+                  ? value
+                  : ""
+                : typeof value === "string"
+                  ? value
+                  : ""
+            }
             onChange={(event) =>
               onValueChange(
                 field.type === "number"
@@ -249,6 +262,7 @@ function FormFieldControl({
               value="true"
               aria-invalid={error ? true : undefined}
               aria-describedby={describedBy}
+              checked={value === true}
               onChange={(event) => onValueChange(event.currentTarget.checked)}
             />
             {field.label}
@@ -270,6 +284,7 @@ function FormFieldControl({
               required={required}
               aria-invalid={error ? true : undefined}
               aria-describedby={describedBy}
+              checked={value === true}
               onChange={(event) => onValueChange(event.currentTarget.checked)}
             />
             {field.attestationText ?? field.label}
@@ -290,7 +305,7 @@ function FormFieldControl({
             id={controlId}
             name={field.id}
             required={required}
-            defaultValue=""
+            value={typeof value === "string" ? value : ""}
             aria-invalid={error ? true : undefined}
             aria-describedby={describedBy}
             onChange={(event) => onValueChange(event.currentTarget.value)}
@@ -314,6 +329,7 @@ function FormFieldControl({
           id={controlId}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
+          tabIndex={-1}
         >
           <legend>
             {field.label}
@@ -325,6 +341,10 @@ function FormFieldControl({
                 name={field.id}
                 type="checkbox"
                 value={option.value}
+                checked={
+                  Array.isArray(value) &&
+                  value.includes(option.value)
+                }
                 onChange={(event) => {
                   const form = event.currentTarget.form;
                   if (!form) return;
@@ -346,6 +366,7 @@ function FormFieldControl({
         <AddressFieldControl
           field={field}
           required={required}
+          value={value}
           error={error}
           onValueChange={onValueChange}
         />
@@ -357,6 +378,7 @@ function FormFieldControl({
           id={controlId}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
+          tabIndex={-1}
         >
           <legend>
             {field.label}
@@ -391,15 +413,21 @@ function addressLabel(
 function AddressFieldControl({
   field,
   required,
+  value,
   error,
   onValueChange,
 }: {
   field: FormField;
   required: boolean;
+  value?: unknown;
   error?: string;
   onValueChange: (value: unknown) => void;
 }) {
-  const [address, setAddress] = useState<Record<string, string>>({});
+  const [address, setAddress] = useState<Record<string, string>>(
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, string>)
+      : {},
+  );
   const controlId = `field-${field.id}`;
   const describedBy = descriptionIds(field, error);
 
@@ -414,6 +442,7 @@ function AddressFieldControl({
       id={controlId}
       aria-invalid={error ? true : undefined}
       aria-describedby={describedBy}
+      tabIndex={-1}
     >
       <legend>
         {field.label}
@@ -444,6 +473,7 @@ function AddressFieldControl({
                     part,
                   )
                 }
+                value={address[part] ?? ""}
                 onChange={(event) =>
                   updatePart(part, event.currentTarget.value)
                 }
