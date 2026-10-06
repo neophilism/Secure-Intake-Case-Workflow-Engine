@@ -565,11 +565,12 @@ export async function createOutboundCorrespondenceAction(
   const channel = parseCommunicationChannel(
     String(formData.get("channel") ?? "email"),
   );
-  const visibility = parseCommunicationVisibility(
-    String(
-      formData.get("visibility") ?? "case_participants",
-    ),
-  );
+  const visibilityRaw = String(
+    formData.get("visibility") ?? "",
+  ).trim();
+  const visibility = visibilityRaw
+    ? parseCommunicationVisibility(visibilityRaw)
+    : null;
   const recipients = parseRecipientText(channel, {
     to: String(formData.get("to") ?? ""),
     cc: String(formData.get("cc") ?? ""),
