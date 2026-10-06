@@ -121,7 +121,7 @@ export async function createCaseNote(
   scope: TenantScope,
   input: {
     caseId: string;
-    visibility?: CommunicationVisibility | null;
+    visibility: CommunicationVisibility;
     body: string;
     documentVersionIds?: readonly string[];
     actorUserId: string;
@@ -199,7 +199,7 @@ export async function createOutboundCorrespondenceDraft(
     caseId: string;
     threadId?: string | null;
     channel: CommunicationChannel;
-    visibility: CommunicationVisibility;
+    visibility?: CommunicationVisibility | null;
     subject?: string | null;
     body?: string | null;
     senderAddress?: string | null;
@@ -595,14 +595,14 @@ export async function deliverQueuedCorrespondence(
   const channel = parseCommunicationChannel(message.channel);
   assertTransportSupportsChannel(transport, channel);
 
-  const attachments = await loadMessageDeliveryAttachments(
-    db,
-    scope,
-    message.id,
-  );
-
   let result;
   try {
+    const attachments = await loadMessageDeliveryAttachments(
+      db,
+      scope,
+      message.id,
+    );
+
     result = await transport.send({
       idempotencyKey: message.id,
       channel,
