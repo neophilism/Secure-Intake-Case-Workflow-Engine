@@ -1721,6 +1721,9 @@ export const caseReviews = pgTable(
     filedAt: timestamp("filed_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
+    filingDeadlineAt: timestamp("filing_deadline_at", {
+      withTimezone: true,
+    }),
     reviewerMembershipId: uuid("reviewer_membership_id").references(
       () => organizationMemberships.id,
       { onDelete: "set null" },
