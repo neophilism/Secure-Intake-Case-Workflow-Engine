@@ -14,11 +14,11 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 11 — notes, correspondence, and communication**
+**PR 12 — notifications and background jobs**
 
-This milestone adds visibility-scoped case notes, threaded inbound/outbound correspondence, deterministic templates, document-version attachments, provider-neutral delivery adapters, manual delivery recording, inbound reply linkage, delivery queue visibility, and a unified case timeline.
+This milestone adds a durable PostgreSQL-backed job queue, expiring worker leases, retry/backoff and dead-letter handling, recurring deadline schedules, in-app notifications, user delivery preferences, provider-neutral email/webhook delivery jobs, correspondence delivery jobs, and operational job controls.
 
-Internal communication access is permission-separated from ordinary case access, and externally visible communications cannot expose internal/restricted document versions.
+The bundled worker only claims job types it can actually execute. External-delivery jobs remain pending until a deployment registers the corresponding transport adapters.
 
 See [docs/development.md](docs/development.md) for local setup and [docs/architecture](docs/architecture) for architectural decisions.
 
