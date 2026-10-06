@@ -272,6 +272,9 @@ export const authLoginThrottles = pgTable(
     index("auth_login_throttles_blocked_until_idx").on(
       table.blockedUntil,
     ),
+    index("auth_login_throttles_updated_at_idx").on(
+      table.updatedAt,
+    ),
   ],
 );
 
