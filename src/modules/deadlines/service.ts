@@ -189,6 +189,7 @@ export async function instantiateDeadlinesForCaseEvent(
         and(
           eq(caseDeadlines.organizationId, scope.organizationId),
           eq(caseDeadlines.caseId, input.caseId),
+          isNull(caseDeadlines.referralId),
           eq(caseDeadlines.policyKey, policy.key),
         ),
       )
