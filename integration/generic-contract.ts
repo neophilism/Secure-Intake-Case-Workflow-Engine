@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq } from "drizzle-orm";
 import { createDatabase } from "../src/db/client";
 import {
+  applicationProfiles,
   auditEvents,
   caseQueues,
   caseTeams,
@@ -147,6 +148,20 @@ async function main() {
     );
     assert.equal(identicalApply.noChange, true);
     assert.equal(identicalApply.revisionId, firstApply.revisionId);
+
+    const [applicationProfile] = await db
+      .select()
+      .from(applicationProfiles)
+      .where(
+        eq(
+          applicationProfiles.organizationId,
+          scope.organizationId,
+        ),
+      )
+      .limit(1);
+    assert.ok(applicationProfile);
+    assert.equal(applicationProfile.operationalViews.length, 1);
+    assert.equal(applicationProfile.operationalMetrics.length, 3);
 
     const [team] = await db
       .select()
