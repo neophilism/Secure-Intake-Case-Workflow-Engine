@@ -251,4 +251,110 @@ describe("form definition", () => {
     });
   });
 
+
+  it("accepts participant messaging conditioned on an ordinary field", () => {
+    const definition = parseFormDefinition({
+      schemaVersion: 1,
+      participantPortal: {
+        enabled: true,
+        allowMessaging: true,
+        messagingCondition: {
+          fieldId: "contact_mode",
+          operator: "not_equals",
+          value: "anonymous",
+        },
+      },
+      sections: [
+        {
+          id: "details",
+          title: "Details",
+          fields: [
+            {
+              id: "contact_mode",
+              type: "select",
+              label: "Contact mode",
+              required: true,
+              options: [
+                { value: "anonymous", label: "Anonymous" },
+                { value: "contactable", label: "Contactable" },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(
+      definition.participantPortal?.messagingCondition,
+    ).toEqual({
+      fieldId: "contact_mode",
+      operator: "not_equals",
+      value: "anonymous",
+    });
+  });
+
+  it("rejects participant messaging conditions that reference protected fields", () => {
+    expect(() =>
+      parseFormDefinition({
+        schemaVersion: 1,
+        participantPortal: {
+          enabled: true,
+          allowMessaging: true,
+          messagingCondition: {
+            fieldId: "protected_mode",
+            operator: "equals",
+            value: "yes",
+          },
+        },
+        sections: [
+          {
+            id: "details",
+            title: "Details",
+            fields: [
+              {
+                id: "protected_mode",
+                type: "short_text",
+                label: "Protected mode",
+                protection: {
+                  compartment: "identity",
+                  revealPolicy: "dual_control",
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(/ordinary, non-protected field/);
+  });
+
+  it("rejects participant messaging conditions when messaging is disabled", () => {
+    expect(() =>
+      parseFormDefinition({
+        schemaVersion: 1,
+        participantPortal: {
+          enabled: true,
+          allowMessaging: false,
+          messagingCondition: {
+            fieldId: "contact_mode",
+            operator: "equals",
+            value: "contactable",
+          },
+        },
+        sections: [
+          {
+            id: "details",
+            title: "Details",
+            fields: [
+              {
+                id: "contact_mode",
+                type: "short_text",
+                label: "Contact mode",
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(/cannot be used when allowMessaging is false/);
+  });
+
 });

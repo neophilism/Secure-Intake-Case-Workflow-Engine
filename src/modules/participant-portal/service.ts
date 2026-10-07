@@ -14,6 +14,7 @@ import {
 } from "@/modules/auth/throttle";
 import { recordInboundCorrespondence } from "@/modules/communications/service";
 import { parseFormDefinition } from "@/modules/forms/definition";
+import { evaluateCondition } from "@/modules/forms/visibility";
 import {
   findWorkflowState,
   parseWorkflowDefinition,
@@ -262,6 +263,14 @@ export async function resolveExternalParticipantContext(
     };
   }
 
+  const allowMessaging =
+    portal.allowMessaging &&
+    (!portal.messagingCondition ||
+      evaluateCondition(
+        portal.messagingCondition,
+        row.submission.answers,
+      ));
+
   return {
     sessionId: row.session.id,
     credentialId: row.credential.id,
@@ -273,7 +282,7 @@ export async function resolveExternalParticipantContext(
       submittedAt: row.submission.submittedAt,
     },
     case: caseView,
-    allowMessaging: portal.allowMessaging,
+    allowMessaging,
   };
 }
 
@@ -281,7 +290,7 @@ export async function listExternalParticipantMessages(
   db: Database,
   context: ExternalParticipantContext,
 ) {
-  if (!context.case) return [];
+  if (!context.allowMessaging || !context.case) return [];
 
   const rows = await listExternalParticipantPortalMessages(
     db,

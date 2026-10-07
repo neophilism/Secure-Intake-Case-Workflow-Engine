@@ -226,6 +226,22 @@
             "title": "Example Section",
             "fields": [
               {
+                "id": "example_contact_mode",
+                "type": "select",
+                "label": "Example contact mode",
+                "required": true,
+                "options": [
+                  {
+                    "value": "status_only",
+                    "label": "Status only"
+                  },
+                  {
+                    "value": "messaging",
+                    "label": "Messaging"
+                  }
+                ]
+              },
+              {
                 "id": "example_value",
                 "type": "long_text",
                 "label": "Example value",
@@ -254,7 +270,12 @@
         ],
         "participantPortal": {
           "enabled": true,
-          "allowMessaging": true
+          "allowMessaging": true,
+          "messagingCondition": {
+            "fieldId": "example_contact_mode",
+            "operator": "equals",
+            "value": "messaging"
+          }
         }
       }
     }

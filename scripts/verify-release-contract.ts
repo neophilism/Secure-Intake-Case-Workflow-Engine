@@ -50,6 +50,11 @@ async function main() {
     "Neutral release fixture must exercise participant portal access.",
   );
   assert.equal(
+    exampleForm?.definition.participantPortal?.messagingCondition?.fieldId,
+    "example_contact_mode",
+    "Neutral release fixture must exercise conditional participant messaging.",
+  );
+  assert.equal(
     manifest.workflows.some(
       (workflow) => workflow.slug === "example_workflow",
     ),

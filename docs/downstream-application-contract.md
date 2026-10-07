@@ -160,3 +160,30 @@ The portal exposes only the generic bounded status/message surface. A downstream
 `allowMessaging: false` provides status-only access.
 
 Participant portal sessions are configured through deployment environment variables, not through the application manifest.
+
+
+### Conditional participant messaging
+
+A downstream form may enable participant status access for every submission while restricting secure messages to selected submissions:
+
+```json
+"participantPortal": {
+  "enabled": true,
+  "allowMessaging": true,
+  "messagingCondition": {
+    "fieldId": "contact_mode",
+    "operator": "not_equals",
+    "value": "anonymous"
+  }
+}
+```
+
+The condition uses the same bounded condition language as form visibility. It may reference only an ordinary, non-protected form field. The engine evaluates the condition against the submission's immutable ordinary answer snapshot when resolving the participant session.
+
+When the result is false, the portal is status-only:
+
+- participant messages are not returned;
+- the participant cannot send a new message or reply;
+- the credential/session/status surface remains available.
+
+Protected fields cannot control this decision because participant authorization must not require decrypting protected compartments.
