@@ -73,6 +73,28 @@ async function main() {
     ),
     true,
   );
+  assert.equal(
+    manifest.referralPolicies.some(
+      (policy) => policy.key === "example_external_referral",
+    ),
+    true,
+    "Neutral release fixture must exercise parallel referral policy.",
+  );
+  const referralPolicy = manifest.referralPolicies.find(
+    (policy) => policy.key === "example_external_referral",
+  );
+  assert.deepEqual(
+    new Set(
+      referralPolicy?.definition.deadlinePolicies.map(
+        (policy) => policy.key,
+      ),
+    ),
+    new Set([
+      "example_acknowledgment",
+      "example_final_response",
+    ]),
+    "Neutral referral fixture must exercise independent milestone clocks.",
+  );
 
   try {
     await access(
