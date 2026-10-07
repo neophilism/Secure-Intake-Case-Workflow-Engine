@@ -36,7 +36,11 @@ import {
   createOutboundCorrespondenceDraft,
   queueOutboundCorrespondence,
 } from "../src/modules/communications/service";
-import { listCaseDeadlines } from "../src/modules/deadlines/repository";
+import {
+  listCaseDeadlines,
+  listDeadlineHistory,
+} from "../src/modules/deadlines/repository";
+import { extendDeadline } from "../src/modules/deadlines/service";
 import {
   recordMalwareScanResult,
 } from "../src/modules/documents/service";
@@ -69,6 +73,15 @@ import {
   addTeamMember,
   applyRoutingRules,
 } from "../src/modules/routing/service";
+import {
+  listReferralDeadlines,
+} from "../src/modules/referrals/repository";
+import {
+  acknowledgeCaseReferral,
+  createCaseReferral,
+  recordCaseReferralResponse,
+  sendCaseReferral,
+} from "../src/modules/referrals/service";
 import {
   applyReviewDecisionToCase,
   assignReview,
@@ -314,6 +327,150 @@ async function main() {
       )
       .limit(1);
     assert.ok(promotedLink);
+
+    const referralA = await createCaseReferral(db, scope, {
+      caseId: uploadCase.id,
+      policyKey: "example_external_referral",
+      recipientKey: "recipient_a",
+      recipientName: "Example Recipient A",
+      subject: "Parallel referral A",
+      actorUserId: actor.userId,
+    });
+    const referralB = await createCaseReferral(db, scope, {
+      caseId: uploadCase.id,
+      policyKey: "example_external_referral",
+      recipientKey: "recipient_b",
+      recipientName: "Example Recipient B",
+      subject: "Parallel referral B",
+      actorUserId: actor.userId,
+    });
+
+    const referralStartedAt = new Date("2026-10-07T12:00:00.000Z");
+    await sendCaseReferral(db, scope, {
+      referralId: referralA.id,
+      actorUserId: actor.userId,
+      sentAt: referralStartedAt,
+    });
+    await sendCaseReferral(db, scope, {
+      referralId: referralB.id,
+      actorUserId: actor.userId,
+      sentAt: referralStartedAt,
+    });
+
+    let referralADeadlines = await listReferralDeadlines(
+      db,
+      scope,
+      referralA.id,
+    );
+    let referralBDeadlines = await listReferralDeadlines(
+      db,
+      scope,
+      referralB.id,
+    );
+    assert.equal(referralADeadlines.length, 2);
+    assert.equal(referralBDeadlines.length, 2);
+    assert.deepEqual(
+      new Set(referralADeadlines.map((item) => item.policyKey)),
+      new Set(["example_acknowledgment", "example_final_response"]),
+    );
+    assert.deepEqual(
+      new Set(referralBDeadlines.map((item) => item.policyKey)),
+      new Set(["example_acknowledgment", "example_final_response"]),
+    );
+    assert.equal(
+      referralADeadlines.some((item) =>
+        referralBDeadlines.some((other) => other.id === item.id),
+      ),
+      false,
+    );
+
+    await acknowledgeCaseReferral(db, scope, {
+      referralId: referralA.id,
+      actorUserId: actor.user.id,
+      summary: "Recipient A acknowledged.",
+      occurredAt: new Date("2026-10-08T12:00:00.000Z"),
+    });
+
+    referralADeadlines = await listReferralDeadlines(
+      db,
+      scope,
+      referralA.id,
+    );
+    referralBDeadlines = await listReferralDeadlines(
+      db,
+      scope,
+      referralB.id,
+    );
+    assert.equal(
+      referralADeadlines.find(
+        (item) => item.policyKey === "example_acknowledgment",
+      )?.status,
+      "completed",
+    );
+    assert.equal(
+      referralBDeadlines.find(
+        (item) => item.policyKey === "example_acknowledgment",
+      )?.status,
+      "active",
+    );
+
+    const referralBFinal = referralBDeadlines.find(
+      (item) => item.policyKey === "example_final_response",
+    );
+    assert.ok(referralBFinal);
+    const originalReferralBDueAt = referralBFinal.dueAt;
+    const extendedReferralBDeadline = await extendDeadline(db, scope, {
+      deadlineId: referralBFinal.id,
+      actorUserId: actor.user.id,
+      reason: "Neutral agreed extension",
+      extension: { value: 5, unit: "calendar_days" },
+      now: new Date("2026-10-09T12:00:00.000Z"),
+    });
+    assert.ok(
+      extendedReferralBDeadline.dueAt.getTime() >
+        originalReferralBDueAt.getTime(),
+    );
+    const referralBDeadlineHistory = await listDeadlineHistory(
+      db,
+      scope,
+      referralBFinal.id,
+    );
+    assert.equal(
+      referralBDeadlineHistory.some(
+        (event) => event.eventType === "extended",
+      ),
+      true,
+    );
+
+    await recordCaseReferralResponse(db, scope, {
+      referralId: referralA.id,
+      responseType: "final_response",
+      summary: "Recipient A supplied a final response.",
+      actorUserId: actor.user.id,
+      occurredAt: new Date("2026-10-10T12:00:00.000Z"),
+    });
+    referralADeadlines = await listReferralDeadlines(
+      db,
+      scope,
+      referralA.id,
+    );
+    referralBDeadlines = await listReferralDeadlines(
+      db,
+      scope,
+      referralB.id,
+    );
+    assert.equal(
+      referralADeadlines.find(
+        (item) => item.policyKey === "example_final_response",
+      )?.status,
+      "completed",
+    );
+    assert.equal(
+      referralBDeadlines.find(
+        (item) => item.policyKey === "example_final_response",
+      )?.status,
+      "active",
+    );
 
     const [workflow] = await db
       .select()
