@@ -12,6 +12,7 @@ The upstream engine owns reusable behavior:
 - role/permission primitives;
 - intake/form processing;
 - encrypted protected form compartments and dual-control reveal;
+- protected external-participant status/messaging credentials;
 - case lifecycle and workflow execution;
 - routing and assignment;
 - documents and evidence metadata;
@@ -31,7 +32,7 @@ A downstream repository owns its application policy:
 - application name and branding;
 - terminology;
 - application-specific roles composed from core permissions;
-- form schemas, including which fields belong to protected compartments;
+- form schemas, including protected compartments and whether a form enables participant portal access;
 - workflow states/transitions;
 - deadlines;
 - teams/queues and routing rules;
@@ -137,3 +138,25 @@ A downstream deployment using protected fields must supply `PROTECTED_DATA_ENCRY
 The current 1.0 contract supports `revealPolicy: "dual_control"` only. A different authorized user must approve a reveal request, approvals expire, and the requester's reveal is one-time.
 
 This primitive protects structured form values. It does not make the engine a classified-information system and does not extend to binary documents.
+
+
+## External-participant deployment contract
+
+A downstream form may opt into:
+
+```json
+"participantPortal": {
+  "enabled": true,
+  "allowMessaging": true
+}
+```
+
+When enabled, final public submission issues a high-entropy secret paired with the normal non-secret confirmation/tracking code. The raw secret is shown only in the immediate submission result and is never stored server-side.
+
+Downstream copy must tell participants to save the access secret. A confirmation code by itself is not authentication.
+
+The portal exposes only the generic bounded status/message surface. A downstream application must not rely on it to expose internal case fields, protected form data, arbitrary documents, or classified information.
+
+`allowMessaging: false` provides status-only access.
+
+Participant portal sessions are configured through deployment environment variables, not through the application manifest.

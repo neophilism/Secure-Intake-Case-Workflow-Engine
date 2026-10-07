@@ -17,6 +17,7 @@ import {
 import { splitProtectedAnswers } from "@/modules/protected-data/answers";
 import { encryptProtectedPayload } from "@/modules/protected-data/crypto";
 import { synchronizeProtectedCompartments } from "@/modules/protected-data/repository";
+import { issueExternalParticipantCredentialInTransaction } from "@/modules/participant-portal/service";
 
 export class FormNotAvailableError extends Error {
   constructor() {
@@ -189,7 +190,18 @@ export async function submitDraftSubmissionByToken(
       encrypt: encryptProtectedPayload,
     });
 
-    return finalized;
+    const participantPortal = definition.participantPortal?.enabled
+      ? await issueExternalParticipantCredentialInTransaction(tx, {
+          organizationId: finalized.organizationId,
+          submissionId: finalized.id,
+          actorUserId: finalized.submitterUserId,
+        })
+      : null;
+
+    return {
+      ...finalized,
+      participantPortalSecret: participantPortal?.secret ?? null,
+    };
   });
 }
 
@@ -243,6 +255,17 @@ export async function submitPublicForm(
       encrypt: encryptProtectedPayload,
     });
 
-    return submission;
+    const participantPortal = published.definition.participantPortal?.enabled
+      ? await issueExternalParticipantCredentialInTransaction(tx, {
+          organizationId: submission.organizationId,
+          submissionId: submission.id,
+          actorUserId: submission.submitterUserId,
+        })
+      : null;
+
+    return {
+      ...submission,
+      participantPortalSecret: participantPortal?.secret ?? null,
+    };
   });
 }

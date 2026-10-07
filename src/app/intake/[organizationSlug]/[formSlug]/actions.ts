@@ -39,6 +39,22 @@ export async function submitPublicFormAction(
       answers,
     );
 
+    if (submission.participantPortalSecret) {
+      const trackingCode = submission.confirmationCode ?? "";
+      return {
+        status: "submitted",
+        errors: [],
+        confirmationCode: trackingCode,
+        participantPortal: {
+          trackingCode,
+          accessSecret: submission.participantPortalSecret,
+          loginPath: `/participant/${encodeURIComponent(
+            organizationSlug,
+          )}`,
+        },
+      };
+    }
+
     redirect(
       `/intake/confirmation/${encodeURIComponent(
         submission.confirmationCode ?? "",

@@ -530,6 +530,83 @@ export const intakeSubmissions = pgTable(
 );
 
 
+export const externalParticipantCredentials = pgTable(
+  "external_participant_credentials",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    submissionId: uuid("submission_id")
+      .notNull()
+      .references(() => intakeSubmissions.id, { onDelete: "cascade" }),
+    secretHash: text("secret_hash").notNull(),
+    status: text("status").notNull().default("active"),
+    credentialVersion: integer("credential_version").notNull().default(1),
+    lastAuthenticatedAt: timestamp("last_authenticated_at", {
+      withTimezone: true,
+    }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("external_participant_credentials_submission_idx").on(
+      table.submissionId,
+    ),
+    uniqueIndex("external_participant_credentials_secret_hash_idx").on(
+      table.secretHash,
+    ),
+    index("external_participant_credentials_org_idx").on(
+      table.organizationId,
+      table.status,
+    ),
+  ],
+);
+
+export const externalParticipantSessions = pgTable(
+  "external_participant_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    credentialId: uuid("credential_id")
+      .notNull()
+      .references(() => externalParticipantCredentials.id, {
+        onDelete: "cascade",
+      }),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("external_participant_sessions_token_hash_idx").on(
+      table.tokenHash,
+    ),
+    index("external_participant_sessions_credential_idx").on(
+      table.credentialId,
+      table.expiresAt,
+    ),
+    index("external_participant_sessions_org_idx").on(
+      table.organizationId,
+      table.expiresAt,
+    ),
+  ],
+);
+
+
+
 export const submissionProtectedCompartments = pgTable(
   "submission_protected_compartments",
   {

@@ -251,7 +251,11 @@
               }
             ]
           }
-        ]
+        ],
+        "participantPortal": {
+          "enabled": true,
+          "allowMessaging": true
+        }
       }
     }
   ],

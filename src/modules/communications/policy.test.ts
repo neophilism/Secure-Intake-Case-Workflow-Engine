@@ -3,6 +3,7 @@ import {
   canExposeDocumentInCommunication,
   parseCommunicationVisibility,
   parseRecipientText,
+  requireOutboundRecipients,
 } from "./policy";
 
 describe("communication policy", () => {
@@ -58,4 +59,13 @@ describe("communication policy", () => {
       ),
     ).toBe(false);
   });
+  it("allows recipientless portal publication but not recipientless email", () => {
+    expect(() =>
+      requireOutboundRecipients("portal", []),
+    ).not.toThrow();
+    expect(() =>
+      requireOutboundRecipients("email", []),
+    ).toThrow(/requires at least one primary recipient/i);
+  });
+
 });

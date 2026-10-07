@@ -10,6 +10,8 @@ import {
   caseWorkflowVersions,
   caseWorkflows,
   cases,
+  externalParticipantCredentials,
+  externalParticipantSessions,
   intakeForms,
   intakeFormVersions,
   intakeSubmissions,
@@ -27,6 +29,10 @@ import {
   createCaseFromSubmission,
   transitionCase,
 } from "../src/modules/cases/service";
+import {
+  createOutboundCorrespondenceDraft,
+  queueOutboundCorrespondence,
+} from "../src/modules/communications/service";
 import { listCaseDeadlines } from "../src/modules/deadlines/repository";
 import {
   createPublicDraftSubmission,
@@ -40,6 +46,13 @@ import {
   decideProtectedReveal,
   requestProtectedReveal,
 } from "../src/modules/protected-data/service";
+import {
+  authenticateExternalParticipant,
+  listExternalParticipantMessages,
+  logoutExternalParticipant,
+  resolveExternalParticipantContext,
+  sendExternalParticipantMessage,
+} from "../src/modules/participant-portal/service";
 import {
   addTeamMember,
   applyRoutingRules,
@@ -234,6 +247,72 @@ async function main() {
     assert.deepEqual(submission.answers, {
       example_value: "example value",
     });
+    assert.ok(submission.participantPortalSecret);
+
+    const [participantCredential] = await db
+      .select()
+      .from(externalParticipantCredentials)
+      .where(
+        eq(
+          externalParticipantCredentials.submissionId,
+          submission.id,
+        ),
+      )
+      .limit(1);
+    assert.ok(participantCredential);
+    assert.notEqual(
+      participantCredential.secretHash,
+      submission.participantPortalSecret,
+    );
+    assert.equal(participantCredential.secretHash.length, 64);
+
+    await assert.rejects(
+      () =>
+        authenticateExternalParticipant(db, {
+          organizationSlug,
+          confirmationCode: submission.confirmationCode ?? "",
+          secret: "x".repeat(43),
+        }),
+      /Invalid tracking code or access secret/i,
+    );
+
+    const participantLogin =
+      await authenticateExternalParticipant(db, {
+        organizationSlug,
+        confirmationCode: submission.confirmationCode ?? "",
+        secret: submission.participantPortalSecret,
+      });
+    assert.ok(participantLogin.token);
+    assert.notEqual(
+      participantLogin.token,
+      submission.participantPortalSecret,
+    );
+
+    const [participantSession] = await db
+      .select()
+      .from(externalParticipantSessions)
+      .where(
+        eq(
+          externalParticipantSessions.credentialId,
+          participantCredential.id,
+        ),
+      )
+      .limit(1);
+    assert.ok(participantSession);
+    assert.notEqual(
+      participantSession.tokenHash,
+      participantLogin.token,
+    );
+    assert.equal(participantSession.tokenHash.length, 64);
+
+    let participantContext =
+      await resolveExternalParticipantContext(db, {
+        organizationSlug,
+        sessionToken: participantLogin.token,
+      });
+    assert.ok(participantContext);
+    assert.equal(participantContext.case, null);
+    assert.equal(participantContext.allowMessaging, true);
 
     protectedCompartments =
       await listProtectedCompartmentsForSubmission(
@@ -333,6 +412,118 @@ async function main() {
     });
     assert.equal(record.status, "state_a");
     assert.equal(record.workflowVersionId, workflowVersionV1.id);
+
+    participantContext =
+      await resolveExternalParticipantContext(db, {
+        organizationSlug,
+        sessionToken: participantLogin.token,
+      });
+    assert.ok(participantContext);
+    assert.ok(participantContext.case);
+    assert.equal(participantContext.case.caseNumber, record.caseNumber);
+    assert.equal(participantContext.case.status, "state_a");
+    assert.equal(participantContext.case.statusLabel, "State A");
+
+    const portalDraft =
+      await createOutboundCorrespondenceDraft(db, scope, {
+        caseId: record.id,
+        channel: "portal",
+        visibility: "participant",
+        subject: "Example participant update",
+        body: "Participant-visible portal update.",
+        recipients: [],
+        actorUserId: actor.userId,
+      });
+    assert.equal(portalDraft.status, "draft");
+
+    const portalPublished =
+      await queueOutboundCorrespondence(db, scope, {
+        messageId: portalDraft.id,
+        actorUserId: actor.userId,
+      });
+    assert.equal(portalPublished.status, "sent");
+    assert.equal(
+      portalPublished.deliveryProvider,
+      "participant-portal",
+    );
+
+    await assert.rejects(
+      () =>
+        createOutboundCorrespondenceDraft(db, scope, {
+          caseId: record.id,
+          channel: "portal",
+          visibility: "internal",
+          subject: "Internal portal message",
+          body: "This must never be participant-visible.",
+          recipients: [],
+          actorUserId: actor.userId,
+        }),
+      /Portal correspondence must be participant or public visibility/i,
+    );
+
+    let participantMessages =
+      await listExternalParticipantMessages(
+        db,
+        participantContext,
+      );
+    assert.equal(participantMessages.length, 1);
+    assert.equal(
+      participantMessages[0].body,
+      "Participant-visible portal update.",
+    );
+
+    const participantReply =
+      await sendExternalParticipantMessage(
+        db,
+        participantContext,
+        {
+          threadId: participantMessages[0].threadId,
+          body: "Participant reply.",
+        },
+      );
+    assert.equal(participantReply.direction, "inbound");
+    assert.equal(participantReply.channel, "portal");
+    assert.equal(participantReply.visibility, "participant");
+    assert.equal(participantReply.status, "received");
+
+    participantMessages =
+      await listExternalParticipantMessages(
+        db,
+        participantContext,
+      );
+    assert.equal(participantMessages.length, 2);
+    assert.equal(
+      participantMessages[1].body,
+      "Participant reply.",
+    );
+
+    const portalAuditEvents = await db
+      .select({
+        action: auditEvents.action,
+        metadata: auditEvents.metadata,
+      })
+      .from(auditEvents)
+      .where(
+        and(
+          eq(auditEvents.organizationId, scope.organizationId),
+          eq(
+            auditEvents.resourceType,
+            "external_participant_credential",
+          ),
+        ),
+      );
+    assert.equal(
+      JSON.stringify(portalAuditEvents).includes(
+        submission.participantPortalSecret,
+      ),
+      false,
+    );
+    assert.equal(
+      JSON.stringify(portalAuditEvents).includes(
+        participantLogin.token,
+      ),
+      false,
+    );
 
     const routed = await applyRoutingRules(db, scope, {
       caseId: record.id,
@@ -500,6 +691,17 @@ async function main() {
     assert.ok(persistedCase);
     assert.equal(persistedCase.workflowVersionId, workflowVersionV1.id);
     assert.equal(persistedCase.status, "state_closed");
+
+    await logoutExternalParticipant(db, {
+      sessionToken: participantLogin.token,
+    });
+    assert.equal(
+      await resolveExternalParticipantContext(db, {
+        organizationSlug,
+        sessionToken: participantLogin.token,
+      }),
+      null,
+    );
 
     // The manifest must not silently claim a matching locally-created
     // resource in another organization.

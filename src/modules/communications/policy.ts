@@ -124,8 +124,10 @@ export function normalizeRecipients(
 }
 
 export function requireOutboundRecipients(
+  channel: CommunicationChannel,
   recipients: readonly CommunicationRecipient[],
 ) {
+  if (channel === "portal") return;
   if (!recipients.some((recipient) => recipient.type === "to")) {
     throw new Error(
       "Outbound correspondence requires at least one primary recipient.",

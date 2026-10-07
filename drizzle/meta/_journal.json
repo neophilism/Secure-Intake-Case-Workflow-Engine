@@ -127,6 +127,13 @@
       "when": 1791306000000,
       "tag": "0017_protected_compartments",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791309600000,
+      "tag": "0018_external_participant_portal",
+      "breakpoints": true
     }
   ]
 }

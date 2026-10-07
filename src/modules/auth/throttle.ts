@@ -17,7 +17,7 @@ export function normalizeLoginIdentifier(value: string) {
 }
 
 export function loginBucketHash(
-  kind: "account" | "source",
+  kind: "account" | "source" | "participant",
   value: string,
 ) {
   return createHash("sha256")
@@ -105,56 +105,74 @@ export async function recordLoginFailure(
     .delete(authLoginThrottles)
     .where(lt(authLoginThrottles.updatedAt, staleBefore));
 
-  for (const keyHash of keys) {
-    await db.execute(sql`
-      insert into auth_login_throttles (
-        key_hash,
-        window_started_at,
-        failure_count,
-        blocked_until,
-        updated_at
-      )
-      values (
-        ${keyHash},
-        ${now},
-        1,
-        null,
-        ${now}
-      )
-      on conflict (key_hash) do update set
-        window_started_at = case
-          when auth_login_throttles.window_started_at < ${cutoff}
-            then ${now}
-          else auth_login_throttles.window_started_at
-        end,
-        failure_count = case
-          when auth_login_throttles.window_started_at < ${cutoff}
-            then 1
-          else auth_login_throttles.failure_count + 1
-        end,
-        blocked_until = case
-          when auth_login_throttles.blocked_until > ${now}
-            then auth_login_throttles.blocked_until
-          when (
-            case
-              when auth_login_throttles.window_started_at < ${cutoff}
-                then 1
-              else auth_login_throttles.failure_count + 1
-            end
-          ) >= ${env.AUTH_LOGIN_FAILURE_LIMIT}
-            then ${blockedUntil}
-          else null
-        end,
-        updated_at = ${now}
-    `);
-  }
+  await db.transaction(async (tx) => {
+    for (const keyHash of keys) {
+      // Serialize updates for this opaque throttle bucket without exposing
+      // the underlying account/source identifier. The lock is scoped to
+      // this transaction and automatically released on commit/rollback.
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtextextended(${keyHash}, 0))`,
+      );
+
+      const [current] = await tx
+        .select()
+        .from(authLoginThrottles)
+        .where(eq(authLoginThrottles.keyHash, keyHash))
+        .limit(1);
+
+      if (!current) {
+        await tx.insert(authLoginThrottles).values({
+          keyHash,
+          windowStartedAt: now,
+          failureCount: 1,
+          blockedUntil:
+            env.AUTH_LOGIN_FAILURE_LIMIT <= 1
+              ? blockedUntil
+              : null,
+          updatedAt: now,
+        });
+        continue;
+      }
+
+      const windowExpired = current.windowStartedAt < cutoff;
+      const failureCount = windowExpired
+        ? 1
+        : current.failureCount + 1;
+      const existingBlockStillActive =
+        current.blockedUntil !== null &&
+        current.blockedUntil > now;
+
+      await tx
+        .update(authLoginThrottles)
+        .set({
+          windowStartedAt: windowExpired
+            ? now
+            : current.windowStartedAt,
+          failureCount,
+          blockedUntil: existingBlockStillActive
+            ? current.blockedUntil
+            : failureCount >= env.AUTH_LOGIN_FAILURE_LIMIT
+              ? blockedUntil
+              : null,
+          updatedAt: now,
+        })
+        .where(eq(authLoginThrottles.keyHash, keyHash));
+    }
+  });
+}
+
+export async function clearLoginFailuresForKey(
+  db: Database,
+  keyHash: string,
+) {
+  await db
+    .delete(authLoginThrottles)
+    .where(eq(authLoginThrottles.keyHash, keyHash));
 }
 
 export async function clearAccountLoginFailures(
   db: Database,
   accountKey: string,
 ) {
-  await db
-    .delete(authLoginThrottles)
-    .where(eq(authLoginThrottles.keyHash, accountKey));
+  return clearLoginFailuresForKey(db, accountKey);
 }
