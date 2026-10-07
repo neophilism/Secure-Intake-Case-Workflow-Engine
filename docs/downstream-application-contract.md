@@ -187,3 +187,45 @@ When the result is false, the portal is status-only:
 - the credential/session/status surface remains available.
 
 Protected fields cannot control this decision because participant authorization must not require decrypting protected compartments.
+
+
+## Public attachment deployment contract
+
+A downstream public form may enable a file field by binding it to a
+manifest-declared document type:
+
+```json
+{
+  "id": "supporting_files",
+  "type": "file",
+  "acceptedMimeTypes": ["application/pdf"],
+  "maxFiles": 3,
+  "publicUpload": {
+    "documentTypeKey": "supporting_material",
+    "visibility": "internal"
+  }
+}
+```
+
+The binding is application policy; public clients cannot select an arbitrary
+document type. Field MIME policy, when present, must be no broader than the
+bound document type.
+
+Public files are stored as immutable submission-linked document versions with
+SHA-256 provenance and begin `quarantined / pending`. Only a recorded clean
+malware scan may make the content available and eligible for promotion into
+case evidence. A downstream deployment must connect an appropriate production
+scanner or authorized scan process; absence of a scanner never causes the
+engine to assume a file is clean.
+
+The global `DOCUMENT_MAX_BYTES` setting remains a deployment ceiling in
+addition to document-type policy. The default local adapter writes beneath
+`/app/.data/documents` in the container image; deployments using that adapter
+must mount durable storage there (and share it with any worker that operates on
+documents). Production deployments may instead supply a durable storage adapter
+appropriate to their environment and should apply sandbox, DLP, retention, and
+infrastructure controls as required.
+
+This public attachment primitive does not extend protected structured-data
+compartments to binary files, does not enable participant-message attachments,
+and does not make the engine suitable for classified information.

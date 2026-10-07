@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { getRuntimeDatabase } from "@/db/runtime";
+import { createTrustedTenantScope } from "@/lib/tenancy";
 import { answersFromFormData } from "@/modules/forms/form-data";
 import { findPublishedFormBySlugs } from "@/modules/forms/repository";
 import {
@@ -10,6 +11,12 @@ import {
   submitPublicForm,
 } from "@/modules/forms/service";
 import type { PublicFormActionState } from "@/modules/forms/public-action-state";
+import {
+  cleanupStagedPublicUploads,
+  PublicUploadValidationError,
+  stagePublicSubmissionUploads,
+  type StagedPublicUploadSet,
+} from "@/modules/documents/public-upload";
 
 export async function submitPublicFormAction(
   organizationSlug: string,
@@ -30,14 +37,39 @@ export async function submitPublicFormAction(
   }
 
   const answers = answersFromFormData(published.definition, formData);
+  let stagedUploads: StagedPublicUploadSet | null = null;
 
   try {
-    const submission = await submitPublicForm(
+    stagedUploads = await stagePublicSubmissionUploads(
       db,
-      organizationSlug,
-      formSlug,
+      createTrustedTenantScope(published.form.organizationId),
+      published.definition,
       answers,
+      formData,
     );
+
+    const submissionAnswers = {
+      ...answers,
+      ...stagedUploads.answerReferences,
+    };
+
+    let submission: Awaited<ReturnType<typeof submitPublicForm>>;
+    try {
+      submission = await submitPublicForm(
+        db,
+        organizationSlug,
+        formSlug,
+        submissionAnswers,
+        null,
+        stagedUploads.uploads,
+      );
+    } catch (error) {
+      await cleanupStagedPublicUploads(stagedUploads);
+      stagedUploads = null;
+      throw error;
+    }
+
+    stagedUploads = null;
 
     if (submission.participantPortalSecret) {
       const trackingCode = submission.confirmationCode ?? "";
@@ -61,6 +93,13 @@ export async function submitPublicFormAction(
       )}`,
     );
   } catch (error) {
+    if (error instanceof PublicUploadValidationError) {
+      return {
+        status: "validation_error",
+        errors: error.errors,
+      };
+    }
+
     if (error instanceof SubmissionValidationError) {
       return {
         status: "validation_error",

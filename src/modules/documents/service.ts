@@ -674,6 +674,57 @@ export async function recordMalwareScanResult(
 
     if (!version) throw new DocumentNotFoundError();
 
+    if (input.status === "clean") {
+      const submissionLinks = await tx
+        .select({
+          submissionId: documentSubmissionLinks.submissionId,
+        })
+        .from(documentSubmissionLinks)
+        .where(
+          and(
+            eq(
+              documentSubmissionLinks.organizationId,
+              scope.organizationId,
+            ),
+            eq(
+              documentSubmissionLinks.documentVersionId,
+              version.id,
+            ),
+          ),
+        );
+
+      for (const submissionLink of submissionLinks) {
+        const [caseRecord] = await tx
+          .select({ id: cases.id })
+          .from(cases)
+          .where(
+            and(
+              eq(cases.organizationId, scope.organizationId),
+              eq(
+                cases.sourceSubmissionId,
+                submissionLink.submissionId,
+              ),
+            ),
+          )
+          .limit(1);
+
+        if (caseRecord) {
+          await tx
+            .insert(documentCaseLinks)
+            .values({
+              organizationId: scope.organizationId,
+              caseId: caseRecord.id,
+              documentVersionId: version.id,
+              relationship: "evidence",
+              sourceDescription:
+                "Promoted from clean intake attachment.",
+              attachedByUserId: input.actorUserId,
+            })
+            .onConflictDoNothing();
+        }
+      }
+    }
+
     await tx.insert(documentAccessEvents).values({
       organizationId: scope.organizationId,
       documentVersionId: version.id,

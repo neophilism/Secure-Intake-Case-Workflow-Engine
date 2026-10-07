@@ -18,6 +18,11 @@ import { splitProtectedAnswers } from "@/modules/protected-data/answers";
 import { encryptProtectedPayload } from "@/modules/protected-data/crypto";
 import { synchronizeProtectedCompartments } from "@/modules/protected-data/repository";
 import { issueExternalParticipantCredentialInTransaction } from "@/modules/participant-portal/service";
+import { createTrustedTenantScope } from "@/lib/tenancy";
+import {
+  persistStagedPublicUploads,
+  type StagedPublicUpload,
+} from "@/modules/documents/public-upload";
 
 export class FormNotAvailableError extends Error {
   constructor() {
@@ -211,6 +216,7 @@ export async function submitPublicForm(
   formSlug: string,
   rawAnswers: AnswerMap,
   submitterUserId?: string | null,
+  stagedUploads: readonly StagedPublicUpload[] = [],
 ) {
   const published = await findPublishedFormBySlugs(
     db,
@@ -254,6 +260,15 @@ export async function submitPublicForm(
       compartments: split.compartments,
       encrypt: encryptProtectedPayload,
     });
+
+    if (stagedUploads.length > 0) {
+      await persistStagedPublicUploads(
+        tx,
+        createTrustedTenantScope(submission.organizationId),
+        submission.id,
+        stagedUploads,
+      );
+    }
 
     const participantPortal = published.definition.participantPortal?.enabled
       ? await issueExternalParticipantCredentialInTransaction(tx, {

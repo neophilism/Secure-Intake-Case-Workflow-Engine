@@ -14,13 +14,15 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 24 — conditional participant messaging**
+**PR 25 — secure public attachment pipeline**
 
-This milestone extends the external participant portal so a form can enable protected status access for all submitters while making secure messaging conditional on an ordinary submitted field. The condition is evaluated from the immutable form-version snapshot plus ordinary persisted answers; protected fields cannot control participant messaging.
+This milestone enables explicitly configured public form file fields while preserving the engine's existing evidence-security boundary. Browser files are staged through the document storage adapter, hashed with SHA-256, bound to a manifest-declared document type, persisted as immutable submission-linked versions, and begin in `quarantined / pending` state.
 
-This also corrects the rc.3 status-only contract: when messaging is disabled for a participant, the portal can neither send nor read portal correspondence.
+A public upload is never trusted merely because the server accepted it. It becomes available evidence only after the document subsystem records a clean malware-scan result. Clean intake attachments are promoted to the case evidence set whether scanning completes before or after case creation; pending, failed, and infected content remains outside the trusted evidence surface.
 
-The package version is **1.0.0-rc.4**.
+The package version is **1.0.0-rc.5**.
+
+See [docs/architecture/0027-public-attachment-pipeline.md](docs/architecture/0027-public-attachment-pipeline.md) and [docs/downstream-application-contract.md](docs/downstream-application-contract.md).
 
 ## Security status
 

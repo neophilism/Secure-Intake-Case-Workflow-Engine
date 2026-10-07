@@ -49,6 +49,13 @@ const fieldProtectionSchema = z.object({
   revealPolicy: z.literal("dual_control").default("dual_control"),
 });
 
+const publicUploadSchema = z.object({
+  documentTypeKey: identifier,
+  visibility: z
+    .enum(["participant", "internal", "restricted"])
+    .default("internal"),
+});
+
 export const formFieldSchema = z
   .object({
     id: identifier,
@@ -63,6 +70,7 @@ export const formFieldSchema = z
     attestationText: z.string().max(5000).optional(),
     acceptedMimeTypes: z.array(z.string().min(1).max(200)).max(100).optional(),
     maxFiles: z.number().int().positive().max(50).optional(),
+    publicUpload: publicUploadSchema.optional(),
     protection: fieldProtectionSchema.optional(),
   })
   .superRefine((field, ctx) => {
@@ -91,6 +99,14 @@ export const formFieldSchema = z
         message:
           "File fields cannot use protected compartments until protected document storage is configured.",
         path: ["protection"],
+      });
+    }
+
+    if (field.publicUpload && field.type !== "file") {
+      ctx.addIssue({
+        code: "custom",
+        message: "publicUpload may be configured only on file fields.",
+        path: ["publicUpload"],
       });
     }
 

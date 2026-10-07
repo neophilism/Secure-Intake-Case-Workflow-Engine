@@ -45,13 +45,16 @@ function parseFieldFromFormData(
 
       return Object.values(address).some(Boolean) ? address : undefined;
     }
-    case "file":
-      // Binary persistence belongs to the document subsystem. Headless clients may
-      // submit already-stored document reference IDs under this field.
-      return formData
+    case "file": {
+      // Browser File objects are staged by the public-upload subsystem. String
+      // values remain supported for trusted/headless callers that already hold
+      // stored document-version references.
+      const references = formData
         .getAll(field.id)
         .filter((value): value is string => typeof value === "string")
         .filter(Boolean);
+      return references.length > 0 ? references : undefined;
+    }
     default: {
       const value = stringValue(formData.get(field.id));
       return value === "" ? undefined : value;

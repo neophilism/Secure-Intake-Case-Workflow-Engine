@@ -262,6 +262,9 @@ export const applicationManifestSchema = z
       manifest.documentTypes.map((item) => item.key),
       "documentTypes",
     );
+    const documentTypeByKey = new Map(
+      manifest.documentTypes.map((item) => [item.key, item] as const),
+    );
     const calendarKeys = unique(
       manifest.deadlineCalendars.map((item) => item.key),
       "deadlineCalendars",
@@ -387,6 +390,62 @@ export const applicationManifestSchema = z
     });
 
     manifest.forms.forEach((form, index) => {
+      form.definition.sections.forEach((section, sectionIndex) => {
+        section.fields.forEach((field, fieldIndex) => {
+          if (field.type !== "file" || !field.publicUpload) return;
+
+          const documentType = documentTypeByKey.get(
+            field.publicUpload.documentTypeKey,
+          );
+          if (!documentType) {
+            ctx.addIssue({
+              code: "custom",
+              message:
+                `Public upload references undeclared document type: ${field.publicUpload.documentTypeKey}`,
+              path: [
+                "forms",
+                index,
+                "definition",
+                "sections",
+                sectionIndex,
+                "fields",
+                fieldIndex,
+                "publicUpload",
+                "documentTypeKey",
+              ],
+            });
+            return;
+          }
+
+          if (
+            field.acceptedMimeTypes &&
+            documentType.acceptedMimeTypes.length > 0 &&
+            field.acceptedMimeTypes.some(
+              (mime) =>
+                !documentType.acceptedMimeTypes.includes(
+                  mime.trim().toLowerCase(),
+                ),
+            )
+          ) {
+            ctx.addIssue({
+              code: "custom",
+              message:
+                "File-field MIME policy must be a subset of its document type policy.",
+              path: [
+                "forms",
+                index,
+                "definition",
+                "sections",
+                sectionIndex,
+                "fields",
+                fieldIndex,
+                "acceptedMimeTypes",
+              ],
+            });
+          }
+        });
+      });
+
       if (form.workflowSlug && !workflowKeys.has(form.workflowSlug)) {
         ctx.addIssue({
           code: "custom",

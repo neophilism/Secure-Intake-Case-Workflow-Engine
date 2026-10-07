@@ -94,7 +94,7 @@ export function FormRenderer({
 
 
   return (
-    <form action={formAction}>
+    <form action={formAction} encType="multipart/form-data">
       {definition.intro ? <p>{definition.intro}</p> : null}
       <p className="hint">
         Fields marked <span aria-hidden="true">*</span> are required.
@@ -414,7 +414,8 @@ function FormFieldControl({
         />
       );
 
-    case "file":
+    case "file": {
+      const publicUploadEnabled = Boolean(field.publicUpload);
       return (
         <fieldset
           id={controlId}
@@ -426,15 +427,30 @@ function FormFieldControl({
             {field.label}
             <RequiredIndicator required={required} />
           </legend>
-          <input type="file" disabled multiple={(field.maxFiles ?? 1) > 1} />
+          <input
+            name={field.id}
+            type="file"
+            disabled={!publicUploadEnabled}
+            required={required && publicUploadEnabled}
+            multiple={(field.maxFiles ?? 1) > 1}
+            accept={field.acceptedMimeTypes?.join(",")}
+            onChange={(event) =>
+              onValueChange(
+                Array.from(event.currentTarget.files ?? []).map(
+                  (file) => file.name,
+                ),
+              )
+            }
+          />
           <small>
-            Secure attachment upload is not available in this generic public
-            form. The form administrator must enable a vetted public-upload
-            service before this required field can be used.
+            {publicUploadEnabled
+              ? "Uploaded files are quarantined and cannot be used as trusted evidence until malware scanning records a clean result."
+              : "Secure attachment upload is not enabled for this field."}
           </small>
           <FieldMessages field={field} error={error} />
         </fieldset>
       );
+    }
   }
 }
 

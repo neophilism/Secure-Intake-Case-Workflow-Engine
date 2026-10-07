@@ -22,6 +22,26 @@ export async function listDocumentTypes(
     .orderBy(asc(documentTypes.name));
 }
 
+export async function findActiveDocumentTypeByKey(
+  db: Database,
+  scope: TenantScope,
+  key: string,
+) {
+  const [row] = await db
+    .select()
+    .from(documentTypes)
+    .where(
+      and(
+        eq(documentTypes.organizationId, scope.organizationId),
+        eq(documentTypes.key, key),
+        eq(documentTypes.status, "active"),
+      ),
+    )
+    .limit(1);
+
+  return row ?? null;
+}
+
 export async function listCaseDocuments(
   db: Database,
   scope: TenantScope,

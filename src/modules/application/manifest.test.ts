@@ -121,4 +121,80 @@ describe("application manifest", () => {
       }),
     ).toThrow();
   });
+  it("requires public file fields to reference declared document types", () => {
+    expect(() =>
+      parseApplicationManifest({
+        schemaVersion: 1,
+        application: { key: "demo", name: "Demo" },
+        forms: [
+          {
+            slug: "demo",
+            name: "Demo",
+            definition: {
+              schemaVersion: 1,
+              sections: [
+                {
+                  id: "files",
+                  title: "Files",
+                  fields: [
+                    {
+                      id: "attachment",
+                      type: "file",
+                      label: "Attachment",
+                      publicUpload: {
+                        documentTypeKey: "missing_type",
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    ).toThrow(/undeclared document type/i);
+  });
+
+  it("rejects file MIME policy broader than its bound document type", () => {
+    expect(() =>
+      parseApplicationManifest({
+        schemaVersion: 1,
+        application: { key: "demo", name: "Demo" },
+        documentTypes: [
+          {
+            key: "support",
+            name: "Support",
+            acceptedMimeTypes: ["application/pdf"],
+          },
+        ],
+        forms: [
+          {
+            slug: "demo",
+            name: "Demo",
+            definition: {
+              schemaVersion: 1,
+              sections: [
+                {
+                  id: "files",
+                  title: "Files",
+                  fields: [
+                    {
+                      id: "attachment",
+                      type: "file",
+                      label: "Attachment",
+                      acceptedMimeTypes: ["application/pdf", "image/png"],
+                      publicUpload: {
+                        documentTypeKey: "support",
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    ).toThrow(/subset of its document type policy/i);
+  });
+
 });
