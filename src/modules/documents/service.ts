@@ -29,7 +29,7 @@ import {
 import {
   enqueueDocumentScan,
   enqueueDocumentScanInTransaction,
-} from "./scan-job";
+} from "./scan-queue";
 
 const typeKeyPattern = /^[a-z][a-z0-9_-]*$/;
 
