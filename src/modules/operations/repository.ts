@@ -7,7 +7,9 @@ import {
   gte,
   gt,
   inArray,
+  isNotNull,
   isNull,
+  lte,
   sql,
   type SQL,
 } from "drizzle-orm";
@@ -26,6 +28,7 @@ import type { TenantScope } from "@/lib/tenancy";
 import {
   parseCaseSearchDefinition,
   type CaseSearchDefinition,
+  type OperationalMetricDefinition,
 } from "./definition";
 
 const recentlyClosedDays = 7;
@@ -225,7 +228,7 @@ export async function searchCases(
     .offset(Math.min(Math.max(options.offset ?? 0, 0), 10000));
 }
 
-async function countCases(
+export async function countCasesForDefinition(
   db: Database,
   scope: TenantScope,
   definition: CaseSearchDefinition,
@@ -269,11 +272,11 @@ export async function getOperationalDashboard(
 ) {
   const [mine, unassigned, overdue, escalated, openReview, recentlyClosed] =
     await Promise.all([
-      countCases(db, scope, focusDefinition("mine"), currentMembershipId),
-      countCases(db, scope, focusDefinition("unassigned"), currentMembershipId),
-      countCases(db, scope, focusDefinition("overdue"), currentMembershipId),
-      countCases(db, scope, focusDefinition("escalated"), currentMembershipId),
-      countCases(db, scope, focusDefinition("open_review"), currentMembershipId),
+      countCasesForDefinition(db, scope, focusDefinition("mine"), currentMembershipId),
+      countCasesForDefinition(db, scope, focusDefinition("unassigned"), currentMembershipId),
+      countCasesForDefinition(db, scope, focusDefinition("overdue"), currentMembershipId),
+      countCasesForDefinition(db, scope, focusDefinition("escalated"), currentMembershipId),
+      countCasesForDefinition(db, scope, focusDefinition("open_review"), currentMembershipId),
       countCases(
         db,
         scope,
@@ -490,4 +493,79 @@ export async function deleteSavedView(
     .returning();
 
   return deleted ?? null;
+}
+
+
+export async function getDeadlineComplianceMetric(
+  db: Database,
+  scope: TenantScope,
+  metric: Extract<
+    OperationalMetricDefinition,
+    { type: "deadline_compliance" }
+  >,
+  now = new Date(),
+) {
+  const windowStart = new Date(
+    now.getTime() - metric.windowDays * 24 * 60 * 60 * 1000,
+  );
+  const conditions: SQL[] = [
+    eq(caseDeadlines.organizationId, scope.organizationId),
+    inArray(caseDeadlines.policyKey, metric.policyKeys),
+    gte(caseDeadlines.dueAt, windowStart),
+    lte(caseDeadlines.dueAt, now),
+  ];
+
+  if (metric.deadlineScope === "case") {
+    conditions.push(isNull(caseDeadlines.referralId));
+  } else if (metric.deadlineScope === "referral") {
+    conditions.push(isNotNull(caseDeadlines.referralId));
+  }
+
+  const rows = await db
+    .select({
+      status: caseDeadlines.status,
+      dueAt: caseDeadlines.dueAt,
+      completedAt: caseDeadlines.completedAt,
+      cancelledAt: caseDeadlines.cancelledAt,
+      pausedAt: caseDeadlines.pausedAt,
+    })
+    .from(caseDeadlines)
+    .where(and(...conditions));
+
+  let completedOnTime = 0;
+  let completedLate = 0;
+  let overdueOpen = 0;
+
+  for (const row of rows) {
+    if (row.cancelledAt || row.status === "cancelled") continue;
+    if (row.completedAt) {
+      if (row.completedAt.getTime() <= row.dueAt.getTime()) {
+        completedOnTime += 1;
+      } else {
+        completedLate += 1;
+      }
+      continue;
+    }
+    if (row.status === "paused" || row.pausedAt) continue;
+    if (
+      row.status === "overdue" ||
+      row.dueAt.getTime() <= now.getTime()
+    ) {
+      overdueOpen += 1;
+    }
+  }
+
+  const assessed = completedOnTime + completedLate + overdueOpen;
+  return {
+    assessed,
+    completedOnTime,
+    completedLate,
+    overdueOpen,
+    complianceRate:
+      assessed === 0
+        ? null
+        : Math.round((completedOnTime / assessed) * 1000) / 10,
+    windowStart,
+    windowEnd: now,
+  };
 }
