@@ -228,4 +228,53 @@ describe("application manifest", () => {
   });
 
 
+  it("rejects operational views that reference undeclared queues", () => {
+    expect(() =>
+      parseApplicationManifest({
+        schemaVersion: 1,
+        application: { key: "demo", name: "Demo" },
+        operationalViews: [
+          {
+            key: "missing_queue",
+            name: "Missing Queue",
+            definition: { queueSlugs: ["not_declared"] },
+          },
+        ],
+      }),
+    ).toThrow(/undeclared queue/i);
+  });
+
+  it("rejects operational metrics with missing view or deadline references", () => {
+    expect(() =>
+      parseApplicationManifest({
+        schemaVersion: 1,
+        application: { key: "demo", name: "Demo" },
+        operationalMetrics: [
+          {
+            key: "count",
+            name: "Count",
+            type: "case_count",
+            viewKey: "missing_view",
+          },
+        ],
+      }),
+    ).toThrow(/undeclared operational view/i);
+
+    expect(() =>
+      parseApplicationManifest({
+        schemaVersion: 1,
+        application: { key: "demo", name: "Demo" },
+        operationalMetrics: [
+          {
+            key: "sla",
+            name: "SLA",
+            type: "deadline_compliance",
+            policyKeys: ["missing_deadline"],
+          },
+        ],
+      }),
+    ).toThrow(/undeclared deadline policy/i);
+  });
+
+
 });

@@ -122,6 +122,8 @@ export async function applyApplicationManifest(
         description: manifest.application.description ?? null,
         branding: manifest.application.branding,
         terminology: manifest.application.terminology,
+        operationalViews: manifest.operationalViews,
+        operationalMetrics: manifest.operationalMetrics,
         updatedAt: now,
       })
       .onConflictDoUpdate({
@@ -134,6 +136,8 @@ export async function applyApplicationManifest(
           description: manifest.application.description ?? null,
           branding: manifest.application.branding,
           terminology: manifest.application.terminology,
+          operationalViews: manifest.operationalViews,
+          operationalMetrics: manifest.operationalMetrics,
           updatedAt: now,
         },
       });

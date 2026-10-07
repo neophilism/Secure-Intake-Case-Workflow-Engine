@@ -96,6 +96,28 @@ async function main() {
     "Neutral referral fixture must exercise independent milestone clocks.",
   );
 
+  assert.equal(
+    manifest.operationalViews.some(
+      (view) => view.key === "example_open_work",
+    ),
+    true,
+    "Neutral release fixture must exercise application operational views.",
+  );
+  assert.equal(
+    manifest.operationalMetrics.some(
+      (metric) => metric.key === "example_deadline_compliance",
+    ),
+    true,
+    "Neutral release fixture must exercise deadline compliance metrics.",
+  );
+  assert.equal(
+    manifest.operationalMetrics.some(
+      (metric) => metric.key === "example_referral_compliance",
+    ),
+    true,
+    "Neutral release fixture must exercise referral deadline metrics.",
+  );
+
   try {
     await access(
       new URL("../examples/reference-app", import.meta.url),

@@ -60,6 +60,7 @@ import {
   transitionsFromState,
 } from "@/modules/workflows/definition";
 import { PrintPageButton } from "@/components/print-page-button";
+import { getCaseParticipantMessagingCapability } from "@/modules/participant-portal/service";
 import {
   listCaseReferrals,
   listReferralEvents,
@@ -118,6 +119,7 @@ export default async function CaseDetailPage({
     correspondence,
     correspondenceAttachments,
     communicationTemplates,
+    participantMessagingCapability,
     reviews,
     reviewPolicies,
     eligibleReviewers,
@@ -162,6 +164,13 @@ export default async function CaseDetailPage({
     hasPermission(context, "correspondence:view")
       ? listCommunicationTemplates(db, scope)
       : Promise.resolve([]),
+    hasPermission(context, "correspondence:view")
+      ? getCaseParticipantMessagingCapability(db, scope, record.id)
+      : Promise.resolve({
+          portalEnabled: false,
+          allowMessaging: false,
+          reason: "unavailable",
+        }),
     hasPermission(context, "review:view")
       ? listCaseReviews(db, scope, record.id)
       : Promise.resolve([]),
@@ -506,6 +515,9 @@ export default async function CaseDetailPage({
           canCreateInternalNote={canCreateInternalNote}
           canCreateParticipantNote={canCreateParticipantNote}
           canManageCorrespondence={canManageCorrespondence}
+          participantMessagingCapability={
+            participantMessagingCapability
+          }
         />
       ) : null}
 

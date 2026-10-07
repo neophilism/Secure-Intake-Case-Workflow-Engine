@@ -141,6 +141,13 @@
       "when": 1791313200000,
       "tag": "0019_parallel_case_referrals",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791400000000,
+      "tag": "0020_application_operations_profiles",
+      "breakpoints": true
     }
   ]
 }

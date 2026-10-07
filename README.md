@@ -14,17 +14,24 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 26 — parallel case referrals and recipient-specific clocks**
+**PR 27 — application operations profiles and participant-safe contact**
 
-This milestone adds a first-class referral ledger for cases that must be sent to multiple external recipients in parallel. Each referral snapshots its manifest-defined policy, records its own recipient and response history, and receives independent deadline instances for acknowledgment, interim response, final response, or other configured milestones.
+This milestone lets downstream applications ship shared operational work views
+and objective performance metrics through the application manifest. Named views
+reuse the existing tenant-scoped case search engine; metrics currently support
+view-based case counts and deadline-compliance reporting over case and referral
+deadline policies.
 
-Referral deadlines reuse the existing warning, pause/resume, escalation, and immutable audit machinery while remaining isolated from case-level workflow deadlines. The deadline service also gains explicit, reasoned extensions so an agreed extension moves only the selected clock and is preserved in deadline history.
+The staff case view also derives participant portal messaging eligibility from
+the same immutable form-version policy and submission answers used by the
+participant portal. Staff cannot create or publish portal correspondence when a
+submission is status-only or otherwise lacks participant messaging capability.
 
-Staff can operate referrals from the case page, oversight staff can use an organization-wide referral dashboard, and API clients can read/create/update referral work items without being misattributed to a staff user.
+The package version is **1.0.0-rc.7**.
 
-The package version is **1.0.0-rc.6**.
-
-See [docs/architecture/0028-parallel-case-referrals.md](docs/architecture/0028-parallel-case-referrals.md) and [docs/downstream-application-contract.md](docs/downstream-application-contract.md).
+See
+[docs/architecture/0029-application-operations-profiles.md](docs/architecture/0029-application-operations-profiles.md)
+and [docs/downstream-application-contract.md](docs/downstream-application-contract.md).
 
 ## Security status
 

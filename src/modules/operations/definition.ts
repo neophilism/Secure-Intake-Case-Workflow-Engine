@@ -110,3 +110,100 @@ export function caseSearchQueryString(
   if (definition.limit !== 50) params.set("limit", String(definition.limit));
   return params.toString();
 }
+
+
+const applicationIdentifier = z
+  .string()
+  .min(1)
+  .max(100)
+  .regex(
+    /^[a-z][a-z0-9_-]*$/,
+    "Use lowercase identifiers with letters, numbers, underscores, or hyphens.",
+  );
+
+export const applicationOperationalFocuses = [
+  "all",
+  "open",
+  "unassigned",
+  "overdue",
+  "escalated",
+  "open_review",
+  "recently_closed",
+] as const;
+
+export const applicationOperationalViewDefinitionSchema = z.object({
+  statuses: z.array(compactString).max(20).default([]),
+  priorities: z.array(compactString).max(20).default([]),
+  queueSlugs: z.array(applicationIdentifier).max(20).default([]),
+  tags: z.array(compactString).max(20).default([]),
+  focus: z.enum(applicationOperationalFocuses).default("all"),
+  sort: z.enum(caseSearchSorts).default("updated_desc"),
+  limit: z.number().int().min(1).max(200).default(50),
+});
+
+export const applicationOperationalViewSchema = z.object({
+  key: applicationIdentifier,
+  name: z.string().trim().min(1).max(160),
+  description: z.string().trim().max(2000).optional(),
+  definition: applicationOperationalViewDefinitionSchema,
+});
+
+const operationalMetricBaseSchema = z.object({
+  key: applicationIdentifier,
+  name: z.string().trim().min(1).max(160),
+  description: z.string().trim().max(2000).optional(),
+});
+
+export const operationalMetricDefinitionSchema = z.discriminatedUnion(
+  "type",
+  [
+    operationalMetricBaseSchema.extend({
+      type: z.literal("case_count"),
+      viewKey: applicationIdentifier,
+    }),
+    operationalMetricBaseSchema.extend({
+      type: z.literal("deadline_compliance"),
+      policyKeys: z.array(applicationIdentifier).min(1).max(50),
+      deadlineScope: z
+        .enum(["all", "case", "referral"])
+        .default("all"),
+      windowDays: z.number().int().min(1).max(3650).default(365),
+    }),
+  ],
+);
+
+export type ApplicationOperationalView = z.infer<
+  typeof applicationOperationalViewSchema
+>;
+
+export type ApplicationOperationalViewDefinition = z.infer<
+  typeof applicationOperationalViewDefinitionSchema
+>;
+
+export type OperationalMetricDefinition = z.infer<
+  typeof operationalMetricDefinitionSchema
+>;
+
+export function applicationOperationalViewToCaseSearchDefinition(
+  definition: ApplicationOperationalViewDefinition,
+  queueIdsBySlug: ReadonlyMap<string, string>,
+): CaseSearchDefinition {
+  const queueIds = definition.queueSlugs.map((slug) => {
+    const id = queueIdsBySlug.get(slug);
+    if (!id) {
+      throw new Error(`Operational view references unavailable queue: ${slug}`);
+    }
+    return id;
+  });
+
+  return parseCaseSearchDefinition({
+    statuses: definition.statuses,
+    priorities: definition.priorities,
+    queueIds,
+    assigneeMembershipIds: [],
+    tags: definition.tags,
+    focus: definition.focus,
+    sort: definition.sort,
+    limit: definition.limit,
+  });
+}

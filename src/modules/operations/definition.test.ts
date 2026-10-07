@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  applicationOperationalViewSchema,
+  applicationOperationalViewToCaseSearchDefinition,
   caseSearchDefinitionFromSearchParams,
   caseSearchQueryString,
+  operationalMetricDefinitionSchema,
   parseCaseSearchDefinition,
 } from "./definition";
 
@@ -59,4 +62,51 @@ describe("operational search definition", () => {
       }),
     ).toThrow();
   });
+  it("converts an application view from queue slugs to queue ids", () => {
+    const view = applicationOperationalViewSchema.parse({
+      key: "triage_work",
+      name: "Triage Work",
+      definition: {
+        queueSlugs: ["triage"],
+        statuses: ["triage"],
+        focus: "open",
+      },
+    });
+
+    const definition =
+      applicationOperationalViewToCaseSearchDefinition(
+        view.definition,
+        new Map([["triage", "11111111-1111-4111-8111-111111111111"]]),
+      );
+
+    expect(definition.queueIds).toEqual([
+      "11111111-1111-4111-8111-111111111111",
+    ]);
+    expect(definition.statuses).toEqual(["triage"]);
+    expect(definition.focus).toBe("open");
+  });
+
+  it("rejects user-specific mine focus in application views", () => {
+    expect(() =>
+      applicationOperationalViewSchema.parse({
+        key: "mine",
+        name: "Mine",
+        definition: { focus: "mine" },
+      }),
+    ).toThrow();
+  });
+
+  it("parses deadline-compliance metric definitions", () => {
+    const metric = operationalMetricDefinitionSchema.parse({
+      key: "timeliness",
+      name: "Timeliness",
+      type: "deadline_compliance",
+      policyKeys: ["triage_target"],
+      deadlineScope: "case",
+      windowDays: 90,
+    });
+    expect(metric.type).toBe("deadline_compliance");
+  });
+
+
 });

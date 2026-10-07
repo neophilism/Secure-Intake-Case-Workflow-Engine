@@ -383,6 +383,14 @@ export const applicationProfiles = pgTable(
       .$type<Record<string, unknown>>()
       .notNull()
       .default({}),
+    operationalViews: jsonb("operational_views")
+      .$type<unknown[]>()
+      .notNull()
+      .default([]),
+    operationalMetrics: jsonb("operational_metrics")
+      .$type<unknown[]>()
+      .notNull()
+      .default([]),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

@@ -24,6 +24,7 @@ import {
   externalParticipantCanReplyToThread,
   findExternalParticipantCredentialForLogin,
   findExternalParticipantSessionContext,
+  findCaseParticipantMessagingPolicyContext,
   insertExternalParticipantCredential,
   listExternalParticipantPortalMessages,
   markExternalParticipantAuthenticated,
@@ -283,6 +284,63 @@ export async function resolveExternalParticipantContext(
     },
     case: caseView,
     allowMessaging,
+  };
+}
+
+export async function getCaseParticipantMessagingCapability(
+  db: Database,
+  scope: ReturnType<typeof createTrustedTenantScope>,
+  caseId: string,
+) {
+  const row = await findCaseParticipantMessagingPolicyContext(
+    db,
+    scope,
+    caseId,
+  );
+  if (!row) {
+    return {
+      portalEnabled: false,
+      allowMessaging: false,
+      reason: "no_participant_portal" as const,
+    };
+  }
+
+  const definition = parseFormDefinition(row.formVersion.definition);
+  const portal = definition.participantPortal;
+  if (!portal?.enabled) {
+    return {
+      portalEnabled: false,
+      allowMessaging: false,
+      reason: "portal_disabled" as const,
+    };
+  }
+
+  if (
+    !row.credential?.id ||
+    row.credential.status !== "active" ||
+    row.credential.revokedAt
+  ) {
+    return {
+      portalEnabled: true,
+      allowMessaging: false,
+      reason: "credential_unavailable" as const,
+    };
+  }
+
+  const allowMessaging =
+    portal.allowMessaging &&
+    (!portal.messagingCondition ||
+      evaluateCondition(
+        portal.messagingCondition,
+        row.submission.answers,
+      ));
+
+  return {
+    portalEnabled: true,
+    allowMessaging,
+    reason: allowMessaging
+      ? ("allowed" as const)
+      : ("status_only" as const),
   };
 }
 

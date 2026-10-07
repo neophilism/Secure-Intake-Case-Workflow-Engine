@@ -9,13 +9,18 @@ import { getCurrentAuthorizationContext } from "@/modules/auth/server-session";
 import { findApplicationProfile } from "@/modules/application/repository";
 import { applicationTerm } from "@/modules/application/terminology";
 import {
+  applicationOperationalViewSchema,
+  applicationOperationalViewToCaseSearchDefinition,
   caseSearchDefinitionFromSearchParams,
   caseSearchQueryString,
   operationalFocuses,
+  operationalMetricDefinitionSchema,
   parseCaseSearchDefinition,
   type CaseSearchDefinition,
 } from "@/modules/operations/definition";
 import {
+  countCasesForDefinition,
+  getDeadlineComplianceMetric,
   getOperationalDashboard,
   listMemberWorkload,
   listQueueWorkload,
@@ -68,6 +73,7 @@ export default async function OperationsPage({
   }
   if (!hasPermission(context, "case:view")) redirect("/forbidden");
 
+  const membershipId: string = context.membership.id;
   const params = await searchParams;
   let definition: CaseSearchDefinition;
   try {
@@ -88,9 +94,9 @@ export default async function OperationsPage({
     members,
     applicationProfile,
   ] = await Promise.all([
-    getOperationalDashboard(db, scope, context.membership.id),
-    searchCases(db, scope, definition, context.membership.id),
-    listSavedViews(db, scope, context.membership.id),
+    getOperationalDashboard(db, scope, membershipId),
+    searchCases(db, scope, definition, membershipId),
+    listSavedViews(db, scope, membershipId),
     listQueueWorkload(db, scope),
     listMemberWorkload(db, scope),
     listQueues(db, scope),
@@ -132,6 +138,77 @@ export default async function OperationsPage({
     applicationProfile?.terminology,
     "deadline",
     2,
+  );
+
+  const configuredViews =
+    applicationOperationalViewSchema
+      .array()
+      .safeParse(applicationProfile?.operationalViews ?? []);
+  const configuredMetrics =
+    operationalMetricDefinitionSchema
+      .array()
+      .safeParse(applicationProfile?.operationalMetrics ?? []);
+  const queueIdsBySlug = new Map(
+    queues.map((queue) => [queue.slug, queue.id] as const),
+  );
+  const applicationViews = configuredViews.success
+    ? configuredViews.data.map((view) => ({
+        ...view,
+        searchDefinition:
+          applicationOperationalViewToCaseSearchDefinition(
+            view.definition,
+            queueIdsBySlug,
+          ),
+      }))
+    : [];
+  const applicationViewByKey = new Map(
+    applicationViews.map((view) => [view.key, view] as const),
+  );
+  const applicationViewCards = await Promise.all(
+    applicationViews.map(async (view) => ({
+      view,
+      count: await countCasesForDefinition(
+        db,
+        scope,
+        view.searchDefinition,
+        membershipId,
+      ),
+    })),
+  );
+  const operationalMetricResults = await Promise.all(
+    (configuredMetrics.success ? configuredMetrics.data : []).map(
+      async (metric) => {
+        if (metric.type === "case_count") {
+          const view = applicationViewByKey.get(metric.viewKey);
+          return {
+            metric,
+            result: view
+              ? {
+                  type: "case_count" as const,
+                  value: await countCasesForDefinition(
+                    db,
+                    scope,
+                    view.searchDefinition,
+                    membershipId,
+                  ),
+                }
+              : null,
+          };
+        }
+
+        return {
+          metric,
+          result: {
+            type: "deadline_compliance" as const,
+            value: await getDeadlineComplianceMetric(
+              db,
+              scope,
+              metric,
+            ),
+          },
+        };
+      },
+    ),
   );
 
   const focusLabels: Record<
@@ -221,6 +298,76 @@ export default async function OperationsPage({
           ))}
         </ul>
       </section>
+
+      {applicationViewCards.length > 0 ? (
+        <section>
+          <h2>Application work views</h2>
+          <p>
+            Shared operational views supplied by the active application
+            configuration.
+          </p>
+          <ul>
+            {applicationViewCards.map(({ view, count }) => (
+              <li key={view.key}>
+                <Link href={hrefFor(view.searchDefinition)}>
+                  {view.name}: {count}
+                </Link>
+                {view.description ? " — " + view.description : ""}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {operationalMetricResults.length > 0 ? (
+        <section>
+          <h2>Application performance metrics</h2>
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Metric</th>
+                <th scope="col">Value</th>
+                <th scope="col">Basis</th>
+              </tr>
+            </thead>
+            <tbody>
+              {operationalMetricResults.map(({ metric, result }) => (
+                <tr key={metric.key}>
+                  <td>
+                    <strong>{metric.name}</strong>
+                    {metric.description ? (
+                      <p>{metric.description}</p>
+                    ) : null}
+                  </td>
+                  <td>
+                    {!result
+                      ? "Unavailable"
+                      : result.type === "case_count"
+                        ? result.value
+                        : result.value.complianceRate === null
+                          ? "—"
+                          : result.value.complianceRate + "%"}
+                  </td>
+                  <td>
+                    {!result
+                      ? "Configuration reference unavailable."
+                      : result.type === "case_count"
+                        ? "Current cases matching the configured application view."
+                        : [
+                            result.value.completedOnTime +
+                              " on time",
+                            result.value.completedLate + " late",
+                            result.value.overdueOpen +
+                              " open overdue",
+                            result.value.assessed + " assessed",
+                          ].join(" · ")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ) : null}
 
       <section>
         <h2>Search and work queue</h2>

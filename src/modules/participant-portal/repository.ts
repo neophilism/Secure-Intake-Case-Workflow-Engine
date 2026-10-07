@@ -385,3 +385,74 @@ export async function listExternalParticipantCredentialForSubmission(
     .limit(1);
   return credential ?? null;
 }
+
+
+export async function findCaseParticipantMessagingPolicyContext(
+  db: Database,
+  scope: TenantScope,
+  caseId: string,
+) {
+  const [row] = await db
+    .select({
+      caseId: cases.id,
+      submission: {
+        id: intakeSubmissions.id,
+        answers: intakeSubmissions.answers,
+      },
+      formVersion: {
+        id: intakeFormVersions.id,
+        definition: intakeFormVersions.definition,
+      },
+      credential: {
+        id: externalParticipantCredentials.id,
+        status: externalParticipantCredentials.status,
+        revokedAt: externalParticipantCredentials.revokedAt,
+      },
+    })
+    .from(cases)
+    .innerJoin(
+      intakeSubmissions,
+      and(
+        eq(intakeSubmissions.id, cases.sourceSubmissionId),
+        eq(
+          intakeSubmissions.organizationId,
+          cases.organizationId,
+        ),
+      ),
+    )
+    .innerJoin(
+      intakeFormVersions,
+      and(
+        eq(
+          intakeFormVersions.id,
+          intakeSubmissions.formVersionId,
+        ),
+        eq(
+          intakeFormVersions.organizationId,
+          cases.organizationId,
+        ),
+      ),
+    )
+    .leftJoin(
+      externalParticipantCredentials,
+      and(
+        eq(
+          externalParticipantCredentials.submissionId,
+          intakeSubmissions.id,
+        ),
+        eq(
+          externalParticipantCredentials.organizationId,
+          cases.organizationId,
+        ),
+      ),
+    )
+    .where(
+      and(
+        eq(cases.id, caseId),
+        eq(cases.organizationId, scope.organizationId),
+      ),
+    )
+    .limit(1);
+
+  return row ?? null;
+}

@@ -403,5 +403,52 @@
         ]
       }
     }
+  ],
+  "operationalViews": [
+    {
+      "key": "example_open_work",
+      "name": "Example Open Work",
+      "description": "Neutral application-defined operational view.",
+      "definition": {
+        "statuses": [],
+        "priorities": [],
+        "queueSlugs": [
+          "example_queue"
+        ],
+        "tags": [],
+        "focus": "open",
+        "sort": "priority_desc",
+        "limit": 50
+      }
+    }
+  ],
+  "operationalMetrics": [
+    {
+      "key": "example_open_work_count",
+      "name": "Example Open Work Count",
+      "type": "case_count",
+      "viewKey": "example_open_work"
+    },
+    {
+      "key": "example_deadline_compliance",
+      "name": "Example Deadline Compliance",
+      "type": "deadline_compliance",
+      "policyKeys": [
+        "example_deadline"
+      ],
+      "deadlineScope": "case",
+      "windowDays": 365
+    },
+    {
+      "key": "example_referral_compliance",
+      "name": "Example Referral Compliance",
+      "type": "deadline_compliance",
+      "policyKeys": [
+        "example_acknowledgment",
+        "example_final_response"
+      ],
+      "deadlineScope": "referral",
+      "windowDays": 365
+    }
   ]
 }
