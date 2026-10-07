@@ -357,4 +357,57 @@ describe("form definition", () => {
     ).toThrow(/cannot be used when allowMessaging is false/);
   });
 
+  it("accepts an explicitly configured public upload on a file field", () => {
+    const definition = parseFormDefinition({
+      schemaVersion: 1,
+      sections: [
+        {
+          id: "details",
+          title: "Details",
+          fields: [
+            {
+              id: "attachment",
+              type: "file",
+              label: "Attachment",
+              acceptedMimeTypes: ["application/pdf"],
+              maxFiles: 2,
+              publicUpload: {
+                documentTypeKey: "supporting_material",
+                visibility: "internal",
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(
+      definition.sections[0].fields[0].publicUpload?.documentTypeKey,
+    ).toBe("supporting_material");
+  });
+
+  it("rejects publicUpload configuration on non-file fields", () => {
+    expect(() =>
+      parseFormDefinition({
+        schemaVersion: 1,
+        sections: [
+          {
+            id: "details",
+            title: "Details",
+            fields: [
+              {
+                id: "summary",
+                type: "short_text",
+                label: "Summary",
+                publicUpload: {
+                  documentTypeKey: "supporting_material",
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(/only on file fields/i);
+  });
+
 });
