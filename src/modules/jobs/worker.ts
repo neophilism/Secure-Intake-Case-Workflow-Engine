@@ -2,6 +2,7 @@ import type { Database } from "@/db/client";
 import type { TenantScope } from "@/lib/tenancy";
 import { createTrustedTenantScope } from "@/lib/tenancy";
 import { sweepOrganizationDeadlines } from "@/modules/deadlines/service";
+import { scanDocumentVersionJob } from "@/modules/documents/scan-job";
 import { sweepReviewDeadlines } from "@/modules/reviews/service";
 import { deliverWebhookJob } from "@/modules/webhooks/worker";
 import {
@@ -47,6 +48,7 @@ export function createCoreBackgroundJobHandlers(): Map<
       },
     ],
     ["webhook.deliver", deliverWebhookJob],
+    ["document.scan", scanDocumentVersionJob],
   ]);
 }
 
