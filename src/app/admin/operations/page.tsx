@@ -73,7 +73,7 @@ export default async function OperationsPage({
   }
   if (!hasPermission(context, "case:view")) redirect("/forbidden");
 
-  const membershipId = membershipId;
+  const membershipId: string = context.membership.id;
   const params = await searchParams;
   let definition: CaseSearchDefinition;
   try {
