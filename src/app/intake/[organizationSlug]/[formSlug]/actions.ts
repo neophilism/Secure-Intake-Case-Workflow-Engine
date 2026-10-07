@@ -15,6 +15,7 @@ import {
   cleanupStagedPublicUploads,
   PublicUploadValidationError,
   stagePublicSubmissionUploads,
+  type StagedPublicUploadSet,
 } from "@/modules/documents/public-upload";
 
 export async function submitPublicFormAction(
@@ -36,7 +37,7 @@ export async function submitPublicFormAction(
   }
 
   const answers = answersFromFormData(published.definition, formData);
-  let stagedUploads = null;
+  let stagedUploads: StagedPublicUploadSet | null = null;
 
   try {
     stagedUploads = await stagePublicSubmissionUploads(
