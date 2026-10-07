@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import type {
   Database,
   DatabaseTransaction,
@@ -495,11 +495,7 @@ async function instantiateReferralDeadlines(
 
     if (
       latest &&
-      inArray(deadlineStatusColumn(latest.status), [
-        "active",
-        "paused",
-        "overdue",
-      ])
+      ["active", "paused", "overdue"].includes(latest.status)
     ) {
       continue;
     }
@@ -812,6 +808,3 @@ async function recordReferralAudit(
   );
 }
 
-function deadlineStatusColumn(status: string) {
-  return status;
-}
