@@ -12,6 +12,9 @@ import {
   cases,
   externalParticipantCredentials,
   externalParticipantSessions,
+  documentCaseLinks,
+  documentSubmissionLinks,
+  documentVersions,
   intakeForms,
   intakeFormVersions,
   intakeSubmissions,
@@ -35,8 +38,17 @@ import {
 } from "../src/modules/communications/service";
 import { listCaseDeadlines } from "../src/modules/deadlines/repository";
 import {
+  recordMalwareScanResult,
+} from "../src/modules/documents/service";
+import {
+  stagePublicSubmissionUploads,
+} from "../src/modules/documents/public-upload";
+import type { DocumentStorageAdapter } from "../src/modules/documents/storage";
+import { answersFromFormData } from "../src/modules/forms/form-data";
+import {
   createPublicDraftSubmission,
   submitDraftSubmissionByToken,
+  submitPublicForm,
 } from "../src/modules/forms/service";
 import {
   listProtectedCompartmentsForSubmission,
@@ -166,6 +178,142 @@ async function main() {
       .limit(1);
     assert.ok(formVersionV1);
     assert.equal(formVersionV1.versionNumber, 1);
+
+    const uploadForm = manifest.forms.find(
+      (item) => item.slug === "example_form",
+    );
+    assert.ok(uploadForm);
+
+    const memoryObjects = new Map<string, Uint8Array>();
+    const memoryStorage: DocumentStorageAdapter = {
+      driver: "integration-memory",
+      async put(key, data) {
+        if (memoryObjects.has(key)) {
+          throw new Error("Duplicate integration storage key.");
+        }
+        memoryObjects.set(key, new Uint8Array(data));
+      },
+      async get(key) {
+        const value = memoryObjects.get(key);
+        if (!value) throw new Error("Integration object missing.");
+        return new Uint8Array(value);
+      },
+      async remove(key) {
+        memoryObjects.delete(key);
+      },
+    };
+
+    const uploadFormData = new FormData();
+    uploadFormData.set("example_contact_mode", "status_only");
+    uploadFormData.set("example_value", "example attachment submission");
+    uploadFormData.set("example_secret", "protected upload value");
+    uploadFormData.append(
+      "example_attachment",
+      new Blob(["%PDF-1.7\nneutral fixture\n"], {
+        type: "application/pdf",
+      }),
+      "example.pdf",
+    );
+
+    const uploadAnswers = answersFromFormData(
+      uploadForm.definition,
+      uploadFormData,
+    );
+    const stagedUpload = await stagePublicSubmissionUploads(
+      db,
+      scope,
+      uploadForm.definition,
+      uploadAnswers,
+      uploadFormData,
+      memoryStorage,
+    );
+    assert.equal(stagedUpload.uploads.length, 1);
+    assert.equal(
+      stagedUpload.answerReferences.example_attachment?.length,
+      1,
+    );
+
+    const uploadSubmission = await submitPublicForm(
+      db,
+      organizationSlug,
+      "example_form",
+      {
+        ...uploadAnswers,
+        ...stagedUpload.answerReferences,
+      },
+      null,
+      stagedUpload.uploads,
+    );
+
+    const [submissionDocument] = await db
+      .select({
+        versionId: documentVersions.id,
+        contentStatus: documentVersions.contentStatus,
+        malwareScanStatus: documentVersions.malwareScanStatus,
+        sha256: documentVersions.sha256,
+      })
+      .from(documentSubmissionLinks)
+      .innerJoin(
+        documentVersions,
+        eq(
+          documentVersions.id,
+          documentSubmissionLinks.documentVersionId,
+        ),
+      )
+      .where(
+        eq(
+          documentSubmissionLinks.submissionId,
+          uploadSubmission.id,
+        ),
+      )
+      .limit(1);
+    assert.ok(submissionDocument);
+    assert.equal(submissionDocument.contentStatus, "quarantined");
+    assert.equal(submissionDocument.malwareScanStatus, "pending");
+    assert.match(submissionDocument.sha256, /^[a-f0-9]{64}$/);
+
+    const uploadCase = await createCaseFromSubmission(db, scope, {
+      submissionId: uploadSubmission.id,
+      actorUserId: actor.userId,
+      title: "Example attachment record",
+    });
+
+    let [promotedLink] = await db
+      .select({ id: documentCaseLinks.id })
+      .from(documentCaseLinks)
+      .where(
+        and(
+          eq(documentCaseLinks.caseId, uploadCase.id),
+          eq(
+            documentCaseLinks.documentVersionId,
+            submissionDocument.versionId,
+          ),
+        ),
+      )
+      .limit(1);
+    assert.equal(promotedLink, undefined);
+
+    await recordMalwareScanResult(db, scope, {
+      versionId: submissionDocument.versionId,
+      status: "clean",
+      provider: "integration-test-scanner",
+      actorUserId: actor.userId,
+    });
+
+    [promotedLink] = await db
+      .select({ id: documentCaseLinks.id })
+      .from(documentCaseLinks)
+      .where(
+        and(
+          eq(documentCaseLinks.caseId, uploadCase.id),
+          eq(
+            documentCaseLinks.documentVersionId,
+            submissionDocument.versionId,
+          ),
+        ),
+      )
+      .limit(1);
+    assert.ok(promotedLink);
 
     const [workflow] = await db
       .select()
