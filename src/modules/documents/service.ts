@@ -27,7 +27,6 @@ import {
   type DocumentStorageAdapter,
 } from "./storage";
 import {
-  enqueueDocumentScan,
   enqueueDocumentScanInTransaction,
 } from "./scan-queue";
 
@@ -512,60 +511,66 @@ export async function addDocumentVersion(
   await storage.put(key, input.data);
 
   try {
-    const [version] = await db
-      .insert(documentVersions)
-      .values({
-        id: versionId,
-        organizationId: scope.organizationId,
-        documentId: document.id,
-        versionNumber,
-        originalFilename: prepared.filename,
-        mimeType: input.mimeType.trim() || "application/octet-stream",
-        sizeBytes: input.data.byteLength,
-        sha256: prepared.sha256,
-        storageDriver: storage.driver,
-        storageKey: key,
-        contentStatus: "quarantined",
-        malwareScanStatus: "pending",
-        uploadedByUserId: input.actorUserId,
-      })
-      .returning();
+    return await db.transaction(async (tx) => {
+      const [version] = await tx
+        .insert(documentVersions)
+        .values({
+          id: versionId,
+          organizationId: scope.organizationId,
+          documentId: document.id,
+          versionNumber,
+          originalFilename: prepared.filename,
+          mimeType: input.mimeType.trim() || "application/octet-stream",
+          sizeBytes: input.data.byteLength,
+          sha256: prepared.sha256,
+          storageDriver: storage.driver,
+          storageKey: key,
+          contentStatus: "quarantined",
+          malwareScanStatus: "pending",
+          uploadedByUserId: input.actorUserId,
+        })
+        .returning();
 
-    await db.insert(documentCustodyEvents).values({
-      organizationId: scope.organizationId,
-      documentVersionId: version.id,
-      action: "version_uploaded",
-      toCustodian: "system",
-      location: storage.driver,
-      actorUserId: input.actorUserId ?? null,
-      note: `SHA-256 ${prepared.sha256}`,
+      await tx.insert(documentCustodyEvents).values({
+        organizationId: scope.organizationId,
+        documentVersionId: version.id,
+        action: "version_uploaded",
+        toCustodian: "system",
+        location: storage.driver,
+        actorUserId: input.actorUserId,
+        note: `SHA-256 ${prepared.sha256}`,
+      });
+
+      await tx.insert(auditEvents).values(
+        auditEventValues({
+          organizationId: scope.organizationId,
+          actorType: "user",
+          actorUserId: input.actorUserId,
+          action: "document.version_created",
+          resourceType: "document_version",
+          resourceId: version.id,
+          parentResourceType: "document",
+          parentResourceId: document.id,
+          newState: {
+            versionNumber: version.versionNumber,
+            contentStatus: version.contentStatus,
+            malwareScanStatus: version.malwareScanStatus,
+          },
+          metadata: {
+            sha256: version.sha256,
+            mimeType: version.mimeType,
+            sizeBytes: version.sizeBytes,
+          },
+        }),
+      );
+
+      await enqueueDocumentScanInTransaction(
+        tx,
+        scope,
+        version.id,
+      );
+      return version;
     });
-
-    await db.insert(auditEvents).values(
-      auditEventValues({
-        organizationId: scope.organizationId,
-        actorType: "user",
-        actorUserId: input.actorUserId ?? null,
-        action: "document.version_created",
-        resourceType: "document_version",
-        resourceId: version.id,
-        parentResourceType: "document",
-        parentResourceId: document.id,
-        newState: {
-          versionNumber: version.versionNumber,
-          contentStatus: version.contentStatus,
-          malwareScanStatus: version.malwareScanStatus,
-        },
-        metadata: {
-          sha256: version.sha256,
-          mimeType: version.mimeType,
-          sizeBytes: version.sizeBytes,
-        },
-      }),
-    );
-
-    await enqueueDocumentScan(db, scope, version.id);
-    return version;
   } catch (error) {
     await storage.remove(key).catch(() => undefined);
     throw error;
