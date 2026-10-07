@@ -17,7 +17,7 @@ import {
 import { visibleFieldIdsForDefinition } from "@/modules/forms/visibility";
 import { sha256Hex } from "./hash";
 import { findActiveDocumentTypeByKey } from "./repository";
-import { enqueueDocumentScanInTransaction } from "./scan-job";
+import { enqueueDocumentScanInTransaction } from "./scan-queue";
 import {
   documentStorageKey,
   getDocumentStorageAdapter,
