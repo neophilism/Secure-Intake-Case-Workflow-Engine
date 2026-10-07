@@ -26,6 +26,10 @@ import {
   getDocumentStorageAdapter,
   type DocumentStorageAdapter,
 } from "./storage";
+import {
+  enqueueDocumentScan,
+  enqueueDocumentScanInTransaction,
+} from "./scan-job";
 
 const typeKeyPattern = /^[a-z][a-z0-9_-]*$/;
 
@@ -210,7 +214,7 @@ export async function uploadDocumentToCase(
           sourceDescription:
             input.sourceDescription?.trim() || null,
           exhibitLabel: input.exhibitLabel?.trim() || null,
-          attachedByUserId: input.actorUserId,
+          attachedByUserId: input.actorUserId ?? null,
         })
         .returning();
 
@@ -220,7 +224,7 @@ export async function uploadDocumentToCase(
         action: "uploaded",
         toCustodian: "system",
         location: storage.driver,
-        actorUserId: input.actorUserId,
+        actorUserId: input.actorUserId ?? null,
         note: `SHA-256 ${prepared.sha256}`,
       });
 
@@ -228,7 +232,7 @@ export async function uploadDocumentToCase(
         organizationId: scope.organizationId,
         documentVersionId: versionId,
         action: "upload",
-        actorUserId: input.actorUserId,
+        actorUserId: input.actorUserId ?? null,
         metadata: {
           caseId: input.caseId,
           storageDriver: storage.driver,
@@ -239,7 +243,7 @@ export async function uploadDocumentToCase(
         auditEventValues({
           organizationId: scope.organizationId,
           actorType: "user",
-          actorUserId: input.actorUserId,
+          actorUserId: input.actorUserId ?? null,
           action: "document.uploaded",
           resourceType: "document_version",
           resourceId: version.id,
@@ -260,6 +264,12 @@ export async function uploadDocumentToCase(
             relationship: link.relationship,
           },
         }),
+      );
+
+      await enqueueDocumentScanInTransaction(
+        tx,
+        scope,
+        version.id,
       );
 
       return { document, version, link };
@@ -423,6 +433,12 @@ export async function uploadDocumentToSubmission(
         }),
       );
 
+      await enqueueDocumentScanInTransaction(
+        tx,
+        scope,
+        version.id,
+      );
+
       return { document, version, link };
     });
   } catch (error) {
@@ -521,7 +537,7 @@ export async function addDocumentVersion(
       action: "version_uploaded",
       toCustodian: "system",
       location: storage.driver,
-      actorUserId: input.actorUserId,
+      actorUserId: input.actorUserId ?? null,
       note: `SHA-256 ${prepared.sha256}`,
     });
 
@@ -529,7 +545,7 @@ export async function addDocumentVersion(
       auditEventValues({
         organizationId: scope.organizationId,
         actorType: "user",
-        actorUserId: input.actorUserId,
+        actorUserId: input.actorUserId ?? null,
         action: "document.version_created",
         resourceType: "document_version",
         resourceId: version.id,
@@ -548,6 +564,7 @@ export async function addDocumentVersion(
       }),
     );
 
+    await enqueueDocumentScan(db, scope, version.id);
     return version;
   } catch (error) {
     await storage.remove(key).catch(() => undefined);
@@ -603,7 +620,7 @@ export async function attachDocumentVersionToCase(
       sourceDescription:
         input.sourceDescription?.trim() || null,
       exhibitLabel: input.exhibitLabel?.trim() || null,
-      attachedByUserId: input.actorUserId,
+      attachedByUserId: input.actorUserId ?? null,
     })
     .onConflictDoNothing()
     .returning();
@@ -614,7 +631,7 @@ export async function attachDocumentVersionToCase(
       auditEventValues({
         organizationId: scope.organizationId,
         actorType: "user",
-        actorUserId: input.actorUserId,
+        actorUserId: input.actorUserId ?? null,
         action: "document.attached_to_case",
         resourceType: "document_version",
         resourceId: version.id,
@@ -640,7 +657,7 @@ export async function recordMalwareScanResult(
     status: MalwareScanStatus;
     provider: string;
     details?: Record<string, unknown>;
-    actorUserId: string;
+    actorUserId?: string | null;
   },
 ) {
   if (!input.provider.trim()) {
@@ -718,7 +735,7 @@ export async function recordMalwareScanResult(
               relationship: "evidence",
               sourceDescription:
                 "Promoted from clean intake attachment.",
-              attachedByUserId: input.actorUserId,
+              attachedByUserId: input.actorUserId ?? null,
             })
             .onConflictDoNothing();
         }
@@ -729,7 +746,7 @@ export async function recordMalwareScanResult(
       organizationId: scope.organizationId,
       documentVersionId: version.id,
       action: "scan_result",
-      actorUserId: input.actorUserId,
+      actorUserId: input.actorUserId ?? null,
       metadata: {
         status: input.status,
         provider: input.provider,
@@ -739,8 +756,8 @@ export async function recordMalwareScanResult(
     await tx.insert(auditEvents).values(
       auditEventValues({
         organizationId: scope.organizationId,
-        actorType: "user",
-        actorUserId: input.actorUserId,
+        actorType: input.actorUserId ? "user" : "system",
+        actorUserId: input.actorUserId ?? null,
         action: "document.scan_recorded",
         resourceType: "document_version",
         resourceId: version.id,
@@ -799,7 +816,7 @@ export async function recordCustodyEvent(
       toCustodian: input.toCustodian?.trim() || null,
       location: input.location?.trim() || null,
       note: input.note?.trim() || null,
-      actorUserId: input.actorUserId,
+      actorUserId: input.actorUserId ?? null,
       occurredAt: input.occurredAt ?? new Date(),
     })
     .returning();
@@ -809,7 +826,7 @@ export async function recordCustodyEvent(
     auditEventValues({
       organizationId: scope.organizationId,
       actorType: "user",
-      actorUserId: input.actorUserId,
+      actorUserId: input.actorUserId ?? null,
       action: "document.custody_recorded",
       resourceType: "document_version",
       resourceId: version.id,
@@ -868,7 +885,7 @@ export async function downloadDocumentVersion(
     organizationId: scope.organizationId,
     documentVersionId: version.id,
     action: "download",
-    actorUserId: input.actorUserId,
+    actorUserId: input.actorUserId ?? null,
     metadata: {},
   });
 
@@ -876,7 +893,7 @@ export async function downloadDocumentVersion(
     auditEventValues({
       organizationId: scope.organizationId,
       actorType: "user",
-      actorUserId: input.actorUserId,
+      actorUserId: input.actorUserId ?? null,
       action: "document.downloaded",
       resourceType: "document_version",
       resourceId: version.id,
