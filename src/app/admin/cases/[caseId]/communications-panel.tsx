@@ -44,6 +44,7 @@ export function CaseCommunicationsPanel({
   canCreateInternalNote,
   canCreateParticipantNote,
   canManageCorrespondence,
+  participantMessagingCapability,
 }: {
   caseId: string;
   notes: Notes;
@@ -57,6 +58,11 @@ export function CaseCommunicationsPanel({
   canCreateInternalNote: boolean;
   canCreateParticipantNote: boolean;
   canManageCorrespondence: boolean;
+  participantMessagingCapability: {
+    portalEnabled: boolean;
+    allowMessaging: boolean;
+    reason: string;
+  };
 }) {
   const noteAttachmentMap = new Map<string, NoteAttachments>();
   for (const attachment of noteAttachments) {
@@ -88,7 +94,10 @@ export function CaseCommunicationsPanel({
   }
 
   const activeTemplates = templates.filter(
-    (template) => template.status === "active",
+    (template) =>
+      template.status === "active" &&
+      (template.channel !== "portal" ||
+        participantMessagingCapability.allowMessaging),
   );
 
   return (
@@ -182,6 +191,15 @@ export function CaseCommunicationsPanel({
       {canViewCorrespondence ? (
       <section>
         <h2>Correspondence</h2>
+        <p>
+          Participant portal messaging:{" "}
+          {participantMessagingCapability.allowMessaging
+            ? "available"
+            : participantMessagingCapability.portalEnabled
+              ? "status-only for this submission"
+              : "not available for this case"}
+          .
+        </p>
         {correspondence.length === 0 ? (
           <p>No correspondence has been recorded.</p>
         ) : (
@@ -252,6 +270,15 @@ export function CaseCommunicationsPanel({
                           </li>
                         ))}
                       </ul>
+                    ) : message.channel === "portal" &&
+                      !participantMessagingCapability.allowMessaging &&
+                      message.direction === "outbound" &&
+                      (message.status === "draft" ||
+                        message.status === "failed") ? (
+                      <p role="status">
+                        Portal publication is unavailable because this
+                        submission does not permit participant messaging.
+                      </p>
                     ) : null}
 
                     {canManageCorrespondence &&
@@ -263,6 +290,7 @@ export function CaseCommunicationsPanel({
                           null,
                           caseId,
                           message.id,
+                          message.channel,
                         )}
                       >
                         <button type="submit">
@@ -344,7 +372,9 @@ export function CaseCommunicationsPanel({
                   <select name="channel" defaultValue="email">
                     <option value="email">email</option>
                     <option value="letter">letter</option>
-                    <option value="portal">portal</option>
+                    {participantMessagingCapability.allowMessaging ? (
+                      <option value="portal">portal</option>
+                    ) : null}
                     <option value="manual">manual</option>
                   </select>
                 </label>
