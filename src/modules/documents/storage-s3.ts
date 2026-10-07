@@ -99,12 +99,12 @@ export class S3CompatibleStorageAdapter
     const now = new Date();
     const amzDate = now
       .toISOString()
-      .replace(/[:-]|.d{3}/g, "");
+      .replace(/[:-]|\.\d{3}/g, "");
     const dateStamp = amzDate.slice(0, 8);
     const payload = body ?? new Uint8Array();
     const payloadHash = sha256Hex(payload);
 
-    const basePath = this.endpoint.pathname.replace(//+$/, "");
+    const basePath = this.endpoint.pathname.replace(/\/+$/, "");
     const objectPath = encodedPath(
       this.config.bucket,
       key,
