@@ -6,6 +6,7 @@ import { createDatabase } from "../src/db/client";
 import {
   applicationProfiles,
   auditEvents,
+  backgroundJobs,
   caseQueues,
   caseTeams,
   caseWorkflowVersions,
@@ -299,6 +300,26 @@ async function main() {
     assert.equal(submissionDocument.contentStatus, "quarantined");
     assert.equal(submissionDocument.malwareScanStatus, "pending");
     assert.match(submissionDocument.sha256, /^[a-f0-9]{64}$/);
+
+    const [scanJob] = await db
+      .select()
+      .from(backgroundJobs)
+      .where(
+        and(
+          eq(backgroundJobs.organizationId, scope.organizationId),
+          eq(backgroundJobs.jobType, "document.scan"),
+          eq(
+            backgroundJobs.dedupeKey,
+            `document-scan:${submissionDocument.versionId}`,
+          ),
+        ),
+      )
+      .limit(1);
+    assert.ok(scanJob);
+    assert.deepEqual(scanJob.payload, {
+      versionId: submissionDocument.versionId,
+    });
+    assert.equal(scanJob.status, "pending");
 
     const uploadCase = await createCaseFromSubmission(db, scope, {
       submissionId: uploadSubmission.id,
