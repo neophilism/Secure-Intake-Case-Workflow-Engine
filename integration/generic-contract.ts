@@ -198,6 +198,7 @@ async function main() {
       organizationSlug,
       "example_form",
       {
+        example_contact_mode: "messaging",
         example_value: "example value",
         example_secret: "protected draft value",
       },
@@ -210,6 +211,7 @@ async function main() {
       .limit(1);
     assert.ok(persistedDraft);
     assert.deepEqual(persistedDraft.answers, {
+      example_contact_mode: "messaging",
       example_value: "example value",
     });
     assert.equal(
@@ -239,12 +241,14 @@ async function main() {
       db,
       draft.resumeToken,
       {
+        example_contact_mode: "messaging",
         example_value: "example value",
         example_secret: "protected submitted value",
       },
     );
     assert.equal(submission.formVersionId, formVersionV1.id);
     assert.deepEqual(submission.answers, {
+      example_contact_mode: "messaging",
       example_value: "example value",
     });
     assert.ok(submission.participantPortalSecret);
@@ -313,6 +317,56 @@ async function main() {
     assert.ok(participantContext);
     assert.equal(participantContext.case, null);
     assert.equal(participantContext.allowMessaging, true);
+
+
+    const statusOnlyDraft = await createPublicDraftSubmission(
+      db,
+      organizationSlug,
+      "example_form",
+      {
+        example_contact_mode: "status_only",
+        example_value: "status-only example",
+        example_secret: "status-only protected value",
+      },
+    );
+    const statusOnlySubmission =
+      await submitDraftSubmissionByToken(
+        db,
+        statusOnlyDraft.resumeToken,
+        {
+          example_contact_mode: "status_only",
+          example_value: "status-only example",
+          example_secret: "status-only protected value",
+        },
+      );
+    assert.ok(statusOnlySubmission.participantPortalSecret);
+
+    const statusOnlyLogin =
+      await authenticateExternalParticipant(db, {
+        organizationSlug,
+        confirmationCode:
+          statusOnlySubmission.confirmationCode ?? "",
+        secret: statusOnlySubmission.participantPortalSecret,
+      });
+    const statusOnlyContext =
+      await resolveExternalParticipantContext(db, {
+        organizationSlug,
+        sessionToken: statusOnlyLogin.token,
+      });
+    assert.ok(statusOnlyContext);
+    assert.equal(statusOnlyContext.allowMessaging, false);
+    await assert.rejects(
+      () =>
+        sendExternalParticipantMessage(
+          db,
+          statusOnlyContext,
+          { body: "must not be accepted" },
+        ),
+      /Messaging is not enabled/i,
+    );
+    await logoutExternalParticipant(db, {
+      sessionToken: statusOnlyLogin.token,
+    });
 
     protectedCompartments =
       await listProtectedCompartmentsForSubmission(
