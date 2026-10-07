@@ -125,7 +125,7 @@ export async function POST(
   }
 
   const operation = String(body.operation ?? "");
-  const actorUserId = auth.context.apiClient.createdByUserId;
+  const actorUserId = null;
 
   try {
     const data =
@@ -136,6 +136,7 @@ export async function POST(
             {
               referralId,
               actorUserId,
+              auditSource: "api",
               note:
                 body.summary === undefined
                   ? null
@@ -149,6 +150,7 @@ export async function POST(
               {
                 referralId,
                 actorUserId,
+                auditSource: "api",
                 summary:
                   body.summary === undefined
                     ? null
@@ -166,6 +168,7 @@ export async function POST(
                 {
                   referralId,
                   actorUserId,
+                  auditSource: "api",
                   responseType: String(body.responseType) as
                     | "preliminary_response"
                     | "status_update"
@@ -180,6 +183,7 @@ export async function POST(
                   {
                     referralId,
                     actorUserId,
+                    auditSource: "api",
                     reason: String(body.reason ?? ""),
                   },
                 )
