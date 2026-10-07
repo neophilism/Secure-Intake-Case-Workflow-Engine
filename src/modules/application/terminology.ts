@@ -8,6 +8,7 @@ export const defaultApplicationTerminology: ApplicationTerminology = {
   deadline: { singular: "Deadline", plural: "Deadlines" },
   document: { singular: "Document", plural: "Documents" },
   queue: { singular: "Queue", plural: "Queues" },
+  referral: { singular: "Referral", plural: "Referrals" },
 };
 
 export type TerminologyKey = keyof ApplicationTerminology;
