@@ -1,15 +1,8 @@
 import { and, eq } from "drizzle-orm";
-import type {
-  Database,
-  DatabaseTransaction,
-} from "@/db/client";
+import type { Database } from "@/db/client";
 import { documentVersions } from "@/db/schema";
 import type { TenantScope } from "@/lib/tenancy";
-import {
-  enqueueBackgroundJob,
-  enqueueBackgroundJobInTransaction,
-  type ClaimedJob,
-} from "@/modules/jobs/service";
+import type { ClaimedJob } from "@/modules/jobs/service";
 import { sha256Hex } from "./hash";
 import { getMalwareScanner } from "./scanner";
 import {
@@ -18,34 +11,6 @@ import {
 import {
   getDocumentStorageAdapter,
 } from "./storage";
-
-export async function enqueueDocumentScanInTransaction(
-  tx: DatabaseTransaction,
-  scope: TenantScope,
-  versionId: string,
-) {
-  return enqueueBackgroundJobInTransaction(tx, scope, {
-    jobType: "document.scan",
-    payload: { versionId },
-    priority: 10,
-    dedupeKey: `document-scan:${versionId}`,
-    maxAttempts: 5,
-  });
-}
-
-export async function enqueueDocumentScan(
-  db: Database,
-  scope: TenantScope,
-  versionId: string,
-) {
-  return enqueueBackgroundJob(db, scope, {
-    jobType: "document.scan",
-    payload: { versionId },
-    priority: 10,
-    dedupeKey: `document-scan:${versionId}`,
-    maxAttempts: 5,
-  });
-}
 
 export async function scanDocumentVersionJob(input: {
   db: Database;
