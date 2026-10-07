@@ -7,6 +7,7 @@ import {
   cases,
   caseTags,
   documentCaseLinks,
+  documentSubmissionLinks,
   documents,
   documentTypes,
   documentVersions,
@@ -245,6 +246,55 @@ export async function createCaseFromSubmission(
 
     if (!record) {
       throw new Error("Unable to create case.");
+    }
+
+    const cleanSubmissionDocuments = await tx
+      .select({
+        documentVersionId: documentSubmissionLinks.documentVersionId,
+      })
+      .from(documentSubmissionLinks)
+      .innerJoin(
+        documentVersions,
+        and(
+          eq(
+            documentVersions.id,
+            documentSubmissionLinks.documentVersionId,
+          ),
+          eq(
+            documentVersions.organizationId,
+            documentSubmissionLinks.organizationId,
+          ),
+          eq(documentVersions.contentStatus, "available"),
+          eq(documentVersions.malwareScanStatus, "clean"),
+        ),
+      )
+      .where(
+        and(
+          eq(
+            documentSubmissionLinks.organizationId,
+            scope.organizationId,
+          ),
+          eq(
+            documentSubmissionLinks.submissionId,
+            source.submission.id,
+          ),
+        ),
+      );
+
+    if (cleanSubmissionDocuments.length > 0) {
+      await tx
+        .insert(documentCaseLinks)
+        .values(
+          cleanSubmissionDocuments.map((item) => ({
+            organizationId: scope.organizationId,
+            caseId: record.id,
+            documentVersionId: item.documentVersionId,
+            relationship: "evidence",
+            sourceDescription: "Promoted from clean intake attachment.",
+            attachedByUserId: input.actorUserId,
+          })),
+        )
+        .onConflictDoNothing();
     }
 
     await tx.insert(caseStatusHistory).values({
