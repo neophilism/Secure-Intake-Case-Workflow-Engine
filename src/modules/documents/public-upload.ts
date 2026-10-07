@@ -22,7 +22,6 @@ import {
   getDocumentStorageAdapter,
   type DocumentStorageAdapter,
 } from "./storage";
-import { configuredDocumentMaxBytes } from "./service";
 
 export interface PublicUploadValidationErrorItem {
   fieldId: string;
@@ -72,6 +71,16 @@ function browserFiles(formData: FormData, fieldId: string): File[] {
 
 function normalizedMime(value: string) {
   return value.trim().toLowerCase() || "application/octet-stream";
+}
+
+function configuredPublicUploadMaxBytes(): number {
+  const raw = Number(
+    process.env.DOCUMENT_MAX_BYTES ?? String(25 * 1024 * 1024),
+  );
+  if (!Number.isSafeInteger(raw) || raw < 1) {
+    throw new Error("DOCUMENT_MAX_BYTES must be a positive integer.");
+  }
+  return raw;
 }
 
 export async function stagePublicSubmissionUploads(
@@ -133,7 +142,7 @@ export async function stagePublicSubmissionUploads(
       const refs: string[] = [];
       for (const file of files) {
         const mimeType = normalizedMime(file.type);
-        const globalMax = configuredDocumentMaxBytes();
+        const globalMax = configuredPublicUploadMaxBytes();
 
         if (file.size > globalMax) {
           errors.push({
@@ -193,13 +202,26 @@ export async function stagePublicSubmissionUploads(
         });
         await storage.put(storageKey, data);
 
+        const filename = file.name
+          .trim()
+          .replace(/[\\/\0]/g, "_")
+          .slice(0, 240);
+        if (!filename) {
+          errors.push({
+            fieldId: field.id,
+            message: "An attachment filename is required.",
+          });
+          await storage.remove(storageKey).catch(() => undefined);
+          continue;
+        }
+
         uploads.push({
           documentId,
           versionId,
           documentTypeId: documentType.id,
           formFieldId: field.id,
           visibility: field.publicUpload.visibility,
-          filename: file.name.trim().replace(/[\\/\0]/g, "_").slice(0, 240),
+          filename,
           mimeType,
           sizeBytes: data.byteLength,
           sha256: sha256Hex(data),
