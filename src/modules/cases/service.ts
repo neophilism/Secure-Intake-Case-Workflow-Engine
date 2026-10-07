@@ -5,6 +5,7 @@ import {
   caseNumberSequences,
   caseStatusHistory,
   cases,
+  caseReferrals,
   caseTags,
   documentCaseLinks,
   documentSubmissionLinks,
@@ -422,6 +423,22 @@ export async function transitionCase(
         ),
       );
 
+    let referralStates: Array<{ status: string }> = [];
+    if (transition.guards.referrals) {
+      referralStates = await tx
+        .select({ status: caseReferrals.status })
+        .from(caseReferrals)
+        .where(
+          and(
+            eq(caseReferrals.caseId, current.id),
+            eq(
+              caseReferrals.organizationId,
+              scope.organizationId,
+            ),
+          ),
+        );
+    }
+
     let trustedDocumentTypes: string[] = [];
     if (transition.guards.requiredDocuments.length > 0) {
       const rows = await tx
@@ -502,6 +519,7 @@ export async function transitionCase(
       },
       submissionAnswers,
       documentTypes: trustedDocumentTypes,
+      referrals: referralStates,
     });
 
     if (failures.length > 0) {

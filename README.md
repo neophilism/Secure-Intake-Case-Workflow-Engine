@@ -14,15 +14,17 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 25 — secure public attachment pipeline**
+**PR 26 — parallel case referrals and recipient-specific clocks**
 
-This milestone enables explicitly configured public form file fields while preserving the engine's existing evidence-security boundary. Browser files are staged through the document storage adapter, hashed with SHA-256, bound to a manifest-declared document type, persisted as immutable submission-linked versions, and begin in `quarantined / pending` state.
+This milestone adds a first-class referral ledger for cases that must be sent to multiple external recipients in parallel. Each referral snapshots its manifest-defined policy, records its own recipient and response history, and receives independent deadline instances for acknowledgment, interim response, final response, or other configured milestones.
 
-A public upload is never trusted merely because the server accepted it. It becomes available evidence only after the document subsystem records a clean malware-scan result. Clean intake attachments are promoted to the case evidence set whether scanning completes before or after case creation; pending, failed, and infected content remains outside the trusted evidence surface.
+Referral deadlines reuse the existing warning, pause/resume, escalation, and immutable audit machinery while remaining isolated from case-level workflow deadlines. The deadline service also gains explicit, reasoned extensions so an agreed extension moves only the selected clock and is preserved in deadline history.
 
-The package version is **1.0.0-rc.5**.
+Staff can operate referrals from the case page, oversight staff can use an organization-wide referral dashboard, and API clients can read/create/update referral work items without being misattributed to a staff user.
 
-See [docs/architecture/0027-public-attachment-pipeline.md](docs/architecture/0027-public-attachment-pipeline.md) and [docs/downstream-application-contract.md](docs/downstream-application-contract.md).
+The package version is **1.0.0-rc.6**.
+
+See [docs/architecture/0028-parallel-case-referrals.md](docs/architecture/0028-parallel-case-referrals.md) and [docs/downstream-application-contract.md](docs/downstream-application-contract.md).
 
 ## Security status
 

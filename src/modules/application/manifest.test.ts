@@ -197,4 +197,35 @@ describe("application manifest", () => {
     ).toThrow(/subset of its document type policy/i);
   });
 
+  it("validates referral deadline calendar and escalation references", () => {
+    expect(() =>
+      parseApplicationManifest({
+        schemaVersion: 1,
+        application: { key: "demo", name: "Demo" },
+        referralPolicies: [
+          {
+            key: "external_referral",
+            name: "External Referral",
+            definition: {
+              schemaVersion: 1,
+              deadlinePolicies: [
+                {
+                  key: "response",
+                  label: "Response",
+                  duration: { value: 2, unit: "business_days" },
+                  calendarKey: "missing_calendar",
+                  completeOnEvents: ["final_response"],
+                  escalation: {
+                    queueSlug: "missing_queue",
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    ).toThrow(/undeclared calendar|undeclared queue/i);
+  });
+
+
 });

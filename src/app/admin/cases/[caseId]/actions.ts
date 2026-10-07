@@ -27,6 +27,7 @@ import { canViewDocumentVisibility } from "@/modules/documents/policy";
 import {
   cancelDeadline,
   completeDeadline,
+  extendDeadline,
   pauseDeadline,
   resumeDeadline,
 } from "@/modules/deadlines/service";
@@ -54,6 +55,14 @@ import {
   decideProtectedReveal,
   requestProtectedReveal,
 } from "@/modules/protected-data/service";
+import {
+  acknowledgeCaseReferral,
+  cancelCaseReferral,
+  completeCaseReferral,
+  createCaseReferral,
+  recordCaseReferralResponse,
+  sendCaseReferral,
+} from "@/modules/referrals/service";
 
 async function requireCaseContext() {
   const context = await getCurrentAuthorizationContext();
@@ -506,6 +515,254 @@ export async function cancelDeadlineAction(
   );
 }
 
+
+export async function extendDeadlineAction(
+  caseId: string,
+  deadlineId: string,
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (!hasPermission(context, "deadline:operate")) {
+    redirect("/forbidden");
+  }
+
+  const reason = String(formData.get("reason") ?? "").trim();
+  const value = Number(formData.get("extensionValue") ?? "");
+  const unit = String(formData.get("extensionUnit") ?? "").trim();
+
+  if (
+    !reason ||
+    !Number.isInteger(value) ||
+    value < 1 ||
+    !["hours", "calendar_days", "business_days"].includes(unit)
+  ) {
+    redirect(
+      `/admin/cases/${caseId}?error=deadline_extension_invalid`,
+    );
+  }
+
+  try {
+    await extendDeadline(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        deadlineId,
+        actorUserId: context.user.id,
+        reason,
+        extension: {
+          value,
+          unit: unit as
+            | "hours"
+            | "calendar_days"
+            | "business_days",
+        },
+      },
+    );
+  } catch {
+    redirect(
+      `/admin/cases/${caseId}?error=deadline_extend_failed`,
+    );
+  }
+
+  redirect(`/admin/cases/${caseId}`);
+}
+
+export async function createReferralAction(
+  caseId: string,
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (!hasPermission(context, "referral:manage")) {
+    redirect("/forbidden");
+  }
+
+  const policyKey = String(formData.get("policyKey") ?? "").trim();
+  const recipientKey = String(
+    formData.get("recipientKey") ?? "",
+  ).trim();
+  const recipientName = String(
+    formData.get("recipientName") ?? "",
+  ).trim();
+  const externalReference = String(
+    formData.get("externalReference") ?? "",
+  ).trim();
+  const subject = String(formData.get("subject") ?? "").trim();
+  const summary = String(formData.get("summary") ?? "").trim();
+
+  if (!policyKey || !recipientName) {
+    redirect(`/admin/cases/${caseId}?error=referral_invalid`);
+  }
+
+  try {
+    await createCaseReferral(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        caseId,
+        policyKey,
+        recipientKey: recipientKey || null,
+        recipientName,
+        externalReference: externalReference || null,
+        subject: subject || null,
+        summary: summary || null,
+        actorUserId: context.user.id,
+      },
+    );
+  } catch {
+    redirect(`/admin/cases/${caseId}?error=referral_create_failed`);
+  }
+
+  redirect(`/admin/cases/${caseId}`);
+}
+
+export async function sendReferralAction(
+  caseId: string,
+  referralId: string,
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (!hasPermission(context, "referral:manage")) {
+    redirect("/forbidden");
+  }
+  const note = String(formData.get("note") ?? "").trim();
+
+  try {
+    await sendCaseReferral(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        referralId,
+        actorUserId: context.user.id,
+        note: note || null,
+      },
+    );
+  } catch {
+    redirect(`/admin/cases/${caseId}?error=referral_send_failed`);
+  }
+  redirect(`/admin/cases/${caseId}`);
+}
+
+export async function acknowledgeReferralAction(
+  caseId: string,
+  referralId: string,
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (!hasPermission(context, "referral:manage")) {
+    redirect("/forbidden");
+  }
+  const summary = String(formData.get("summary") ?? "").trim();
+  const externalReference = String(
+    formData.get("externalReference") ?? "",
+  ).trim();
+
+  try {
+    await acknowledgeCaseReferral(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        referralId,
+        actorUserId: context.user.id,
+        summary: summary || null,
+        externalReference: externalReference || null,
+      },
+    );
+  } catch {
+    redirect(
+      `/admin/cases/${caseId}?error=referral_acknowledge_failed`,
+    );
+  }
+  redirect(`/admin/cases/${caseId}`);
+}
+
+export async function recordReferralResponseAction(
+  caseId: string,
+  referralId: string,
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (!hasPermission(context, "referral:manage")) {
+    redirect("/forbidden");
+  }
+
+  const responseType = String(
+    formData.get("responseType") ?? "",
+  ).trim();
+  const summary = String(formData.get("summary") ?? "").trim();
+
+  if (
+    !summary ||
+    ![
+      "preliminary_response",
+      "status_update",
+      "final_response",
+    ].includes(responseType)
+  ) {
+    redirect(
+      `/admin/cases/${caseId}?error=referral_response_invalid`,
+    );
+  }
+
+  try {
+    await recordCaseReferralResponse(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        referralId,
+        responseType: responseType as
+          | "preliminary_response"
+          | "status_update"
+          | "final_response",
+        summary,
+        actorUserId: context.user.id,
+      },
+    );
+  } catch {
+    redirect(
+      `/admin/cases/${caseId}?error=referral_response_failed`,
+    );
+  }
+  redirect(`/admin/cases/${caseId}`);
+}
+
+export async function finalizeReferralAction(
+  caseId: string,
+  referralId: string,
+  formData: FormData,
+) {
+  const context = await requireCaseContext();
+  if (!hasPermission(context, "referral:manage")) {
+    redirect("/forbidden");
+  }
+  const operation = String(formData.get("operation") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!reason || !["complete", "cancel"].includes(operation)) {
+    redirect(
+      `/admin/cases/${caseId}?error=referral_finalize_invalid`,
+    );
+  }
+
+  try {
+    const service =
+      operation === "complete"
+        ? completeCaseReferral
+        : cancelCaseReferral;
+    await service(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      {
+        referralId,
+        actorUserId: context.user.id,
+        reason,
+      },
+    );
+  } catch {
+    redirect(
+      `/admin/cases/${caseId}?error=referral_finalize_failed`,
+    );
+  }
+  redirect(`/admin/cases/${caseId}`);
+}
 
 export async function createCaseNoteAction(
   caseId: string,

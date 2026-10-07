@@ -23,6 +23,12 @@ export const requiredDocumentSchema = z.object({
 });
 
 export const transitionGuardSchema = z.object({
+  referrals: z
+    .object({
+      minCount: z.number().int().positive().max(100).default(1),
+      requireAllFinal: z.boolean().default(false),
+    })
+    .optional(),
   requiredCaseFields: z
     .array(
       z.enum([

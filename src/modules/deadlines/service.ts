@@ -17,6 +17,7 @@ import type {
   WorkflowDefinition,
 } from "@/modules/workflows/definition";
 import {
+  addDuration,
   calculateDeadline,
   extendForPause,
   normalizeWeekendDays,
@@ -189,6 +190,7 @@ export async function instantiateDeadlinesForCaseEvent(
         and(
           eq(caseDeadlines.organizationId, scope.organizationId),
           eq(caseDeadlines.caseId, input.caseId),
+          isNull(caseDeadlines.referralId),
           eq(caseDeadlines.policyKey, policy.key),
         ),
       )
@@ -315,6 +317,7 @@ export async function completeDeadlinesForTransition(
       and(
         eq(caseDeadlines.organizationId, scope.organizationId),
         eq(caseDeadlines.caseId, input.caseId),
+        isNull(caseDeadlines.referralId),
       ),
     );
 
@@ -506,6 +509,113 @@ export async function resumeDeadline(
       reason: input.reason.trim(),
       occurredAt: now,
       metadata: { extensionSeconds: Math.round(extension / 1000) },
+    });
+
+    return updated;
+  });
+}
+
+export async function extendDeadline(
+  db: Database,
+  scope: TenantScope,
+  input: {
+    deadlineId: string;
+    actorUserId?: string | null;
+    auditSource?: string;
+    reason: string;
+    extension: {
+      value: number;
+      unit: "hours" | "calendar_days" | "business_days";
+    };
+    now?: Date;
+  },
+) {
+  const now = input.now ?? new Date();
+  const reason = input.reason.trim();
+  if (!reason) {
+    throw new DeadlineStateError("Extension reason is required.");
+  }
+  if (
+    !Number.isInteger(input.extension.value) ||
+    input.extension.value < 1
+  ) {
+    throw new DeadlineStateError(
+      "Deadline extension must be a positive integer.",
+    );
+  }
+
+  return db.transaction(async (tx) => {
+    const deadline = await requireDeadline(tx, scope, input.deadlineId);
+    if (
+      deadline.status !== "active" &&
+      deadline.status !== "paused" &&
+      deadline.status !== "overdue"
+    ) {
+      throw new DeadlineStateError(
+        "Only an active, paused, or overdue deadline can be extended.",
+      );
+    }
+
+    const calendar = await resolveDeadlineCalendar(
+      tx,
+      scope,
+      deadline.calendarId,
+    );
+    if (
+      input.extension.unit === "business_days" &&
+      !calendar
+    ) {
+      throw new DeadlineStateError(
+        "Business-day extension requires a deadline calendar.",
+      );
+    }
+
+    const dueAt = addDuration(
+      deadline.dueAt,
+      input.extension.value,
+      input.extension.unit,
+      calendar?.spec ?? null,
+    );
+    const warningAt =
+      deadline.warningAt && !deadline.warningIssuedAt
+        ? addDuration(
+            deadline.warningAt,
+            input.extension.value,
+            input.extension.unit,
+            calendar?.spec ?? null,
+          )
+        : deadline.warningAt;
+    const restoredFromOverdue =
+      deadline.status === "overdue" &&
+      dueAt.getTime() > now.getTime();
+
+    const [updated] = await tx
+      .update(caseDeadlines)
+      .set({
+        status: restoredFromOverdue ? "active" : deadline.status,
+        dueAt,
+        warningAt,
+        updatedAt: now,
+      })
+      .where(eq(caseDeadlines.id, deadline.id))
+      .returning();
+
+    await recordDeadlineHistoryAndAudit(tx, scope, {
+      deadline,
+      updated,
+      eventType: "extended",
+      action: "deadline.extended",
+      actorUserId: input.actorUserId ?? null,
+      auditSource: input.auditSource,
+      reason,
+      occurredAt: now,
+      metadata: {
+        extensionValue: input.extension.value,
+        extensionUnit: input.extension.unit,
+        previousDueAt: deadline.dueAt.toISOString(),
+        newDueAt: dueAt.toISOString(),
+        referralId: deadline.referralId,
+      },
     });
 
     return updated;
@@ -1010,7 +1120,8 @@ async function recordDeadlineHistoryAndAudit(
     updated: typeof caseDeadlines.$inferSelect;
     eventType: string;
     action: string;
-    actorUserId: string;
+    actorUserId?: string | null;
+    auditSource?: string;
     reason?: string | null;
     occurredAt: Date;
     metadata?: Record<string, unknown>;
@@ -1020,7 +1131,7 @@ async function recordDeadlineHistoryAndAudit(
     organizationId: scope.organizationId,
     deadlineId: input.deadline.id,
     eventType: input.eventType,
-    actorUserId: input.actorUserId,
+    actorUserId: input.actorUserId ?? null,
     reason: input.reason ?? null,
     metadata: input.metadata ?? {},
     occurredAt: input.occurredAt,
@@ -1029,13 +1140,17 @@ async function recordDeadlineHistoryAndAudit(
   await tx.insert(auditEvents).values(
     auditEventValues({
       organizationId: scope.organizationId,
-      actorType: "user",
-      actorUserId: input.actorUserId,
+      actorType: input.actorUserId ? "user" : "system",
+      actorUserId: input.actorUserId ?? null,
       action: input.action,
+      source: input.auditSource ?? "application",
       resourceType: "case_deadline",
       resourceId: input.deadline.id,
-      parentResourceType: "case",
-      parentResourceId: input.deadline.caseId,
+      parentResourceType: input.deadline.referralId
+        ? "case_referral"
+        : "case",
+      parentResourceId:
+        input.deadline.referralId ?? input.deadline.caseId,
       previousState: {
         status: input.deadline.status,
         dueAt: input.deadline.dueAt.toISOString(),
@@ -1046,7 +1161,11 @@ async function recordDeadlineHistoryAndAudit(
         dueAt: input.updated.dueAt.toISOString(),
         warningAt: input.updated.warningAt?.toISOString() ?? null,
       },
-      metadata: input.metadata ?? {},
+      metadata: {
+        caseId: input.deadline.caseId,
+        referralId: input.deadline.referralId,
+        ...(input.metadata ?? {}),
+      },
       occurredAt: input.occurredAt,
     }),
   );

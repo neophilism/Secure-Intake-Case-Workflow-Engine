@@ -9,6 +9,7 @@ import {
   applicationProfiles,
   auditEvents,
   caseQueues,
+  caseReferralPolicies,
   caseRoutingRules,
   caseTeams,
   caseWorkflowVersions,
@@ -314,6 +315,60 @@ export async function applyApplicationManifest(
 
       await record(
         "document_type",
+        configured.key,
+        resource.id,
+        configured,
+      );
+    }
+
+    for (const configured of manifest.referralPolicies) {
+      const [existing] = await tx
+        .select()
+        .from(caseReferralPolicies)
+        .where(
+          and(
+            eq(
+              caseReferralPolicies.organizationId,
+              scope.organizationId,
+            ),
+            eq(caseReferralPolicies.key, configured.key),
+          ),
+        )
+        .limit(1);
+
+      await assertOwned(
+        "referral_policy",
+        configured.key,
+        existing?.id ?? null,
+      );
+
+      const [resource] = existing
+        ? await tx
+            .update(caseReferralPolicies)
+            .set({
+              name: configured.name,
+              description: configured.description ?? null,
+              definition: configured.definition,
+              status: "active",
+              updatedAt: now,
+            })
+            .where(eq(caseReferralPolicies.id, existing.id))
+            .returning()
+        : await tx
+            .insert(caseReferralPolicies)
+            .values({
+              organizationId: scope.organizationId,
+              key: configured.key,
+              name: configured.name,
+              description: configured.description ?? null,
+              definition: configured.definition,
+              status: "active",
+              createdByUserId: actorUserId,
+            })
+            .returning();
+
+      await record(
+        "referral_policy",
         configured.key,
         resource.id,
         configured,

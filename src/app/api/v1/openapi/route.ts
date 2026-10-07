@@ -10,7 +10,7 @@ export function GET(request: Request) {
         title: "Secure Intake & Case Workflow Engine API",
         version: "1.0.0",
         description:
-          "Tenant-scoped read API for cases, intake, documents, deadlines, reviews, and immutable audit events.",
+          "Tenant-scoped API for cases, intake, documents, deadlines, referrals, reviews, and immutable audit events.",
       },
       servers: [{ url: origin }],
       components: {
@@ -97,7 +97,8 @@ export function GET(request: Request) {
         "/api/v1/cases/{caseId}/deadlines": {
           get: {
             summary: "List case deadlines",
-            description: "Requires case:view and deadline:view.",
+            description:
+              "Requires case:view and deadline:view. Includes case-level and referral-linked deadlines.",
             parameters: [
               {
                 name: "caseId",
@@ -107,6 +108,143 @@ export function GET(request: Request) {
               },
             ],
             responses: { "200": { description: "Deadline list" } },
+          },
+          post: {
+            summary: "Record a deadline extension",
+            description:
+              "Requires case:view and deadline:operate. operation must be extend; the deadline must belong to the case. Extensions are reasoned and audited.",
+            parameters: [
+              {
+                name: "caseId",
+                in: "path",
+                required: true,
+                schema: { type: "string", format: "uuid" },
+              },
+            ],
+            requestBody: {
+              required: true,
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: [
+                      "operation",
+                      "deadlineId",
+                      "reason",
+                      "extensionValue",
+                      "extensionUnit",
+                    ],
+                    properties: {
+                      operation: {
+                        type: "string",
+                        const: "extend",
+                      },
+                      deadlineId: {
+                        type: "string",
+                        format: "uuid",
+                      },
+                      reason: { type: "string" },
+                      extensionValue: {
+                        type: "integer",
+                        minimum: 1,
+                      },
+                      extensionUnit: {
+                        type: "string",
+                        enum: [
+                          "hours",
+                          "calendar_days",
+                          "business_days",
+                        ],
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            responses: {
+              "200": { description: "Extended deadline" },
+              "400": { description: "Invalid extension" },
+              "404": { description: "Case or deadline not found" },
+            },
+          },
+        },
+        "/api/v1/cases/{caseId}/referrals": {
+          get: {
+            summary: "List case referrals",
+            description: "Requires case:view and referral:view.",
+            parameters: [
+              {
+                name: "caseId",
+                in: "path",
+                required: true,
+                schema: { type: "string", format: "uuid" },
+              },
+            ],
+            responses: { "200": { description: "Referral list" } },
+          },
+          post: {
+            summary: "Create a case referral",
+            description: "Requires case:view and referral:manage.",
+            parameters: [
+              {
+                name: "caseId",
+                in: "path",
+                required: true,
+                schema: { type: "string", format: "uuid" },
+              },
+            ],
+            responses: {
+              "201": { description: "Created referral" },
+              "400": { description: "Invalid referral" },
+            },
+          },
+        },
+        "/api/v1/cases/{caseId}/referrals/{referralId}": {
+          get: {
+            summary: "Get a referral with events and deadlines",
+            description: "Requires case:view and referral:view.",
+            parameters: [
+              {
+                name: "caseId",
+                in: "path",
+                required: true,
+                schema: { type: "string", format: "uuid" },
+              },
+              {
+                name: "referralId",
+                in: "path",
+                required: true,
+                schema: { type: "string", format: "uuid" },
+              },
+            ],
+            responses: {
+              "200": { description: "Referral detail" },
+              "404": { description: "Referral not found" },
+            },
+          },
+          post: {
+            summary: "Record a referral lifecycle operation",
+            description:
+              "Requires case:view and referral:manage. Supported operations are send, acknowledge, response, complete, and cancel.",
+            parameters: [
+              {
+                name: "caseId",
+                in: "path",
+                required: true,
+                schema: { type: "string", format: "uuid" },
+              },
+              {
+                name: "referralId",
+                in: "path",
+                required: true,
+                schema: { type: "string", format: "uuid" },
+              },
+            ],
+            responses: {
+              "200": { description: "Updated referral" },
+              "400": { description: "Invalid referral operation" },
+              "404": { description: "Referral not found" },
+            },
           },
         },
         "/api/v1/cases/{caseId}/reviews": {

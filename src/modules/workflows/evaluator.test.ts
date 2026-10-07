@@ -75,6 +75,74 @@ describe("transition guard evaluation", () => {
     ]);
   });
 
+  it("requires configured referral count", () => {
+    const failures = evaluateTransitionGuards(
+      transition({
+        guards: {
+          referrals: { minCount: 2, requireAllFinal: false },
+          requiredCaseFields: [],
+          requiredSubmissionFields: [],
+          requiredDocuments: [],
+        },
+      }),
+      {
+        ...baseContext,
+        referrals: [{ status: "sent" }],
+      },
+    );
+
+    expect(failures.map((failure) => failure.code)).toEqual([
+      "missing_referral",
+    ]);
+  });
+
+  it("can require all referrals to be final", () => {
+    const failures = evaluateTransitionGuards(
+      transition({
+        guards: {
+          referrals: { minCount: 1, requireAllFinal: true },
+          requiredCaseFields: [],
+          requiredSubmissionFields: [],
+          requiredDocuments: [],
+        },
+      }),
+      {
+        ...baseContext,
+        referrals: [
+          { status: "completed" },
+          { status: "sent" },
+        ],
+      },
+    );
+
+    expect(failures.map((failure) => failure.code)).toEqual([
+      "open_referral",
+    ]);
+
+    expect(
+      evaluateTransitionGuards(
+        transition({
+          guards: {
+            referrals: {
+              minCount: 1,
+              requireAllFinal: true,
+            },
+            requiredCaseFields: [],
+            requiredSubmissionFields: [],
+            requiredDocuments: [],
+          },
+        }),
+        {
+          ...baseContext,
+          referrals: [
+            { status: "completed" },
+            { status: "cancelled" },
+          ],
+        },
+      ),
+    ).toEqual([]);
+  });
+
   it("enforces forbidden comments", () => {
     const failures = evaluateTransitionGuards(
       transition({ comment: "forbidden" }),

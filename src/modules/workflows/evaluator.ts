@@ -8,7 +8,9 @@ export type GuardFailureCode =
   | "comment_forbidden"
   | "missing_case_field"
   | "missing_submission_field"
-  | "missing_document";
+  | "missing_document"
+  | "missing_referral"
+  | "open_referral";
 
 export interface GuardFailure {
   code: GuardFailureCode;
@@ -27,6 +29,7 @@ export interface TransitionEvaluationContext {
   };
   submissionAnswers?: Record<string, unknown> | null;
   documentTypes?: readonly string[];
+  referrals?: readonly { status: string }[];
 }
 
 export function evaluateTransitionGuards(
@@ -81,6 +84,32 @@ export function evaluateTransitionGuards(
         code: "missing_submission_field",
         subject: field,
         message: `Required submission field is missing: ${field}.`,
+      });
+    }
+  }
+
+  const referralGuard = transition.guards.referrals;
+  if (referralGuard) {
+    const referrals = context.referrals ?? [];
+    if (referrals.length < referralGuard.minCount) {
+      failures.push({
+        code: "missing_referral",
+        message:
+          `Requires at least ${referralGuard.minCount} referral(s).`,
+      });
+    }
+    if (
+      referralGuard.requireAllFinal &&
+      referrals.some(
+        (referral) =>
+          referral.status !== "completed" &&
+          referral.status !== "cancelled",
+      )
+    ) {
+      failures.push({
+        code: "open_referral",
+        message:
+          "All referrals must be completed or cancelled before this transition.",
       });
     }
   }

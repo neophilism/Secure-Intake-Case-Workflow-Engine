@@ -342,5 +342,66 @@
       "requireIndependentReviewer": true,
       "prerequisitePolicyKeys": []
     }
+  ],
+  "referralPolicies": [
+    {
+      "key": "example_external_referral",
+      "name": "Example External Referral",
+      "description": "Neutral policy used to validate parallel referral tracking.",
+      "definition": {
+        "schemaVersion": 1,
+        "deadlinePolicies": [
+          {
+            "key": "example_acknowledgment",
+            "label": "Example acknowledgment",
+            "trigger": "sent",
+            "duration": {
+              "value": 2,
+              "unit": "business_days"
+            },
+            "warningBefore": {
+              "value": 1,
+              "unit": "business_days"
+            },
+            "calendarKey": "example_calendar",
+            "completeOnEvents": [
+              "acknowledged",
+              "preliminary_response",
+              "status_update",
+              "final_response",
+              "completed",
+              "cancelled"
+            ],
+            "escalation": {
+              "priority": "high",
+              "queueSlug": "example_queue"
+            }
+          },
+          {
+            "key": "example_final_response",
+            "label": "Example final response",
+            "trigger": "sent",
+            "duration": {
+              "value": 10,
+              "unit": "calendar_days"
+            },
+            "warningBefore": {
+              "value": 2,
+              "unit": "calendar_days"
+            },
+            "pausable": true,
+            "completeOnEvents": [
+              "final_response",
+              "completed",
+              "cancelled"
+            ],
+            "escalation": {
+              "priority": "high",
+              "queueSlug": "example_queue"
+            }
+          }
+        ]
+      }
+    }
   ]
 }

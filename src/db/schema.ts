@@ -1572,6 +1572,119 @@ export const deadlineCalendarExclusions = pgTable(
   ],
 );
 
+export const caseReferralPolicies = pgTable(
+  "case_referral_policies",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    definition: jsonb("definition")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    status: text("status").notNull().default("active"),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("case_referral_policies_organization_idx").on(table.organizationId),
+    uniqueIndex("case_referral_policies_org_key_idx").on(
+      table.organizationId,
+      table.key,
+    ),
+  ],
+);
+
+export const caseReferrals = pgTable(
+  "case_referrals",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    policyId: uuid("policy_id")
+      .notNull()
+      .references(() => caseReferralPolicies.id, { onDelete: "restrict" }),
+    policyKey: text("policy_key").notNull(),
+    policySnapshot: jsonb("policy_snapshot")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    recipientKey: text("recipient_key"),
+    recipientName: text("recipient_name").notNull(),
+    externalReference: text("external_reference"),
+    subject: text("subject"),
+    summary: text("summary"),
+    status: text("status").notNull().default("draft"),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    updatedByUserId: uuid("updated_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("case_referrals_organization_idx").on(table.organizationId),
+    index("case_referrals_case_idx").on(table.caseId, table.createdAt),
+    index("case_referrals_status_idx").on(
+      table.organizationId,
+      table.status,
+      table.updatedAt,
+    ),
+    index("case_referrals_recipient_idx").on(
+      table.organizationId,
+      table.recipientKey,
+    ),
+  ],
+);
+
+export const caseReferralEvents = pgTable(
+  "case_referral_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    referralId: uuid("referral_id")
+      .notNull()
+      .references(() => caseReferrals.id, { onDelete: "cascade" }),
+    eventType: text("event_type").notNull(),
+    summary: text("summary"),
+    details: jsonb("details")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    actorUserId: uuid("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    occurredAt: timestamp("occurred_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("case_referral_events_organization_idx").on(table.organizationId),
+    index("case_referral_events_referral_idx").on(
+      table.referralId,
+      table.occurredAt,
+    ),
+  ],
+);
+
 export const caseDeadlines = pgTable(
   "case_deadlines",
   {
@@ -1582,6 +1695,9 @@ export const caseDeadlines = pgTable(
     caseId: uuid("case_id")
       .notNull()
       .references(() => cases.id, { onDelete: "cascade" }),
+    referralId: uuid("referral_id").references(() => caseReferrals.id, {
+      onDelete: "cascade",
+    }),
     policyKey: text("policy_key").notNull(),
     occurrence: integer("occurrence").notNull().default(1),
     label: text("label").notNull(),
@@ -1622,16 +1738,18 @@ export const caseDeadlines = pgTable(
   (table) => [
     index("case_deadlines_organization_idx").on(table.organizationId),
     index("case_deadlines_case_idx").on(table.caseId),
+    index("case_deadlines_referral_idx").on(table.referralId),
     index("case_deadlines_due_idx").on(
       table.organizationId,
       table.status,
       table.dueAt,
     ),
-    uniqueIndex("case_deadlines_occurrence_idx").on(
-      table.caseId,
-      table.policyKey,
-      table.occurrence,
-    ),
+    uniqueIndex("case_deadlines_case_occurrence_idx")
+      .on(table.caseId, table.policyKey, table.occurrence)
+      .where(sql`${table.referralId} is null`),
+    uniqueIndex("case_deadlines_referral_occurrence_idx")
+      .on(table.referralId, table.policyKey, table.occurrence)
+      .where(sql`${table.referralId} is not null`),
   ],
 );
 
