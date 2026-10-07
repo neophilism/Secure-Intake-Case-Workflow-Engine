@@ -114,7 +114,8 @@ export async function POST(
           body.subject === undefined ? null : String(body.subject),
         summary:
           body.summary === undefined ? null : String(body.summary),
-        actorUserId: auth.context.apiClient.createdByUserId,
+        actorUserId: null,
+        auditSource: "api",
       },
     );
     return apiJson(auth.context, { data: referral }, { status: 201 });
