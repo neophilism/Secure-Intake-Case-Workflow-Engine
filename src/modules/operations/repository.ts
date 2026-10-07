@@ -277,7 +277,7 @@ export async function getOperationalDashboard(
       countCasesForDefinition(db, scope, focusDefinition("overdue"), currentMembershipId),
       countCasesForDefinition(db, scope, focusDefinition("escalated"), currentMembershipId),
       countCasesForDefinition(db, scope, focusDefinition("open_review"), currentMembershipId),
-      countCases(
+      countCasesForDefinition(
         db,
         scope,
         focusDefinition("recently_closed"),
