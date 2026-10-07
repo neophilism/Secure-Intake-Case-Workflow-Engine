@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  applicationOperationalViewSchema,
+  applicationOperationalViewToCaseSearchDefinition,
   caseSearchDefinitionFromSearchParams,
   caseSearchQueryString,
+  operationalMetricDefinitionSchema,
   parseCaseSearchDefinition,
 } from "./definition";
 
