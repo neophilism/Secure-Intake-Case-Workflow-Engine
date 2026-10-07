@@ -49,6 +49,7 @@ import { CaseCommunicationsPanel } from "./communications-panel";
 import { CaseReviewsPanel } from "./reviews-panel";
 import { CaseTimelinePanel } from "./timeline-panel";
 import { CaseProtectedDataPanel } from "./protected-data-panel";
+import { CaseReferralsPanel } from "./referrals-panel";
 import {
   listProtectedCompartmentsForSubmission,
   listRevealRequestsForCompartments,
@@ -59,6 +60,11 @@ import {
   transitionsFromState,
 } from "@/modules/workflows/definition";
 import { PrintPageButton } from "@/components/print-page-button";
+import {
+  listCaseReferrals,
+  listReferralEvents,
+  listReferralPolicies,
+} from "@/modules/referrals/repository";
 import {
   applyRoutingRulesAction,
   cancelDeadlineAction,
@@ -105,6 +111,8 @@ export default async function CaseDetailPage({
     caseDocuments,
     documentTypes,
     deadlines,
+    referrals,
+    referralPolicies,
     notes,
     noteAttachments,
     correspondence,
@@ -132,6 +140,12 @@ export default async function CaseDetailPage({
       : Promise.resolve([]),
     hasPermission(context, "deadline:view")
       ? listCaseDeadlines(db, scope, record.id)
+      : Promise.resolve([]),
+    hasPermission(context, "referral:view")
+      ? listCaseReferrals(db, scope, record.id)
+      : Promise.resolve([]),
+    hasPermission(context, "referral:manage")
+      ? listReferralPolicies(db, scope)
       : Promise.resolve([]),
     hasPermission(context, "note:view")
       ? listCaseNotes(db, scope, record.id)
@@ -187,6 +201,8 @@ export default async function CaseDetailPage({
   const canApplyRouting =
     canAssign && hasPermission(context, "routing:view");
   const canViewDeadlines = hasPermission(context, "deadline:view");
+  const canViewReferrals = hasPermission(context, "referral:view");
+  const canManageReferrals = hasPermission(context, "referral:manage");
   const canOperateDeadlines = hasPermission(
     context,
     "deadline:operate",
@@ -305,6 +321,26 @@ export default async function CaseDetailPage({
         reviews.map((review) => review.id),
       )
     : [];
+
+  const referralEventsByReferral = new Map(
+    await Promise.all(
+      referrals.map(async ({ referral }) => [
+        referral.id,
+        await listReferralEvents(db, scope, referral.id),
+      ] as const),
+    ),
+  );
+  const referralDeadlinesByReferral = new Map(
+    referrals.map(({ referral }) => [
+      referral.id,
+      deadlines.filter(
+        (deadline) => deadline.referralId === referral.id,
+      ),
+    ] as const),
+  );
+  const caseLevelDeadlines = deadlines.filter(
+    (deadline) => !deadline.referralId,
+  );
 
   const deadlineHistory = new Map(
     await Promise.all(
@@ -471,13 +507,25 @@ export default async function CaseDetailPage({
         />
       ) : null}
 
+      {canViewReferrals ? (
+        <CaseReferralsPanel
+          caseId={record.id}
+          referrals={referrals}
+          policies={referralPolicies}
+          eventsByReferral={referralEventsByReferral}
+          deadlinesByReferral={referralDeadlinesByReferral}
+          canManage={canManageReferrals}
+          canOperateDeadlines={canOperateDeadlines}
+        />
+      ) : null}
+
       {canViewDeadlines ? (
         <section>
           <h2>Deadlines & statutory clocks</h2>
-          {deadlines.length === 0 ? (
-            <p>No deadlines are attached to this case.</p>
+          {caseLevelDeadlines.length === 0 ? (
+            <p>No case-level deadlines are attached to this case.</p>
           ) : (
-            deadlines.map((deadline) => {
+            caseLevelDeadlines.map((deadline) => {
               const clockHistory =
                 deadlineHistory.get(deadline.id) ?? [];
               const final =
