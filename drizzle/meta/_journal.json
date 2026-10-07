@@ -134,6 +134,13 @@
       "when": 1791309600000,
       "tag": "0018_external_participant_portal",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791313200000,
+      "tag": "0019_parallel_case_referrals",
+      "breakpoints": true
     }
   ]
 }
