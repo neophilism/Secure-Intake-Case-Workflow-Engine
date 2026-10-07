@@ -55,6 +55,7 @@ import {
   decideProtectedReveal,
   requestProtectedReveal,
 } from "@/modules/protected-data/service";
+import { getCaseParticipantMessagingCapability } from "@/modules/participant-portal/service";
 import {
   acknowledgeCaseReferral,
   cancelCaseReferral,
@@ -856,6 +857,19 @@ export async function createOutboundCorrespondenceAction(
     context,
   );
 
+  if (channel === "portal") {
+    const capability = await getCaseParticipantMessagingCapability(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      caseId,
+    );
+    if (!capability.allowMessaging) {
+      redirect(
+        `/admin/cases/${caseId}?error=participant_messaging_unavailable`,
+      );
+    }
+  }
+
   try {
     await createOutboundCorrespondenceDraft(
       getRuntimeDatabase(),
@@ -890,6 +904,7 @@ export async function createOutboundCorrespondenceAction(
 export async function queueCorrespondenceAction(
   caseId: string,
   messageId: string,
+  channel: string,
   _formData: FormData,
 ) {
   const context = await requireCaseContext();
@@ -898,6 +913,19 @@ export async function queueCorrespondenceAction(
     !hasPermission(context, "correspondence:manage")
   ) {
     redirect("/forbidden");
+  }
+
+  if (channel === "portal") {
+    const capability = await getCaseParticipantMessagingCapability(
+      getRuntimeDatabase(),
+      requireTenantScope(context),
+      caseId,
+    );
+    if (!capability.allowMessaging) {
+      redirect(
+        `/admin/cases/${caseId}?error=participant_messaging_unavailable`,
+      );
+    }
   }
 
   try {
