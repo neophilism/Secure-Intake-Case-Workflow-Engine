@@ -53,7 +53,7 @@ export async function submitPublicFormAction(
       ...stagedUploads.answerReferences,
     };
 
-    let submission;
+    let submission: Awaited<ReturnType<typeof submitPublicForm>>;
     try {
       submission = await submitPublicForm(
         db,
