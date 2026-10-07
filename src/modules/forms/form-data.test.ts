@@ -50,4 +50,26 @@ describe("form data parsing", () => {
       },
     });
   });
+  it("does not treat browser File objects as ordinary answer references", () => {
+    const definition = parseFormDefinition({
+      schemaVersion: 1,
+      sections: [
+        {
+          id: "files",
+          title: "Files",
+          fields: [
+            { id: "attachment", type: "file", label: "Attachment" },
+          ],
+        },
+      ],
+    });
+    const formData = new FormData();
+    formData.append(
+      "attachment",
+      new File(["example"], "example.txt", { type: "text/plain" }),
+    );
+
+    expect(answersFromFormData(definition, formData)).toEqual({});
+  });
+
 });
