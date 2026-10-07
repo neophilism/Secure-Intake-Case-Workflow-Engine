@@ -16,6 +16,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
 COPY --from=builder --chown=nextjs:nodejs /app ./
+RUN mkdir -p /app/.data/documents && chown -R nextjs:nodejs /app/.data
 
 USER nextjs
 EXPOSE 3000
