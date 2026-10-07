@@ -386,7 +386,7 @@ async function main() {
 
     await acknowledgeCaseReferral(db, scope, {
       referralId: referralA.id,
-      actorUserId: actor.user.id,
+      actorUserId: actor.userId,
       summary: "Recipient A acknowledged.",
       occurredAt: new Date("2026-10-08T12:00:00.000Z"),
     });
@@ -421,7 +421,7 @@ async function main() {
     const originalReferralBDueAt = referralBFinal.dueAt;
     const extendedReferralBDeadline = await extendDeadline(db, scope, {
       deadlineId: referralBFinal.id,
-      actorUserId: actor.user.id,
+      actorUserId: actor.userId,
       reason: "Neutral agreed extension",
       extension: { value: 5, unit: "calendar_days" },
       now: new Date("2026-10-09T12:00:00.000Z"),
@@ -446,7 +446,7 @@ async function main() {
       referralId: referralA.id,
       responseType: "final_response",
       summary: "Recipient A supplied a final response.",
-      actorUserId: actor.user.id,
+      actorUserId: actor.userId,
       occurredAt: new Date("2026-10-10T12:00:00.000Z"),
     });
     referralADeadlines = await listReferralDeadlines(
