@@ -54,6 +54,19 @@ async function main() {
     "example_contact_mode",
     "Neutral release fixture must exercise conditional participant messaging.",
   );
+  const attachmentField = exampleForm?.definition.sections
+    .flatMap((section) => section.fields)
+    .find((field) => field.id === "example_attachment");
+  assert.equal(
+    attachmentField?.type,
+    "file",
+    "Neutral release fixture must exercise public attachment fields.",
+  );
+  assert.equal(
+    attachmentField?.publicUpload?.documentTypeKey,
+    "example_document",
+    "Public attachment fixture must bind to a declared document type.",
+  );
   assert.equal(
     manifest.workflows.some(
       (workflow) => workflow.slug === "example_workflow",
