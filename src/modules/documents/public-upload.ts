@@ -17,6 +17,7 @@ import {
 import { visibleFieldIdsForDefinition } from "@/modules/forms/visibility";
 import { sha256Hex } from "./hash";
 import { findActiveDocumentTypeByKey } from "./repository";
+import { enqueueDocumentScanInTransaction } from "./scan-job";
 import {
   documentStorageKey,
   getDocumentStorageAdapter,
@@ -377,6 +378,12 @@ export async function persistStagedPublicUploads(
           visibility: document.visibility,
         },
       }),
+    );
+
+    await enqueueDocumentScanInTransaction(
+      tx,
+      scope,
+      version.id,
     );
   }
 }
