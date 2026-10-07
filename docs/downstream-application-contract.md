@@ -343,3 +343,42 @@ publication are unavailable.
 
 Downstream applications should use portal templates for participant-facing
 content when ordinary email would expose sensitive submission content.
+
+
+## Durable object storage and scanner deployment contract
+
+Production deployments that cannot guarantee a durable shared filesystem may
+configure S3-compatible storage:
+
+```text
+DOCUMENT_STORAGE_DRIVER=s3
+DOCUMENT_S3_ENDPOINT=https://...
+DOCUMENT_S3_REGION=...
+DOCUMENT_S3_BUCKET=...
+DOCUMENT_S3_ACCESS_KEY_ID=...
+DOCUMENT_S3_SECRET_ACCESS_KEY=...
+DOCUMENT_S3_SESSION_TOKEN=... # optional
+```
+
+The bucket should be private. The application requires only object put/get/delete
+for engine-generated keys; it does not require public bucket access.
+
+A real malware scanner may be configured with:
+
+```text
+MALWARE_SCANNER_URL=https://scanner.example/scan
+MALWARE_SCANNER_PROVIDER=approved-scanner
+MALWARE_SCANNER_TOKEN=...
+MALWARE_SCANNER_TIMEOUT_MS=120000
+```
+
+The endpoint receives raw file bytes and must return
+`clean`, `infected`, or `failed` JSON status.
+
+Every newly persisted document version automatically queues a
+`document.scan` background job. A production deployment therefore needs a
+running engine worker in addition to the web process.
+
+If the worker or scanner is unavailable, files remain quarantined. Downstream
+applications must not create a shortcut that converts pending/failed scans to
+clean.
