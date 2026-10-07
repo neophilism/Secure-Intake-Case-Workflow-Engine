@@ -284,3 +284,62 @@ pause/resume only when the policy genuinely excludes a paused interval.
 The engine does not deliver referral packages to external systems by itself.
 Email gateways, secure transfer systems, agency APIs, or other delivery
 adapters remain deployment/integration responsibilities.
+
+
+## Application operations profile contract
+
+A downstream manifest may ship shared staff work views:
+
+```json
+"operationalViews": [
+  {
+    "key": "triage_work",
+    "name": "Triage Work",
+    "definition": {
+      "statuses": ["triage"],
+      "queueSlugs": ["intake_triage"],
+      "focus": "open",
+      "sort": "priority_desc",
+      "limit": 100
+    }
+  }
+]
+```
+
+Application views are organization-wide, manifest-versioned configuration.
+Personal saved views remain separate and user-owned.
+
+A downstream manifest may also expose objective operational metrics:
+
+```json
+"operationalMetrics": [
+  {
+    "key": "triage_timeliness",
+    "name": "Triage Timeliness",
+    "type": "deadline_compliance",
+    "policyKeys": ["triage_target"],
+    "deadlineScope": "case",
+    "windowDays": 365
+  }
+]
+```
+
+Supported metric types are:
+
+- `case_count`, referencing a configured operational view;
+- `deadline_compliance`, referencing declared case/referral deadline policy
+  keys.
+
+Deadline compliance reports completed-on-time, completed-late, open-overdue,
+assessed total, and on-time percentage for deadlines due during the configured
+window. It intentionally does not assign qualitative scores.
+
+### Participant-safe portal contact
+
+Staff portal messaging is gated by the immutable participant-portal policy of
+the source intake version. If the submission is status-only, has no enabled
+portal, or no active participant credential, case-admin portal drafts and
+publication are unavailable.
+
+Downstream applications should use portal templates for participant-facing
+content when ordinary email would expose sensitive submission content.
