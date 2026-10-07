@@ -520,7 +520,8 @@ export async function extendDeadline(
   scope: TenantScope,
   input: {
     deadlineId: string;
-    actorUserId: string;
+    actorUserId?: string | null;
+    auditSource?: string;
     reason: string;
     extension: {
       value: number;
@@ -604,7 +605,8 @@ export async function extendDeadline(
       updated,
       eventType: "extended",
       action: "deadline.extended",
-      actorUserId: input.actorUserId,
+      actorUserId: input.actorUserId ?? null,
+      auditSource: input.auditSource,
       reason,
       occurredAt: now,
       metadata: {
@@ -1118,7 +1120,8 @@ async function recordDeadlineHistoryAndAudit(
     updated: typeof caseDeadlines.$inferSelect;
     eventType: string;
     action: string;
-    actorUserId: string;
+    actorUserId?: string | null;
+    auditSource?: string;
     reason?: string | null;
     occurredAt: Date;
     metadata?: Record<string, unknown>;
@@ -1128,7 +1131,7 @@ async function recordDeadlineHistoryAndAudit(
     organizationId: scope.organizationId,
     deadlineId: input.deadline.id,
     eventType: input.eventType,
-    actorUserId: input.actorUserId,
+    actorUserId: input.actorUserId ?? null,
     reason: input.reason ?? null,
     metadata: input.metadata ?? {},
     occurredAt: input.occurredAt,
@@ -1137,9 +1140,10 @@ async function recordDeadlineHistoryAndAudit(
   await tx.insert(auditEvents).values(
     auditEventValues({
       organizationId: scope.organizationId,
-      actorType: "user",
-      actorUserId: input.actorUserId,
+      actorType: input.actorUserId ? "user" : "system",
+      actorUserId: input.actorUserId ?? null,
       action: input.action,
+      source: input.auditSource ?? "application",
       resourceType: "case_deadline",
       resourceId: input.deadline.id,
       parentResourceType: input.deadline.referralId
