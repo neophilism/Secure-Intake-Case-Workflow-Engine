@@ -316,6 +316,7 @@ export async function completeDeadlinesForTransition(
       and(
         eq(caseDeadlines.organizationId, scope.organizationId),
         eq(caseDeadlines.caseId, input.caseId),
+        isNull(caseDeadlines.referralId),
       ),
     );
 
