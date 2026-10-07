@@ -14,23 +14,24 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 27 — application operations profiles and participant-safe contact**
+**PR 28 — durable object storage and automatic malware scanning**
 
-This milestone lets downstream applications ship shared operational work views
-and objective performance metrics through the application manifest. Named views
-reuse the existing tenant-scoped case search engine; metrics currently support
-view-based case counts and deadline-compliance reporting over case and referral
-deadline policies.
+This milestone closes two deployment gaps in the generic document subsystem.
 
-The staff case view also derives participant portal messaging eligibility from
-the same immutable form-version policy and submission answers used by the
-participant portal. Staff cannot create or publish portal correspondence when a
-submission is status-only or otherwise lacks participant messaging capability.
+The engine can now store document bytes in an S3-compatible private object
+store rather than requiring a shared local filesystem. It also supports a
+generic HTTPS malware-scanner adapter and automatically enqueues a
+`document.scan` background job for every newly persisted document version.
 
-The package version is **1.0.0-rc.7**.
+The trust boundary remains fail-closed: missing scanner configuration,
+transient scanner/storage failure, a final failed result, or a SHA-256 mismatch
+never marks a document clean. Only an explicit clean result makes content
+available.
+
+The package version is **1.0.0-rc.8**.
 
 See
-[docs/architecture/0029-application-operations-profiles.md](docs/architecture/0029-application-operations-profiles.md)
+[docs/architecture/0030-durable-object-storage-and-automatic-scanning.md](docs/architecture/0030-durable-object-storage-and-automatic-scanning.md)
 and [docs/downstream-application-contract.md](docs/downstream-application-contract.md).
 
 ## Security status
