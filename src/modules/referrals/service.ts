@@ -334,6 +334,7 @@ export async function recordCaseReferralResponse(
       .update(caseReferrals)
       .set({
         status: final ? "completed" : "active",
+        acknowledgedAt: referral.acknowledgedAt ?? occurredAt,
         completedAt: final ? occurredAt : referral.completedAt,
         updatedByUserId: input.actorUserId,
         updatedAt: occurredAt,
