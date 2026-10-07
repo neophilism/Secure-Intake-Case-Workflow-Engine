@@ -69,7 +69,8 @@ export async function createCaseReferral(
     externalReference?: string | null;
     subject?: string | null;
     summary?: string | null;
-    actorUserId: string;
+    actorUserId?: string | null;
+    auditSource?: string;
   },
 ) {
   const policyKey = cleanRequired(input.policyKey, "Referral policy key", 100);
@@ -124,15 +125,15 @@ export async function createCaseReferral(
         subject: cleanOptional(input.subject, 1000),
         summary: cleanOptional(input.summary, 10_000),
         status: "draft",
-        createdByUserId: input.actorUserId,
-        updatedByUserId: input.actorUserId,
+        createdByUserId: input.actorUserId ?? null,
+        updatedByUserId: input.actorUserId ?? null,
       })
       .returning();
 
     await recordReferralEvent(tx, scope, {
       referral,
       eventType: "created",
-      actorUserId: input.actorUserId,
+      actorUserId: input.actorUserId ?? null,
       summary: "Referral created.",
     });
 
@@ -140,8 +141,9 @@ export async function createCaseReferral(
       auditEventValues({
         organizationId: scope.organizationId,
         actorType: "user",
-        actorUserId: input.actorUserId,
+        actorUserId: input.actorUserId ?? null,
         action: "referral.created",
+        source: input.auditSource ?? "application",
         resourceType: "case_referral",
         resourceId: referral.id,
         parentResourceType: "case",
@@ -166,7 +168,8 @@ export async function sendCaseReferral(
   scope: TenantScope,
   input: {
     referralId: string;
-    actorUserId: string;
+    actorUserId?: string | null;
+    auditSource?: string;
     note?: string | null;
     sentAt?: Date;
   },
@@ -184,7 +187,7 @@ export async function sendCaseReferral(
       .set({
         status: "sent",
         sentAt: occurredAt,
-        updatedByUserId: input.actorUserId,
+        updatedByUserId: input.actorUserId ?? null,
         updatedAt: occurredAt,
       })
       .where(eq(caseReferrals.id, referral.id))
@@ -193,9 +196,10 @@ export async function sendCaseReferral(
     await recordReferralEvent(tx, scope, {
       referral: updated,
       eventType: "sent",
-      actorUserId: input.actorUserId,
+      actorUserId: input.actorUserId ?? null,
       summary: cleanOptional(input.note, 10_000) ?? "Referral sent.",
       occurredAt,
+      auditSource: input.auditSource,
     });
     await completeDeadlinesForReferralEvent(
       tx,
@@ -215,7 +219,7 @@ export async function sendCaseReferral(
     );
     await recordReferralAudit(tx, scope, referral, updated, {
       action: "referral.sent",
-      actorUserId: input.actorUserId,
+      actorUserId: input.actorUserId ?? null,
       occurredAt,
     });
 
@@ -228,7 +232,8 @@ export async function acknowledgeCaseReferral(
   scope: TenantScope,
   input: {
     referralId: string;
-    actorUserId: string;
+    actorUserId?: string | null;
+    auditSource?: string;
     summary?: string | null;
     externalReference?: string | null;
     occurredAt?: Date;
@@ -256,7 +261,7 @@ export async function acknowledgeCaseReferral(
         externalReference:
           cleanOptional(input.externalReference, 500) ??
           referral.externalReference,
-        updatedByUserId: input.actorUserId,
+        updatedByUserId: input.actorUserId ?? null,
         updatedAt: occurredAt,
       })
       .where(eq(caseReferrals.id, referral.id))
@@ -265,13 +270,14 @@ export async function acknowledgeCaseReferral(
     await recordReferralEvent(tx, scope, {
       referral: updated,
       eventType: "acknowledged",
-      actorUserId: input.actorUserId,
+      actorUserId: input.actorUserId ?? null,
       summary:
         cleanOptional(input.summary, 10_000) ?? "Referral acknowledged.",
       details: {
         externalReference: updated.externalReference,
       },
       occurredAt,
+      auditSource: input.auditSource,
     });
     await completeDeadlinesForReferralEvent(
       tx,
@@ -291,7 +297,7 @@ export async function acknowledgeCaseReferral(
     );
     await recordReferralAudit(tx, scope, referral, updated, {
       action: "referral.acknowledged",
-      actorUserId: input.actorUserId,
+      actorUserId: input.actorUserId ?? null,
       occurredAt,
     });
 
@@ -310,7 +316,8 @@ export async function recordCaseReferralResponse(
       | "final_response";
     summary: string;
     details?: Record<string, unknown>;
-    actorUserId: string;
+    actorUserId?: string | null;
+    auditSource?: string;
     occurredAt?: Date;
   },
 ) {
@@ -336,7 +343,7 @@ export async function recordCaseReferralResponse(
         status: final ? "completed" : "active",
         acknowledgedAt: referral.acknowledgedAt ?? occurredAt,
         completedAt: final ? occurredAt : referral.completedAt,
-        updatedByUserId: input.actorUserId,
+        updatedByUserId: input.actorUserId ?? null,
         updatedAt: occurredAt,
       })
       .where(eq(caseReferrals.id, referral.id))
@@ -345,10 +352,11 @@ export async function recordCaseReferralResponse(
     await recordReferralEvent(tx, scope, {
       referral: updated,
       eventType: input.responseType,
-      actorUserId: input.actorUserId,
+      actorUserId: input.actorUserId ?? null,
       summary,
       details: input.details ?? {},
       occurredAt,
+      auditSource: input.auditSource,
     });
     await completeDeadlinesForReferralEvent(
       tx,
@@ -362,9 +370,10 @@ export async function recordCaseReferralResponse(
       action: final
         ? "referral.final_response_recorded"
         : "referral.response_recorded",
-      actorUserId: input.actorUserId,
+      actorUserId: input.actorUserId ?? null,
       occurredAt,
       metadata: { responseType: input.responseType },
+      auditSource: input.auditSource,
     });
 
     return updated;
@@ -376,7 +385,8 @@ export async function completeCaseReferral(
   scope: TenantScope,
   input: {
     referralId: string;
-    actorUserId: string;
+    actorUserId?: string | null;
+    auditSource?: string;
     reason: string;
     occurredAt?: Date;
   },
@@ -394,7 +404,8 @@ export async function cancelCaseReferral(
   scope: TenantScope,
   input: {
     referralId: string;
-    actorUserId: string;
+    actorUserId?: string | null;
+    auditSource?: string;
     reason: string;
     occurredAt?: Date;
   },
@@ -412,7 +423,8 @@ async function finishCaseReferral(
   scope: TenantScope,
   input: {
     referralId: string;
-    actorUserId: string;
+    actorUserId?: string | null;
+    auditSource?: string;
     reason: string;
     occurredAt?: Date;
     eventType: "completed" | "cancelled";
@@ -437,7 +449,7 @@ async function finishCaseReferral(
           input.status === "completed" ? occurredAt : referral.completedAt,
         cancelledAt:
           input.status === "cancelled" ? occurredAt : referral.cancelledAt,
-        updatedByUserId: input.actorUserId,
+        updatedByUserId: input.actorUserId ?? null,
         updatedAt: occurredAt,
       })
       .where(eq(caseReferrals.id, referral.id))
@@ -446,9 +458,10 @@ async function finishCaseReferral(
     await recordReferralEvent(tx, scope, {
       referral: updated,
       eventType: input.eventType,
-      actorUserId: input.actorUserId,
+      actorUserId: input.actorUserId ?? null,
       summary: reason,
       occurredAt,
+      auditSource: input.auditSource,
     });
     await completeDeadlinesForReferralEvent(
       tx,
@@ -460,7 +473,7 @@ async function finishCaseReferral(
     );
     await recordReferralAudit(tx, scope, referral, updated, {
       action: input.action,
-      actorUserId: input.actorUserId,
+      actorUserId: input.actorUserId ?? null,
       occurredAt,
     });
     return updated;
@@ -472,7 +485,7 @@ async function instantiateReferralDeadlines(
   scope: TenantScope,
   referral: typeof caseReferrals.$inferSelect,
   trigger: "sent" | "acknowledged",
-  actorUserId: string,
+  actorUserId: string | null | undefined,
   startedAt: Date,
 ) {
   const definition = parseReferralPolicyDefinition(referral.policySnapshot);
@@ -553,7 +566,7 @@ async function instantiateReferralDeadlines(
       organizationId: scope.organizationId,
       deadlineId: deadline.id,
       eventType: "started",
-      actorUserId,
+      actorUserId: actorUserId ?? null,
       metadata: {
         referralId: referral.id,
         recipientName: referral.recipientName,
@@ -568,8 +581,8 @@ async function instantiateReferralDeadlines(
     await tx.insert(auditEvents).values(
       auditEventValues({
         organizationId: scope.organizationId,
-        actorType: "user",
-        actorUserId,
+        actorType: actorUserId ? "user" : "system",
+        actorUserId: actorUserId ?? null,
         action: "deadline.started",
         resourceType: "case_deadline",
         resourceId: deadline.id,
@@ -596,7 +609,7 @@ async function completeDeadlinesForReferralEvent(
   scope: TenantScope,
   referral: typeof caseReferrals.$inferSelect,
   eventType: ReferralEventType,
-  actorUserId: string,
+  actorUserId: string | null | undefined,
   occurredAt: Date,
 ) {
   const active = await tx
@@ -641,7 +654,7 @@ async function completeDeadlinesForReferralEvent(
       deadlineId: deadline.id,
       eventType:
         eventType === "cancelled" ? "cancelled" : "completed",
-      actorUserId,
+      actorUserId: actorUserId ?? null,
       reason: `Referral event: ${eventType}`,
       metadata: {
         referralId: referral.id,
@@ -653,8 +666,8 @@ async function completeDeadlinesForReferralEvent(
     await tx.insert(auditEvents).values(
       auditEventValues({
         organizationId: scope.organizationId,
-        actorType: "user",
-        actorUserId,
+        actorType: actorUserId ? "user" : "system",
+        actorUserId: actorUserId ?? null,
         action:
           eventType === "cancelled"
             ? "deadline.cancelled"
@@ -758,7 +771,8 @@ async function recordReferralEvent(
   input: {
     referral: typeof caseReferrals.$inferSelect;
     eventType: ReferralEventType | "created";
-    actorUserId: string;
+    actorUserId?: string | null;
+    auditSource?: string;
     summary?: string | null;
     details?: Record<string, unknown>;
     occurredAt?: Date;
@@ -770,7 +784,7 @@ async function recordReferralEvent(
     eventType: input.eventType,
     summary: input.summary ?? null,
     details: input.details ?? {},
-    actorUserId: input.actorUserId,
+    actorUserId: input.actorUserId ?? null,
     occurredAt: input.occurredAt ?? new Date(),
   });
 }
@@ -782,7 +796,8 @@ async function recordReferralAudit(
   updated: typeof caseReferrals.$inferSelect,
   input: {
     action: string;
-    actorUserId: string;
+    actorUserId?: string | null;
+    auditSource?: string;
     occurredAt: Date;
     metadata?: Record<string, unknown>;
   },
@@ -791,8 +806,9 @@ async function recordReferralAudit(
     auditEventValues({
       organizationId: scope.organizationId,
       actorType: "user",
-      actorUserId: input.actorUserId,
+      actorUserId: input.actorUserId ?? null,
       action: input.action,
+      source: input.auditSource ?? "application",
       resourceType: "case_referral",
       resourceId: updated.id,
       parentResourceType: "case",
