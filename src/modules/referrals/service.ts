@@ -140,7 +140,7 @@ export async function createCaseReferral(
     await tx.insert(auditEvents).values(
       auditEventValues({
         organizationId: scope.organizationId,
-        actorType: "user",
+        actorType: input.actorUserId ? "user" : "system",
         actorUserId: input.actorUserId ?? null,
         action: "referral.created",
         source: input.auditSource ?? "application",
@@ -220,6 +220,7 @@ export async function sendCaseReferral(
     await recordReferralAudit(tx, scope, referral, updated, {
       action: "referral.sent",
       actorUserId: input.actorUserId ?? null,
+      auditSource: input.auditSource,
       occurredAt,
     });
 
@@ -298,6 +299,7 @@ export async function acknowledgeCaseReferral(
     await recordReferralAudit(tx, scope, referral, updated, {
       action: "referral.acknowledged",
       actorUserId: input.actorUserId ?? null,
+      auditSource: input.auditSource,
       occurredAt,
     });
 
@@ -474,6 +476,7 @@ async function finishCaseReferral(
     await recordReferralAudit(tx, scope, referral, updated, {
       action: input.action,
       actorUserId: input.actorUserId ?? null,
+      auditSource: input.auditSource,
       occurredAt,
     });
     return updated;
@@ -805,7 +808,7 @@ async function recordReferralAudit(
   await tx.insert(auditEvents).values(
     auditEventValues({
       organizationId: scope.organizationId,
-      actorType: "user",
+      actorType: input.actorUserId ? "user" : "system",
       actorUserId: input.actorUserId ?? null,
       action: input.action,
       source: input.auditSource ?? "application",
