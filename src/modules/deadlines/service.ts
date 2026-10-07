@@ -1142,8 +1142,11 @@ async function recordDeadlineHistoryAndAudit(
       action: input.action,
       resourceType: "case_deadline",
       resourceId: input.deadline.id,
-      parentResourceType: "case",
-      parentResourceId: input.deadline.caseId,
+      parentResourceType: input.deadline.referralId
+        ? "case_referral"
+        : "case",
+      parentResourceId:
+        input.deadline.referralId ?? input.deadline.caseId,
       previousState: {
         status: input.deadline.status,
         dueAt: input.deadline.dueAt.toISOString(),
@@ -1154,7 +1157,11 @@ async function recordDeadlineHistoryAndAudit(
         dueAt: input.updated.dueAt.toISOString(),
         warningAt: input.updated.warningAt?.toISOString() ?? null,
       },
-      metadata: input.metadata ?? {},
+      metadata: {
+        caseId: input.deadline.caseId,
+        referralId: input.deadline.referralId,
+        ...(input.metadata ?? {}),
+      },
       occurredAt: input.occurredAt,
     }),
   );
