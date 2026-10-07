@@ -5,6 +5,7 @@ import {
 } from "@/modules/auth/permissions";
 import { formDefinitionSchema } from "@/modules/forms/definition";
 import { routingRuleDefinitionSchema } from "@/modules/routing/definition";
+import { referralPolicyDefinitionSchema } from "@/modules/referrals/definition";
 import { workflowDefinitionSchema } from "@/modules/workflows/definition";
 
 const identifier = z
@@ -73,6 +74,10 @@ const terminologySchema = z
       singular: "Queue",
       plural: "Queues",
     }),
+    referral: labelPairSchema.default({
+      singular: "Referral",
+      plural: "Referrals",
+    }),
   })
   .default({
     case: { singular: "Case", plural: "Cases" },
@@ -82,6 +87,7 @@ const terminologySchema = z
     deadline: { singular: "Deadline", plural: "Deadlines" },
     document: { singular: "Document", plural: "Documents" },
     queue: { singular: "Queue", plural: "Queues" },
+    referral: { singular: "Referral", plural: "Referrals" },
   });
 
 const roleSchema = z.object({
@@ -97,6 +103,13 @@ const documentTypeSchema = z.object({
   description: z.string().max(2000).optional(),
   acceptedMimeTypes: z.array(z.string().min(1).max(200)).max(100).default([]),
   maxBytes: z.number().int().positive().max(2_147_483_647).optional(),
+});
+
+const referralPolicySchema = z.object({
+  key: identifier,
+  name: z.string().min(1).max(200),
+  description: z.string().max(2000).optional(),
+  definition: referralPolicyDefinitionSchema,
 });
 
 const deadlineCalendarSchema = z.object({
@@ -208,6 +221,7 @@ export const applicationManifestSchema = z
     }),
     roles: z.array(roleSchema).max(100).default([]),
     documentTypes: z.array(documentTypeSchema).max(200).default([]),
+    referralPolicies: z.array(referralPolicySchema).max(100).default([]),
     deadlineCalendars: z.array(deadlineCalendarSchema).max(50).default([]),
     teams: z.array(teamSchema).max(100).default([]),
     queues: z.array(queueSchema).max(100).default([]),
@@ -265,6 +279,11 @@ export const applicationManifestSchema = z
     const documentTypeByKey = new Map(
       manifest.documentTypes.map((item) => [item.key, item] as const),
     );
+    const referralPolicyKeys = unique(
+      manifest.referralPolicies.map((item) => item.key),
+      "referralPolicies",
+    );
+    void referralPolicyKeys;
     const calendarKeys = unique(
       manifest.deadlineCalendars.map((item) => item.key),
       "deadlineCalendars",
@@ -385,6 +404,50 @@ export const applicationManifestSchema = z
               }
             },
           );
+        },
+      );
+    });
+
+    manifest.referralPolicies.forEach((policy, policyIndex) => {
+      policy.definition.deadlinePolicies.forEach(
+        (deadline, deadlineIndex) => {
+          if (
+            deadline.calendarKey &&
+            !calendarKeys.has(deadline.calendarKey)
+          ) {
+            ctx.addIssue({
+              code: "custom",
+              message:
+                `Referral deadline references undeclared calendar: ${deadline.calendarKey}`,
+              path: [
+                "referralPolicies",
+                policyIndex,
+                "definition",
+                "deadlinePolicies",
+                deadlineIndex,
+                "calendarKey",
+              ],
+            });
+          }
+          if (
+            deadline.escalation?.queueSlug &&
+            !queueKeys.has(deadline.escalation.queueSlug)
+          ) {
+            ctx.addIssue({
+              code: "custom",
+              message:
+                `Referral deadline references undeclared queue: ${deadline.escalation.queueSlug}`,
+              path: [
+                "referralPolicies",
+                policyIndex,
+                "definition",
+                "deadlinePolicies",
+                deadlineIndex,
+                "escalation",
+                "queueSlug",
+              ],
+            });
+          }
         },
       );
     });
