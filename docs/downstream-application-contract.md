@@ -229,3 +229,58 @@ infrastructure controls as required.
 This public attachment primitive does not extend protected structured-data
 compartments to binary files, does not enable participant-message attachments,
 and does not make the engine suitable for classified information.
+
+
+## Parallel referral deployment contract
+
+Downstream applications that need recipient-specific external follow-up may
+declare one or more referral policies:
+
+```json
+"referralPolicies": [
+  {
+    "key": "routine_referral",
+    "name": "Routine referral",
+    "definition": {
+      "schemaVersion": 1,
+      "deadlinePolicies": [
+        {
+          "key": "preliminary_response",
+          "label": "Preliminary response",
+          "trigger": "sent",
+          "duration": {
+            "value": 30,
+            "unit": "calendar_days"
+          },
+          "completeOnEvents": [
+            "preliminary_response",
+            "final_response",
+            "completed",
+            "cancelled"
+          ]
+        }
+      ]
+    }
+  }
+]
+```
+
+Referral policy is application configuration. Recipient identity is operational
+data on each case referral and is not required to be hard-coded into the
+manifest.
+
+Each referral stores an immutable policy snapshot at creation time. Multiple
+referrals on one case may therefore use the same policy keys while retaining
+independent dates, responses, extensions, and overdue status.
+
+Referral deadline escalation uses the existing case-level escalation effects.
+A downstream application should configure an oversight queue when a missed
+recipient deadline requires centralized compliance follow-up.
+
+An explicit deadline extension is different from pause/resume: extensions
+require a reason and permanently record the previous and new due dates. Use
+pause/resume only when the policy genuinely excludes a paused interval.
+
+The engine does not deliver referral packages to external systems by itself.
+Email gateways, secure transfer systems, agency APIs, or other delivery
+adapters remain deployment/integration responsibilities.
