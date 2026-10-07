@@ -73,14 +73,29 @@ function normalizedMime(value: string) {
   return value.trim().toLowerCase() || "application/octet-stream";
 }
 
-function configuredPublicUploadMaxBytes(): number {
-  const raw = Number(
-    process.env.DOCUMENT_MAX_BYTES ?? String(25 * 1024 * 1024),
-  );
+function positiveByteSetting(
+  name: string,
+  fallback: number,
+): number {
+  const raw = Number(process.env[name] ?? String(fallback));
   if (!Number.isSafeInteger(raw) || raw < 1) {
-    throw new Error("DOCUMENT_MAX_BYTES must be a positive integer.");
+    throw new Error(`${name} must be a positive integer.`);
   }
   return raw;
+}
+
+function configuredPublicUploadMaxBytes(): number {
+  return positiveByteSetting(
+    "DOCUMENT_MAX_BYTES",
+    25 * 1024 * 1024,
+  );
+}
+
+function configuredPublicUploadTotalMaxBytes(): number {
+  return positiveByteSetting(
+    "PUBLIC_UPLOAD_TOTAL_MAX_BYTES",
+    50 * 1024 * 1024,
+  );
 }
 
 export async function stagePublicSubmissionUploads(
@@ -95,6 +110,8 @@ export async function stagePublicSubmissionUploads(
   const answerReferences: Record<string, string[]> = {};
   const errors: PublicUploadValidationErrorItem[] = [];
   const visible = visibleFieldIdsForDefinition(definition, ordinaryAnswers);
+  const totalMaxBytes = configuredPublicUploadTotalMaxBytes();
+  let acceptedBytes = 0;
 
   try {
     for (const field of fieldsInDefinition(definition)) {
@@ -148,6 +165,13 @@ export async function stagePublicSubmissionUploads(
           errors.push({
             fieldId: field.id,
             message: "An attachment exceeds the deployment upload-size limit.",
+          });
+          continue;
+        }
+        if (acceptedBytes + file.size > totalMaxBytes) {
+          errors.push({
+            fieldId: field.id,
+            message: "The combined attachment size exceeds the public-upload request limit.",
           });
           continue;
         }
@@ -215,6 +239,7 @@ export async function stagePublicSubmissionUploads(
           continue;
         }
 
+        acceptedBytes += data.byteLength;
         uploads.push({
           documentId,
           versionId,
