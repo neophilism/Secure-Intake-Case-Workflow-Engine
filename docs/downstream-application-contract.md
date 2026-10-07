@@ -219,9 +219,12 @@ scanner or authorized scan process; absence of a scanner never causes the
 engine to assume a file is clean.
 
 The global `DOCUMENT_MAX_BYTES` setting remains a deployment ceiling in
-addition to document-type policy. Production deployments should use durable
-storage and apply their own sandbox, DLP, retention, and infrastructure
-controls as required.
+addition to document-type policy. The default local adapter writes beneath
+`/app/.data/documents` in the container image; deployments using that adapter
+must mount durable storage there (and share it with any worker that operates on
+documents). Production deployments may instead supply a durable storage adapter
+appropriate to their environment and should apply sandbox, DLP, retention, and
+infrastructure controls as required.
 
 This public attachment primitive does not extend protected structured-data
 compartments to binary files, does not enable participant-message attachments,
