@@ -145,6 +145,7 @@ export type FormSection = z.infer<typeof formSectionSchema>;
 const participantPortalSchema = z.object({
   enabled: z.boolean().default(false),
   allowMessaging: z.boolean().default(true),
+  messagingCondition: conditionSchema.optional(),
 });
 
 export const formDefinitionSchema = z
@@ -191,6 +192,34 @@ export const formDefinitionSchema = z
         field.protection?.compartment ?? null,
       ] as const),
     );
+
+    if (definition.participantPortal?.messagingCondition) {
+      const condition = definition.participantPortal.messagingCondition;
+      if (!fieldIds.has(condition.fieldId)) {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            "Participant messaging condition references an unknown field.",
+          path: ["participantPortal", "messagingCondition"],
+        });
+      } else if (protectionByField.get(condition.fieldId)) {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            "Participant messaging condition must reference an ordinary, non-protected field.",
+          path: ["participantPortal", "messagingCondition"],
+        });
+      }
+
+      if (!definition.participantPortal.allowMessaging) {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            "Participant messaging condition cannot be used when allowMessaging is false.",
+          path: ["participantPortal", "messagingCondition"],
+        });
+      }
+    }
 
     definition.sections.forEach((section, sectionIndex) => {
       section.fields.forEach((field, fieldIndex) => {
