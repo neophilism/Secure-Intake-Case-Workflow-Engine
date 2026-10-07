@@ -73,6 +73,7 @@ export default async function OperationsPage({
   }
   if (!hasPermission(context, "case:view")) redirect("/forbidden");
 
+  const membershipId = membershipId;
   const params = await searchParams;
   let definition: CaseSearchDefinition;
   try {
@@ -93,9 +94,9 @@ export default async function OperationsPage({
     members,
     applicationProfile,
   ] = await Promise.all([
-    getOperationalDashboard(db, scope, context.membership.id),
-    searchCases(db, scope, definition, context.membership.id),
-    listSavedViews(db, scope, context.membership.id),
+    getOperationalDashboard(db, scope, membershipId),
+    searchCases(db, scope, definition, membershipId),
+    listSavedViews(db, scope, membershipId),
     listQueueWorkload(db, scope),
     listMemberWorkload(db, scope),
     listQueues(db, scope),
@@ -170,7 +171,7 @@ export default async function OperationsPage({
         db,
         scope,
         view.searchDefinition,
-        context.membership.id,
+        membershipId,
       ),
     })),
   );
@@ -188,7 +189,7 @@ export default async function OperationsPage({
                     db,
                     scope,
                     view.searchDefinition,
-                    context.membership.id,
+                    membershipId,
                   ),
                 }
               : null,
