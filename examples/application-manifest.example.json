@@ -264,6 +264,20 @@
                   "compartment": "example_secret",
                   "revealPolicy": "dual_control"
                 }
+              },
+              {
+                "id": "example_attachment",
+                "type": "file",
+                "label": "Example attachment",
+                "required": false,
+                "acceptedMimeTypes": [
+                  "application/pdf"
+                ],
+                "maxFiles": 2,
+                "publicUpload": {
+                  "documentTypeKey": "example_document",
+                  "visibility": "internal"
+                }
               }
             ]
           }
