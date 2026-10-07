@@ -290,7 +290,7 @@ export async function listExternalParticipantMessages(
   db: Database,
   context: ExternalParticipantContext,
 ) {
-  if (!context.case) return [];
+  if (!context.allowMessaging || !context.case) return [];
 
   const rows = await listExternalParticipantPortalMessages(
     db,
