@@ -399,6 +399,8 @@ export default async function CaseDetailPage({
         {" · "}
         <Link href="/admin/deadlines">Deadlines</Link>
         {" · "}
+        <Link href="/admin/referrals">Referrals</Link>
+        {" · "}
         <Link href="/admin/reviews">Reviews</Link>
         {" · "}
         <Link href="/admin/disclosures">Disclosures</Link>
