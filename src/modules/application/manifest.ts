@@ -6,6 +6,10 @@ import {
 import { formDefinitionSchema } from "@/modules/forms/definition";
 import { routingRuleDefinitionSchema } from "@/modules/routing/definition";
 import { referralPolicyDefinitionSchema } from "@/modules/referrals/definition";
+import {
+  applicationOperationalViewSchema,
+  operationalMetricDefinitionSchema,
+} from "@/modules/operations/definition";
 import { workflowDefinitionSchema } from "@/modules/workflows/definition";
 
 const identifier = z
@@ -233,6 +237,14 @@ export const applicationManifestSchema = z
     forms: z.array(formSchema).max(100).default([]),
     routingRules: z.array(routingRuleSchema).max(500).default([]),
     reviewPolicies: z.array(reviewPolicySchema).max(100).default([]),
+    operationalViews: z
+      .array(applicationOperationalViewSchema)
+      .max(100)
+      .default([]),
+    operationalMetrics: z
+      .array(operationalMetricDefinitionSchema)
+      .max(100)
+      .default([]),
   })
   .superRefine((manifest, ctx) => {
     const systemRoleKeys = new Set(
@@ -336,6 +348,81 @@ export const applicationManifestSchema = z
       manifest.reviewPolicies.map((item) => item.key),
       "reviewPolicies",
     );
+    const operationalViewKeys = unique(
+      manifest.operationalViews.map((item) => item.key),
+      "operationalViews",
+    );
+    unique(
+      manifest.operationalMetrics.map((item) => item.key),
+      "operationalMetrics",
+    );
+
+    const deadlinePolicyKeys = new Set<string>();
+    for (const workflow of manifest.workflows) {
+      for (const policy of workflow.definition.deadlinePolicies) {
+        deadlinePolicyKeys.add(policy.key);
+      }
+    }
+    for (const referralPolicy of manifest.referralPolicies) {
+      for (const policy of referralPolicy.definition.deadlinePolicies) {
+        deadlinePolicyKeys.add(policy.key);
+      }
+    }
+
+    manifest.operationalViews.forEach((view, viewIndex) => {
+      view.definition.queueSlugs.forEach((queueSlug, queueIndex) => {
+        if (!queueKeys.has(queueSlug)) {
+          ctx.addIssue({
+            code: "custom",
+            message:
+              `Operational view references undeclared queue: ${queueSlug}`,
+            path: [
+              "operationalViews",
+              viewIndex,
+              "definition",
+              "queueSlugs",
+              queueIndex,
+            ],
+          });
+        }
+      });
+    });
+
+    manifest.operationalMetrics.forEach((metric, metricIndex) => {
+      if (
+        metric.type === "case_count" &&
+        !operationalViewKeys.has(metric.viewKey)
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            `Case-count metric references undeclared operational view: ${metric.viewKey}`,
+          path: [
+            "operationalMetrics",
+            metricIndex,
+            "viewKey",
+          ],
+        });
+      }
+
+      if (metric.type === "deadline_compliance") {
+        metric.policyKeys.forEach((policyKey, policyIndex) => {
+          if (!deadlinePolicyKeys.has(policyKey)) {
+            ctx.addIssue({
+              code: "custom",
+              message:
+                `Deadline-compliance metric references undeclared deadline policy: ${policyKey}`,
+              path: [
+                "operationalMetrics",
+                metricIndex,
+                "policyKeys",
+                policyIndex,
+              ],
+            });
+          }
+        });
+      }
+    });
 
     manifest.workflows.forEach((workflow, workflowIndex) => {
       workflow.definition.deadlinePolicies.forEach(
