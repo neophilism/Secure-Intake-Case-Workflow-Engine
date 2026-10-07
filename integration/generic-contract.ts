@@ -355,6 +355,13 @@ async function main() {
       });
     assert.ok(statusOnlyContext);
     assert.equal(statusOnlyContext.allowMessaging, false);
+    assert.deepEqual(
+      await listExternalParticipantMessages(
+        db,
+        statusOnlyContext,
+      ),
+      [],
+    );
     await assert.rejects(
       () =>
         sendExternalParticipantMessage(
