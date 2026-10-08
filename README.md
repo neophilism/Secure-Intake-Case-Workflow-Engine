@@ -14,21 +14,24 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 30 — immutable container release evidence**
+**PR 32 — one-click validated release dispatch**
 
-The tagged container release workflow now emits a machine-readable
-`release-evidence.json` artifact after the GHCR push.
+The container release workflow can now be started manually from GitHub Actions
+with a package version and source ref.
 
-The artifact binds the release's package version, Git tag, exact source commit,
-container digest, and immutable `repository@sha256:digest` reference.
+The manual path runs the same audit, migration, typecheck, release-contract,
+accessibility, unit, integration and production-build gates as a tag-triggered
+release. Only after those validations succeed does it create the annotated tag
+(if needed), publish the GHCR image, emit provenance/SBOM, and upload immutable
+`release-evidence.json`.
 
-The existing release gates, provenance attestation, and SBOM remain unchanged.
-Normal PR CI also exercises the evidence writer with synthetic inputs.
+Retries are allowed only when an existing release tag already resolves to the
+same source commit; the workflow refuses to move a release tag.
 
 The runtime package version remains **1.0.0-rc.9**.
 
 See
-[docs/architecture/0032-immutable-container-release-evidence.md](docs/architecture/0032-immutable-container-release-evidence.md).
+[docs/architecture/0033-one-click-validated-release-dispatch.md](docs/architecture/0033-one-click-validated-release-dispatch.md).
 
 ## Security status
 
