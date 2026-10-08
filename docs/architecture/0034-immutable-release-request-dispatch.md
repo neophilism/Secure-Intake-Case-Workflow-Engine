@@ -89,10 +89,17 @@ source, tests, tag-state or evidence checks.
 
 ## Operational use
 
-A release can be requested through a normal reviewed PR that changes only
+A release can be requested through a normal reviewed PR that changes
 `release-request.json`.
 
-After that PR is merged to `main`:
+PR 34 itself contains the initial rc.9 request pinned to canonical source
+`2fb452f23e5e5464db03a3ec95d36c4bc2db4fa4`.
+
+GitHub evaluates push workflows from the commit associated with the push, so
+merging PR 34 both installs the dispatcher and supplies the matching release
+request in the same `main` push.
+
+After the request reaches `main`:
 
 1. the request workflow validates the immutable source SHA;
 2. it dispatches the release workflow;
