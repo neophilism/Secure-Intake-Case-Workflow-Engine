@@ -21,69 +21,94 @@ permissions:
   packages: write
 
 jobs:
-  prepare-tag:
-    if: github.event_name == 'workflow_dispatch'
+  release:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: casework
+          POSTGRES_PASSWORD: casework
+          POSTGRES_DB: casework
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U casework -d casework"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://casework:casework@localhost:5432/casework
+      APP_BASE_URL: http://localhost:3000
+      PROTECTED_DATA_ENCRYPTION_KEY: "1111111111111111111111111111111111111111111111111111111111111111"
+      IMAGE_NAME: ghcr.io/neophilism/secure-intake-case-workflow-engine
     steps:
-      - name: Checkout requested source
+      - name: Checkout release source
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.source_ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.source_ref || github.ref }}
           fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Validate requested release
+      - id: context
+        name: Resolve and validate release context
         shell: bash
         env:
-          REQUESTED_VERSION: ${{ inputs.version }}
+          EVENT_NAME: ${{ github.event_name }}
+          REQUESTED_VERSION: ${{ inputs.version || '' }}
         run: |
           set -euo pipefail
+
           package_version="$(node -p "require('./package.json').version")"
-          if [ "$REQUESTED_VERSION" != "$package_version" ]; then
-            echo "Requested version $REQUESTED_VERSION does not match package version $package_version." >&2
+          source_sha="$(git rev-parse HEAD)"
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            version="$REQUESTED_VERSION"
+            tag="v$version"
+          else
+            tag="$GITHUB_REF_NAME"
+            version="${tag#v}"
+          fi
+
+          if [ "$version" != "$package_version" ]; then
+            echo "Release version $version does not match package version $package_version." >&2
             exit 1
           fi
-          if ! printf '%s' "$REQUESTED_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: casework
-          POSTGRES_PASSWORD: casework
-          POSTGRES_DB: casework
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U casework -d casework"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      DATABASE_URL: postgres://casework:casework@localhost:5432/casework
-      APP_BASE_URL: http://localhost:3000
-      PROTECTED_DATA_ENCRYPTION_KEY: "1111111111111111111111111111111111111111111111111111111111111111"
-      IMAGE_NAME: ghcr.io/neophilism/secure-intake-case-workflow-engine
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
+          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$'; then
+            echo "Release version is not valid." >&2
+            exit 1
+          fi
 
-      - name: Verify tag matches package version
+          if [ "$tag" != "v$package_version" ]; then
+            echo "Release tag $tag does not match v$package_version." >&2
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Validate manual-release tag state
+        if: github.event_name == 'workflow_dispatch'
         shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.context.outputs.tag }}
+          SOURCE_SHA: ${{ steps.context.outputs.source_sha }}
         run: |
           set -euo pipefail
-          tag_version="${GITHUB_REF_NAME#v}"
-          package_version="$(node -p "require('./package.json').version")"
-          if [ "$tag_version" != "$package_version" ]; then
-            echo "Tag version $tag_version does not match package version $package_version." >&2
+
+          remote_sha="$(git ls-remote --tags origin "refs/tags/$RELEASE_TAG^{}" | awk '{print $1}')"
+          if [ -z "$remote_sha" ]; then
+            remote_sha="$(git ls-remote --tags origin "refs/tags/$RELEASE_TAG" | awk '{print $1}')"
+          fi
+
+          if [ -n "$remote_sha" ] && [ "$remote_sha" != "$SOURCE_SHA" ]; then
+            echo "Release tag $RELEASE_TAG already exists at $remote_sha, not $SOURCE_SHA." >&2
             exit 1
           fi
 
@@ -96,6 +121,30 @@ jobs:
       - run: npm run test
       - run: npm run test:integration
       - run: npm run build
+
+      - name: Create manual release tag after validation
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.context.outputs.tag }}
+          SOURCE_SHA: ${{ steps.context.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+
+          remote_sha="$(git ls-remote --tags origin "refs/tags/$RELEASE_TAG^{}" | awk '{print $1}')"
+          if [ -z "$remote_sha" ]; then
+            remote_sha="$(git ls-remote --tags origin "refs/tags/$RELEASE_TAG" | awk '{print $1}')"
+          fi
+
+          if [ -z "$remote_sha" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$RELEASE_TAG" "$SOURCE_SHA" -m "Release $RELEASE_TAG"
+            git push origin "refs/tags/$RELEASE_TAG"
+          elif [ "$remote_sha" != "$SOURCE_SHA" ]; then
+            echo "Release tag moved during validation." >&2
+            exit 1
+          fi
 
       - uses: docker/setup-buildx-action@v3
 
@@ -110,8 +159,8 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}}
-            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+            type=raw,value=${{ steps.context.outputs.version }}
+            type=raw,value=latest,enable=${{ !contains(steps.context.outputs.version, '-') }}
 
       - id: build
         uses: docker/build-push-action@v6
@@ -126,18 +175,20 @@ jobs:
       - name: Write immutable release evidence
         env:
           IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+          SOURCE_SHA: ${{ steps.context.outputs.source_sha }}
+          RELEASE_TAG: ${{ steps.context.outputs.tag }}
         run: |
           node scripts/write-release-evidence.mjs \
             --image "$IMAGE_NAME" \
             --digest "$IMAGE_DIGEST" \
-            --source "$GITHUB_SHA" \
-            --tag "$GITHUB_REF_NAME" \
+            --source "$SOURCE_SHA" \
+            --tag "$RELEASE_TAG" \
             --out release-evidence.json
 
       - name: Upload immutable release evidence
         uses: actions/upload-artifact@v4
         with:
-          name: container-release-evidence-${{ github.ref_name }}
+          name: container-release-evidence-${{ steps.context.outputs.tag }}
           path: release-evidence.json
           if-no-files-found: error
           retention-days: 90
@@ -145,154 +196,14 @@ jobs:
       - name: Summarize immutable release
         env:
           IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+          SOURCE_SHA: ${{ steps.context.outputs.source_sha }}
+          RELEASE_TAG: ${{ steps.context.outputs.tag }}
         run: |
           echo "## Container release" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Version: $(node -p "require('./package.json').version")" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Source commit: $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Immutable image: $IMAGE_NAME@$IMAGE_DIGEST" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Provenance: enabled" >> "$GITHUB_STEP_SUMMARY"
-          echo "- SBOM: enabled" >> "$GITHUB_STEP_SUMMARY"
-; then
-            echo "Requested version is not a valid release version." >&2
-            exit 1
-          fi
-
-      - name: Ensure release tag does not already exist
-        shell: bash
-        env:
-          RELEASE_TAG: v${{ inputs.version }}
-        run: |
-          set -euo pipefail
-          if git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "Release tag $RELEASE_TAG already exists." >&2
-            exit 1
-          fi
-
-      - name: Create release tag
-        shell: bash
-        env:
-          RELEASE_TAG: v${{ inputs.version }}
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$RELEASE_TAG" -m "Release $RELEASE_TAG"
-          git push origin "refs/tags/$RELEASE_TAG"
-
-      - name: Summarize prepared release
-        run: |
-          echo "## Release tag prepared" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Tag: `v${{ inputs.version }}`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Source ref: `${{ inputs.source_ref }}`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Source commit: `$(git rev-parse HEAD)`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Next: the tag push triggers the container release job automatically." >> "$GITHUB_STEP_SUMMARY"
-
-  release:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: casework
-          POSTGRES_PASSWORD: casework
-          POSTGRES_DB: casework
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U casework -d casework"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      DATABASE_URL: postgres://casework:casework@localhost:5432/casework
-      APP_BASE_URL: http://localhost:3000
-      PROTECTED_DATA_ENCRYPTION_KEY: "1111111111111111111111111111111111111111111111111111111111111111"
-      IMAGE_NAME: ghcr.io/neophilism/secure-intake-case-workflow-engine
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Verify tag matches package version
-        shell: bash
-        run: |
-          set -euo pipefail
-          tag_version="${GITHUB_REF_NAME#v}"
-          package_version="$(node -p "require('./package.json').version")"
-          if [ "$tag_version" != "$package_version" ]; then
-            echo "Tag version $tag_version does not match package version $package_version." >&2
-            exit 1
-          fi
-
-      - run: npm install
-      - run: npm audit --omit=dev --audit-level=high
-      - run: npm run db:migrate
-      - run: npm run typecheck
-      - run: npm run verify:release-contract
-      - run: npm run test:a11y
-      - run: npm run test
-      - run: npm run test:integration
-      - run: npm run build
-
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
-
-      - id: build
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          provenance: true
-          sbom: true
-
-      - name: Write immutable release evidence
-        env:
-          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
-        run: |
-          node scripts/write-release-evidence.mjs \
-            --image "$IMAGE_NAME" \
-            --digest "$IMAGE_DIGEST" \
-            --source "$GITHUB_SHA" \
-            --tag "$GITHUB_REF_NAME" \
-            --out release-evidence.json
-
-      - name: Upload immutable release evidence
-        uses: actions/upload-artifact@v4
-        with:
-          name: container-release-evidence-${{ github.ref_name }}
-          path: release-evidence.json
-          if-no-files-found: error
-          retention-days: 90
-
-      - name: Summarize immutable release
-        env:
-          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
-        run: |
-          echo "## Container release" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Version: $(node -p "require('./package.json').version")" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Source commit: $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Tag: $RELEASE_TAG" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Version: ${{ steps.context.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Source commit: $SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
           echo "- Immutable image: $IMAGE_NAME@$IMAGE_DIGEST" >> "$GITHUB_STEP_SUMMARY"
           echo "- Provenance: enabled" >> "$GITHUB_STEP_SUMMARY"
           echo "- SBOM: enabled" >> "$GITHUB_STEP_SUMMARY"
