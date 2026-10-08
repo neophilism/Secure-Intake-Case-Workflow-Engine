@@ -40,6 +40,15 @@ jobs:
       - run: npm run db:migrate
       - run: npm run typecheck
       - run: npm run verify:release-contract
+      - name: Verify release evidence writer
+        run: |
+          node scripts/write-release-evidence.mjs \
+            --image ghcr.io/neophilism/secure-intake-case-workflow-engine \
+            --digest sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+            --source bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb \
+            --tag "v$(node -p "require('./package.json').version")" \
+            --out /tmp/release-evidence.json
+          test -s /tmp/release-evidence.json
       - run: npm run test:a11y
       - run: npm run test
       - run: npm run test:integration
