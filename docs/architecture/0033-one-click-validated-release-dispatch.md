@@ -45,7 +45,10 @@ For a manual dispatch, the workflow itself performs the complete release:
    exist;
 9. pushes the GHCR image;
 10. emits provenance and SBOM;
-11. writes and uploads immutable release evidence.
+11. writes and uploads immutable release evidence;
+12. publishes the same `release-evidence.json` as a GitHub Release asset at
+    the release tag, giving downstream public consumers a stable URL that does
+    not depend on Actions artifact retention.
 
 The image tag is derived from the validated package version rather than relying
 on `github.ref_name`, allowing manual and tag-triggered release paths to share
