@@ -23,6 +23,7 @@ import {
   reviewPolicies,
 } from "../src/db/schema";
 import { createTrustedTenantScope } from "../src/lib/tenancy";
+import { checkDatabaseReadiness } from "../src/lib/readiness";
 import {
   parseApplicationManifest,
   type ApplicationManifest,
@@ -113,6 +114,9 @@ async function main() {
   const organizationName = `Contract ${suffix}`;
   const password = "NeutralContractPassword!123";
   const { client, db } = createDatabase(databaseUrl);
+
+  const readiness = await checkDatabaseReadiness(databaseUrl);
+  assert.deepEqual(readiness, { ready: true, status: "ok" });
 
   try {
     const actor = await bootstrapOrganizationAdministrator(db, {
