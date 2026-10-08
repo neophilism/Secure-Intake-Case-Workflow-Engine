@@ -14,22 +14,21 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 29 — liveness and readiness contracts**
+**PR 30 — immutable container release evidence**
 
-Cloud deployments now have explicit machine-readable service health endpoints.
+The tagged container release workflow now emits a machine-readable
+`release-evidence.json` artifact after the GHCR push.
 
-- `GET /api/health` is a process-level liveness signal and reports the actual
-  package version.
-- `GET /api/ready` performs a minimal PostgreSQL probe and returns HTTP 503
-  when the database is unconfigured or unavailable.
+The artifact binds the release's package version, Git tag, exact source commit,
+container digest, and immutable `repository@sha256:digest` reference.
 
-Neither endpoint exposes credentials, raw database errors, tenant data, or
-protected content.
+The existing release gates, provenance attestation, and SBOM remain unchanged.
+Normal PR CI also exercises the evidence writer with synthetic inputs.
 
-The package version is **1.0.0-rc.9**.
+The runtime package version remains **1.0.0-rc.9**.
 
 See
-[docs/architecture/0031-liveness-readiness-contracts.md](docs/architecture/0031-liveness-readiness-contracts.md).
+[docs/architecture/0032-immutable-container-release-evidence.md](docs/architecture/0032-immutable-container-release-evidence.md).
 
 ## Security status
 
