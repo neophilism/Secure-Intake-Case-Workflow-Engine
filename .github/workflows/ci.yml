@@ -76,6 +76,7 @@ jobs:
             }));
           '
           node scripts/validate-release-request.mjs --file /tmp/release-request.json
+          node scripts/validate-release-request.mjs --file release-request.json
           if node scripts/validate-release-request.mjs --file /tmp/invalid-release-request.json; then
             echo "Release request validator accepted a mutable source ref." >&2
             exit 1
