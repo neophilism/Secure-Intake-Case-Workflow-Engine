@@ -193,6 +193,22 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+      - name: Publish GitHub Release evidence asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.context.outputs.tag }}
+          name: ${{ steps.context.outputs.tag }}
+          prerelease: ${{ contains(steps.context.outputs.version, '-') }}
+          files: release-evidence.json
+          fail_on_unmatched_files: true
+          overwrite_files: true
+          body: |
+            Immutable engine container release.
+
+            Source commit: ${{ steps.context.outputs.source_sha }}
+            Immutable image: ${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+            Provenance and SBOM are enabled by the container build.
+
       - name: Summarize immutable release
         env:
           IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
