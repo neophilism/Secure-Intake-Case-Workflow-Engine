@@ -14,7 +14,7 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 32 — one-click validated release dispatch**
+**PR 33 — one-click validated release dispatch**
 
 The container release workflow can now be started manually from GitHub Actions
 with a package version and source ref.
