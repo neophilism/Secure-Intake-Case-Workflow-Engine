@@ -23,7 +23,8 @@ The manual path runs the same audit, migration, typecheck, release-contract,
 accessibility, unit, integration and production-build gates as a tag-triggered
 release. Only after those validations succeed does it create the annotated tag
 (if needed), publish the GHCR image, emit provenance/SBOM, and upload immutable
-`release-evidence.json`.
+`release-evidence.json` both as a 90-day Actions artifact and as a stable
+GitHub Release asset for downstream promotion.
 
 Retries are allowed only when an existing release tag already resolves to the
 same source commit; the workflow refuses to move a release tag.
