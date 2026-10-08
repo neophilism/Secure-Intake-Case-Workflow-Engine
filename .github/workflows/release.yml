@@ -76,7 +76,8 @@ jobs:
             type=semver,pattern={{version}}
             type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
 
-      - uses: docker/build-push-action@v6
+      - id: build
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
@@ -84,3 +85,34 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           provenance: true
           sbom: true
+
+      - name: Write immutable release evidence
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          node scripts/write-release-evidence.mjs \
+            --image "$IMAGE_NAME" \
+            --digest "$IMAGE_DIGEST" \
+            --source "$GITHUB_SHA" \
+            --tag "$GITHUB_REF_NAME" \
+            --out release-evidence.json
+
+      - name: Upload immutable release evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-release-evidence-${{ github.ref_name }}
+          path: release-evidence.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Summarize immutable release
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          echo "## Container release" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Version: $(node -p "require('./package.json').version")" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Source commit: $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Immutable image: $IMAGE_NAME@$IMAGE_DIGEST" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Provenance: enabled" >> "$GITHUB_STEP_SUMMARY"
+          echo "- SBOM: enabled" >> "$GITHUB_STEP_SUMMARY"
