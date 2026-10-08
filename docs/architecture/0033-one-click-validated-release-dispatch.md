@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted for PR 32.
+Accepted for PR 33.
 
 ## Context
 
