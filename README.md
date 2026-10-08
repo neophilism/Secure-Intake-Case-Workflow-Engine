@@ -29,6 +29,11 @@ tests, tag creation, GHCR publication, provenance/SBOM and release evidence.
 This makes releases triggerable through the same reviewed Git/PR path used for
 source changes without introducing a personal access token.
 
+PR 34 also includes the reviewed rc.9 release request pinned to source commit
+`2fb452f23e5e5464db03a3ec95d36c4bc2db4fa4`. When this PR is merged to
+`main`, the push matches the release-request workflow and dispatches the
+validated rc.9 release automatically.
+
 The runtime package version remains **1.0.0-rc.9**.
 
 See
