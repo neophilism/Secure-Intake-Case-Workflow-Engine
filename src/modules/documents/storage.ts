@@ -1,4 +1,5 @@
 import { LocalFilesystemStorageAdapter } from "./storage-local";
+import { S3CompatibleStorageAdapter } from "./storage-s3";
 
 export interface StoredObject {
   key: string;
@@ -32,6 +33,39 @@ export function getDocumentStorageAdapter(): DocumentStorageAdapter {
       process.env.DOCUMENT_STORAGE_ROOT ??
         ".data/documents",
     );
+  }
+
+  if (driver === "s3") {
+    const endpoint = process.env.DOCUMENT_S3_ENDPOINT?.trim();
+    const region =
+      process.env.DOCUMENT_S3_REGION?.trim() || "us-east-1";
+    const bucket = process.env.DOCUMENT_S3_BUCKET?.trim();
+    const accessKeyId =
+      process.env.DOCUMENT_S3_ACCESS_KEY_ID?.trim();
+    const secretAccessKey =
+      process.env.DOCUMENT_S3_SECRET_ACCESS_KEY?.trim();
+    const sessionToken =
+      process.env.DOCUMENT_S3_SESSION_TOKEN?.trim();
+
+    if (
+      !endpoint ||
+      !bucket ||
+      !accessKeyId ||
+      !secretAccessKey
+    ) {
+      throw new Error(
+        "S3 document storage requires DOCUMENT_S3_ENDPOINT, DOCUMENT_S3_BUCKET, DOCUMENT_S3_ACCESS_KEY_ID, and DOCUMENT_S3_SECRET_ACCESS_KEY.",
+      );
+    }
+
+    return new S3CompatibleStorageAdapter({
+      endpoint,
+      region,
+      bucket,
+      accessKeyId,
+      secretAccessKey,
+      sessionToken: sessionToken || undefined,
+    });
   }
 
   throw new Error(
