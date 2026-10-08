@@ -14,25 +14,22 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 28 — durable object storage and automatic malware scanning**
+**PR 29 — liveness and readiness contracts**
 
-This milestone closes two deployment gaps in the generic document subsystem.
+Cloud deployments now have explicit machine-readable service health endpoints.
 
-The engine can now store document bytes in an S3-compatible private object
-store rather than requiring a shared local filesystem. It also supports a
-generic HTTPS malware-scanner adapter and automatically enqueues a
-`document.scan` background job for every newly persisted document version.
+- `GET /api/health` is a process-level liveness signal and reports the actual
+  package version.
+- `GET /api/ready` performs a minimal PostgreSQL probe and returns HTTP 503
+  when the database is unconfigured or unavailable.
 
-The trust boundary remains fail-closed: missing scanner configuration,
-transient scanner/storage failure, a final failed result, or a SHA-256 mismatch
-never marks a document clean. Only an explicit clean result makes content
-available.
+Neither endpoint exposes credentials, raw database errors, tenant data, or
+protected content.
 
-The package version is **1.0.0-rc.8**.
+The package version is **1.0.0-rc.9**.
 
 See
-[docs/architecture/0030-durable-object-storage-and-automatic-scanning.md](docs/architecture/0030-durable-object-storage-and-automatic-scanning.md)
-and [docs/downstream-application-contract.md](docs/downstream-application-contract.md).
+[docs/architecture/0031-liveness-readiness-contracts.md](docs/architecture/0031-liveness-readiness-contracts.md).
 
 ## Security status
 
