@@ -59,6 +59,32 @@ jobs:
           grep -q 'release-evidence.json' .github/workflows/release.yml
           grep -q 'steps.context.outputs.source_sha' .github/workflows/release.yml
           grep -q 'steps.build.outputs.digest' .github/workflows/release.yml
+      - name: Verify immutable release request automation
+        run: |
+          node -e '
+            const fs = require("fs");
+            const version = require("./package.json").version;
+            fs.writeFileSync("/tmp/release-request.json", JSON.stringify({
+              schemaVersion: 1,
+              version,
+              sourceRef: "a".repeat(40)
+            }));
+            fs.writeFileSync("/tmp/invalid-release-request.json", JSON.stringify({
+              schemaVersion: 1,
+              version,
+              sourceRef: "main"
+            }));
+          '
+          node scripts/validate-release-request.mjs --file /tmp/release-request.json
+          node scripts/validate-release-request.mjs --file release-request.json
+          if node scripts/validate-release-request.mjs --file /tmp/invalid-release-request.json; then
+            echo "Release request validator accepted a mutable source ref." >&2
+            exit 1
+          fi
+          ruby -e 'require "yaml"; YAML.load_file(".github/workflows/release-request.yml")'
+          grep -q 'release-request.json' .github/workflows/release-request.yml
+          grep -q 'actions: write' .github/workflows/release-request.yml
+          grep -q 'gh workflow run release.yml' .github/workflows/release-request.yml
       - run: npm run test:a11y
       - run: npm run test
       - run: npm run test:integration
