@@ -14,25 +14,25 @@ Reusable open-source infrastructure for secure intake, case management, workflow
 
 ## Current milestone
 
-**PR 33 — one-click validated release dispatch**
+**PR 34 — immutable release-request automation**
 
-The container release workflow can now be started manually from GitHub Actions
-with a package version and source ref.
+A reviewed change to `release-request.json` on `main` can now dispatch the
+validated release workflow automatically.
 
-The manual path runs the same audit, migration, typecheck, release-contract,
-accessibility, unit, integration and production-build gates as a tag-triggered
-release. Only after those validations succeed does it create the annotated tag
-(if needed), publish the GHCR image, emit provenance/SBOM, and upload immutable
-`release-evidence.json` both as a 90-day Actions artifact and as a stable
-GitHub Release asset for downstream promotion.
+The request must name the package version and an immutable 40-character source
+commit SHA. Moving refs such as `main` are rejected.
 
-Retries are allowed only when an existing release tag already resolves to the
-same source commit; the workflow refuses to move a release tag.
+The dispatcher has only Actions-write and repository-read permission; the
+existing validated release workflow remains the sole authority for release
+tests, tag creation, GHCR publication, provenance/SBOM and release evidence.
+
+This makes releases triggerable through the same reviewed Git/PR path used for
+source changes without introducing a personal access token.
 
 The runtime package version remains **1.0.0-rc.9**.
 
 See
-[docs/architecture/0033-one-click-validated-release-dispatch.md](docs/architecture/0033-one-click-validated-release-dispatch.md).
+[docs/architecture/0034-immutable-release-request-dispatch.md](docs/architecture/0034-immutable-release-request-dispatch.md).
 
 ## Security status
 
