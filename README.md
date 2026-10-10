@@ -1,5 +1,7 @@
 # Secure Intake & Case Workflow Engine
 
+**Full development plan and handoff:** [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md).
+
 Reusable open-source infrastructure for secure intake, case management, workflow routing, deadlines, review, and administrative due process.
 
 ## Design goals
