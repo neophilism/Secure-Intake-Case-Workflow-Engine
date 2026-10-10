@@ -1,0 +1,36 @@
+# OPTIONAL, separate paid Render Blueprint. Do not add this service to render.yaml
+# or apply it until the operator explicitly approves its recurring cost.
+# Start only after the database migrations are applied and document storage/scanner are configured.
+services:
+  - type: worker
+    name: secure-intake-engine-worker
+    runtime: image
+    image: ghcr.io/neophilism/secure-intake-case-workflow-engine@sha256:cfbea03ffb3e652b904340990085cb1c039a14731ab9d35f460c10e543cdf9df
+    plan: starter
+    region: ohio
+    dockerCommand: npm run worker
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DOCUMENT_STORAGE_DRIVER
+        value: s3
+      - key: DOCUMENT_S3_ENDPOINT
+        sync: false
+      - key: DOCUMENT_S3_REGION
+        value: us-east-2
+      - key: DOCUMENT_S3_BUCKET
+        sync: false
+      - key: DOCUMENT_S3_ACCESS_KEY_ID
+        sync: false
+      - key: DOCUMENT_S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: MALWARE_SCANNER_URL
+        sync: false
+      - key: MALWARE_SCANNER_PROVIDER
+        sync: false
+      - key: PROTECTED_DATA_ENCRYPTION_KEY
+        sync: false
+      - key: WEBHOOK_ENCRYPTION_KEY
+        sync: false
