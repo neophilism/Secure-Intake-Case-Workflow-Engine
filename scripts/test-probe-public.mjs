@@ -22,4 +22,20 @@ await assert.rejects(() => probePublicService(origin, async () => new Response("
 await assert.rejects(() => probePublicService(origin, async url => Response.json(url.endsWith("/api/health")
   ? { status: "ok", check: "liveness", version: "v" }
   : { status: "ready", check: "readiness", version: "v", checks: { database: "unavailable" } })));
+
+await assert.rejects(
+  () => probePublicService(origin, async url => url.endsWith("/api/health")
+    ? Response.json({ status: "ok", check: "liveness", version: "1.0.0-rc.9" })
+    : Response.json({ status: "not_ready", check: "readiness", version: "1.0.0-rc.9",
+      checks: { database: "unconfigured" } }, { status: 503 })),
+  /HTTP 503 database=unconfigured/
+);
+await assert.rejects(
+  () => probePublicService(origin, async url => url.endsWith("/api/health")
+    ? Response.json({ status: "ok", check: "liveness", version: "1.0.0-rc.9" })
+    : Response.json({ status: "not_ready", check: "readiness", version: "1.0.0-rc.9",
+      checks: { database: "postgresql:\/\/sensitive-secret" } }, { status: 503 })),
+  error => error instanceof Error && !error.message.includes("sensitive-secret") &&
+    error.message.includes("HTTP 503")
+);
 console.info("Deployment smoke-check contract passed.");
