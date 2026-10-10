@@ -5,16 +5,19 @@ assert.equal(canonicalBaseUrl(origin), origin);
 for (const bad of ["http://secure-intake.example.org", "https://secure-intake.example.org/path", "https://u:p@secure-intake.example.org", "https://localhost", "https://secure-intake.example.org:8443"]) {
   assert.throws(() => canonicalBaseUrl(bad));
 }
-let seen = [];
+const seen = [];
 const fake = async url => {
   seen.push(url);
   return Response.json(url.endsWith("/api/health")
     ? { status: "ok", check: "liveness", version: "1.0.0-rc.9" }
     : { status: "ready", check: "readiness", version: "1.0.0-rc.9", checks: { database: "ok" } });
 };
-const result = await probePublicService(origin, fake);
+const result = await probePublicService(origin, fake, "1.0.0-rc.9");
 assert.equal(result.status, "smoke_verified");
 assert.deepEqual(seen, [origin + "/api/health", origin + "/api/ready"]);
+await assert.rejects(() => probePublicService(origin, fake, "1.0.0-rc.8"), /expected deployed version/);
+await assert.rejects(() => probePublicService(origin, fake, "main"), /valid package version/);
+await assert.rejects(() => probePublicService(origin, fake, undefined, 0), /timeout/);
 await assert.rejects(() => probePublicService(origin, async () => new Response("unavailable", { status: 503 })));
 await assert.rejects(() => probePublicService(origin, async url => Response.json(url.endsWith("/api/health")
   ? { status: "ok", check: "liveness", version: "v" }

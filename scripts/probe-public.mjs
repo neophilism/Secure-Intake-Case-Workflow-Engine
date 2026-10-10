@@ -6,15 +6,21 @@ export function canonicalBaseUrl(input) {
   }
   return u.origin;
 }
-export async function probePublicService(baseUrl, fetcher = fetch) {
+export async function probePublicService(baseUrl, fetcher = fetch, expectedVersion, timeoutMs = 45000) {
   const origin = canonicalBaseUrl(baseUrl);
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 60000) {
+    throw new Error("Smoke-check timeout must be between 1000 and 60000 milliseconds.");
+  }
+  if (expectedVersion !== undefined && (typeof expectedVersion !== "string" || !/^[0-9]+\.[0-9]+\.[0-9]+(?:[-.][A-Za-z0-9.-]+)?$/.test(expectedVersion))) {
+    throw new Error("Expected engine version must be a valid package version.");
+  }
   const results = [];
   for (const [path, expectedCheck, expectedStatus] of [
     ["/api/health", "liveness", "ok"],
     ["/api/ready", "readiness", "ready"]
   ]) {
     const response = await fetcher(origin + path, {
-      method: "GET", redirect: "manual", cache: "no-store", signal: AbortSignal.timeout(12000)
+      method: "GET", redirect: "manual", cache: "no-store", signal: AbortSignal.timeout(timeoutMs)
     });
     const value = response.ok ? await response.json() : null;
     if (!response.ok || !value || value.status !== expectedStatus || value.check !== expectedCheck ||
@@ -23,6 +29,9 @@ export async function probePublicService(baseUrl, fetcher = fetch) {
     }
     if (path === "/api/ready" && value.checks?.database !== "ok") {
       throw new Error("Database readiness probe did not return ok.");
+    }
+    if (expectedVersion && value.version !== expectedVersion) {
+      throw new Error(path + " reports version " + value.version + "; expected deployed version " + expectedVersion + ".");
     }
     results.push({ path, httpStatus: response.status, check: expectedCheck, version: value.version });
   }
@@ -35,7 +44,7 @@ if (process.argv[1] && import.meta.url === new URL("file://" + process.argv[1]).
     console.error("Usage: node scripts/probe-public.mjs https://YOUR-AUTHORIZED-SERVICE");
     process.exitCode = 2;
   } else {
-    probePublicService(baseUrl).then(result => console.log(JSON.stringify(result))).catch(error => {
+    probePublicService(baseUrl, fetch, process.env.EXPECTED_ENGINE_VERSION || undefined).then(result => console.log(JSON.stringify(result))).catch(error => {
       console.error("Smoke check failed: " + (error instanceof Error ? error.message : "unknown error"));
       process.exitCode = 1;
     });

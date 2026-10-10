@@ -1,0 +1,37 @@
+name: Existing Secure Intake preview health
+
+# Checks the user's EXISTING Render service; never creates or deploys a new one.
+# Cron events are best effort and may run late. Failed probe != verified outage.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "*/15 * * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: existing-secure-intake-preview-health
+  cancel-in-progress: true
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate probe behavior offline
+        run: node scripts/test-probe-public.mjs
+      - name: Probe existing Secure Intake Render URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "## Existing Secure Intake preview: read-only health check" >> "$GITHUB_STEP_SUMMARY"
+          echo "This checks the existing Render URL and does not deploy or modify it." >> "$GITHUB_STEP_SUMMARY"
+          EXPECTED_ENGINE_VERSION="$(node -p "require('./package.json').version")" \
+            node scripts/probe-public.mjs https://secure-intake-preview.onrender.com | tee -a "$GITHUB_STEP_SUMMARY"
