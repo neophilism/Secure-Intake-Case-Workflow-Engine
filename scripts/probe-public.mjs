@@ -22,10 +22,16 @@ export async function probePublicService(baseUrl, fetcher = fetch, expectedVersi
     const response = await fetcher(origin + path, {
       method: "GET", redirect: "manual", cache: "no-store", signal: AbortSignal.timeout(timeoutMs)
     });
-    const value = response.ok ? await response.json() : null;
+    // /api/ready returns a deliberately coarse public database status even on HTTP 503.
+    // Read only a bounded known enum; never echo arbitrary response text or hidden database errors.
+    const value = await response.json().catch(() => null);
+    const databaseHint = path === "/api/ready" &&
+      ["unconfigured", "unavailable"].includes(value?.checks?.database)
+        ? " database=" + value.checks.database
+        : "";
     if (!response.ok || !value || value.status !== expectedStatus || value.check !== expectedCheck ||
         typeof value.version !== "string" || !value.version) {
-      throw new Error(path + " did not satisfy the " + expectedCheck + " contract (HTTP " + response.status + ").");
+      throw new Error(path + " did not satisfy the " + expectedCheck + " contract (HTTP " + response.status + databaseHint + ").");
     }
     if (path === "/api/ready" && value.checks?.database !== "ok") {
       throw new Error("Database readiness probe did not return ok.");
