@@ -1,10 +1,10 @@
 /** Pure fail-closed checks for a Neon + Render deployment. Never log secret values. */
-function httpsOrigin(value) {
+function httpsEndpoint(value, originOnly = false) {
   if (typeof value !== "string") return false;
   try {
     const u = new URL(value);
     return u.protocol === "https:" && !!u.hostname && !u.username && !u.password &&
-      !u.port && u.pathname === "/" && !u.search && !u.hash &&
+      !u.port && (!originOnly || u.pathname === "/") && !u.search && !u.hash &&
       u.hostname !== "localhost" && !u.hostname.endsWith(".localhost");
   } catch { return false; }
 }
@@ -18,7 +18,7 @@ function databaseUrl(value) {
   } catch { return false; }
 }
 function safeSecret(value) {
-  return typeof value === "string" && value.length >= 4 &&
+  return typeof value === "string" && !!value.trim() &&
     !["example", "changeme", "replace-me", "placeholder", "password"].includes(value.toLowerCase());
 }
 function encryptionKey(value) {
@@ -29,14 +29,14 @@ export function inspectProductionEnvironment(env) {
   const warnings = [];
   const requireCheck = (name, ok) => { if (!ok) failed.push(name); };
   requireCheck("database_tls_connection", databaseUrl(env.DATABASE_URL));
-  requireCheck("canonical_https_app_origin", httpsOrigin(env.APP_BASE_URL));
+  requireCheck("canonical_https_app_origin", httpsEndpoint(env.APP_BASE_URL, true));
   requireCheck("private_durable_document_driver", env.DOCUMENT_STORAGE_DRIVER === "s3");
-  requireCheck("secure_s3_endpoint", httpsOrigin(env.DOCUMENT_S3_ENDPOINT));
+  requireCheck("secure_s3_endpoint", httpsEndpoint(env.DOCUMENT_S3_ENDPOINT));
   requireCheck("s3_region", safeSecret(env.DOCUMENT_S3_REGION));
   requireCheck("s3_bucket", safeSecret(env.DOCUMENT_S3_BUCKET));
   requireCheck("s3_access_key_id", safeSecret(env.DOCUMENT_S3_ACCESS_KEY_ID));
   requireCheck("s3_secret_access_key", safeSecret(env.DOCUMENT_S3_SECRET_ACCESS_KEY));
-  requireCheck("https_malware_scanner", httpsOrigin(env.MALWARE_SCANNER_URL));
+  requireCheck("https_malware_scanner", httpsEndpoint(env.MALWARE_SCANNER_URL));
   requireCheck("malware_scanner_provider", safeSecret(env.MALWARE_SCANNER_PROVIDER));
   if (env.PROTECTED_DATA_ENCRYPTION_KEY) {
     requireCheck("protected_data_encryption_key_format", encryptionKey(env.PROTECTED_DATA_ENCRYPTION_KEY));

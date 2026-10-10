@@ -9,7 +9,7 @@ const valid = {
   DOCUMENT_S3_BUCKET: "private-documents",
   DOCUMENT_S3_ACCESS_KEY_ID: "access-key",
   DOCUMENT_S3_SECRET_ACCESS_KEY: "secret-key",
-  MALWARE_SCANNER_URL: "https://scanner.example.net",
+  MALWARE_SCANNER_URL: "https://scanner.example.net/v1/scan",
   MALWARE_SCANNER_PROVIDER: "scanner",
   PROTECTED_DATA_ENCRYPTION_KEY: "a".repeat(32) + "b".repeat(32),
   WEBHOOK_ENCRYPTION_KEY: "b".repeat(32) + "a".repeat(32)
