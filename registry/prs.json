@@ -10,163 +10,244 @@
       "id": "SI-01",
       "title": "Foundation and architecture",
       "origin": "original",
-      "prs": []
+      "prs": [
+        1
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-02",
       "title": "Organizations and tenancy",
       "origin": "original",
-      "prs": []
+      "prs": [
+        2
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-03",
       "title": "Authentication and RBAC",
       "origin": "original",
-      "prs": []
+      "prs": [
+        3
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-04",
       "title": "Configurable intake/forms",
       "origin": "original",
-      "prs": []
+      "prs": [
+        4
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-05",
       "title": "Submission to case lifecycle",
       "origin": "original",
-      "prs": []
+      "prs": [
+        5
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-06",
       "title": "Configurable workflow and transitions",
       "origin": "original",
-      "prs": []
+      "prs": [
+        6
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-07",
       "title": "Assignment and routing",
       "origin": "original",
-      "prs": []
+      "prs": [
+        7
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-08",
       "title": "Documents, attachments and evidence",
       "origin": "original",
-      "prs": []
+      "prs": [
+        8
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-09",
       "title": "Immutable audit events",
       "origin": "original",
-      "prs": []
+      "prs": [
+        9
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-10",
       "title": "Deadlines, statutory clocks and escalation",
       "origin": "original",
-      "prs": []
+      "prs": [
+        10
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-11",
       "title": "Notes, correspondence and communication",
       "origin": "original",
-      "prs": []
+      "prs": [
+        11
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-12",
       "title": "Notifications and jobs",
       "origin": "original",
-      "prs": []
+      "prs": [
+        12
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-13",
       "title": "Review, reconsideration and appeals",
       "origin": "original",
-      "prs": []
+      "prs": [
+        13
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-14",
       "title": "Public/private separation and redaction",
       "origin": "original",
-      "prs": []
+      "prs": [
+        14
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-15",
       "title": "Search, queues and dashboards",
       "origin": "original",
-      "prs": []
+      "prs": [
+        15
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-16",
       "title": "Integration API and webhooks",
       "origin": "original",
-      "prs": []
+      "prs": [
+        16
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-17",
       "title": "Declarative thin applications",
       "origin": "original",
-      "prs": []
+      "prs": [
+        17
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-18",
       "title": "Security hardening",
       "origin": "original",
-      "prs": []
+      "prs": [
+        18
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-19",
       "title": "Accessibility and public-sector usability",
       "origin": "original",
-      "prs": []
+      "prs": [
+        19
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-20",
       "title": "End-to-end reference application and 1.0 candidate",
       "origin": "original",
-      "prs": []
+      "prs": [
+        20
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-21",
       "title": "Generic 1.0 release contract",
       "origin": "addition",
-      "prs": []
+      "prs": [
+        21
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-22",
       "title": "Encrypted protected compartments",
       "origin": "addition",
-      "prs": []
+      "prs": [
+        22
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-23",
       "title": "External participant portal",
       "origin": "addition",
-      "prs": []
+      "prs": [
+        23
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-24",
       "title": "Conditional participant messaging",
       "origin": "addition",
-      "prs": []
+      "prs": [
+        24
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-25",
       "title": "Public attachment quarantine",
       "origin": "addition",
-      "prs": []
+      "prs": [
+        25
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-26",
       "title": "Parallel referral and recipient deadlines",
       "origin": "addition",
-      "prs": []
+      "prs": [
+        26
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-27",
       "title": "Operational views / thin app contracts",
       "origin": "addition",
-      "prs": []
+      "prs": [
+        27
+      ],
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
     },
     {
       "id": "SI-28",
