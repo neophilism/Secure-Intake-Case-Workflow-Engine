@@ -1,3 +1,5 @@
+> **Canonical PR roadmap:** [`registry/roadmap.json`](../registry/roadmap.json). Historical complete development specifications remain below; new PRs and counts must be entered only in the canonical file.
+
 # Secure Intake & Case Workflow Engine — recovered original development plan and independent-account handoff
 
 **Historical source:** Original October 5 generic 20-milestone plan plus October 6-9 security and operational extensions. Numbered 20-milestone original roadmap recovered from the previous conversations and cross-checked with checked-in roadmap and technical documentation. This document preserves original scope and, where applicable, separates later extensions. Technical per-item acceptance language is an engineering elaboration rather than a purported verbatim transcript; a milestone ID is **not** a GitHub PR number.
