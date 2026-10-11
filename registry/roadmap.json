@@ -3,7 +3,7 @@
   "title": "Secure-Intake-Case-Workflow-Engine",
   "version": 1,
   "planVerified": true,
-  "plannedPrCount": 35,
+  "plannedPrCount": 42,
   "sourceFiles": [
     "docs/DEVELOPMENT_PLAN.md"
   ],
@@ -144,6 +144,48 @@
       "origin": "addition"
     },
     {
+      "id": "SI-28",
+      "title": "Further production and security work — documented scope slot 1 of 7",
+      "origin": "addition",
+      "sourceHeading": "SI-28–34 — Further production and security work"
+    },
+    {
+      "id": "SI-29",
+      "title": "Further production and security work — documented scope slot 2 of 7",
+      "origin": "addition",
+      "sourceHeading": "SI-28–34 — Further production and security work"
+    },
+    {
+      "id": "SI-30",
+      "title": "Further production and security work — documented scope slot 3 of 7",
+      "origin": "addition",
+      "sourceHeading": "SI-28–34 — Further production and security work"
+    },
+    {
+      "id": "SI-31",
+      "title": "Further production and security work — documented scope slot 4 of 7",
+      "origin": "addition",
+      "sourceHeading": "SI-28–34 — Further production and security work"
+    },
+    {
+      "id": "SI-32",
+      "title": "Further production and security work — documented scope slot 5 of 7",
+      "origin": "addition",
+      "sourceHeading": "SI-28–34 — Further production and security work"
+    },
+    {
+      "id": "SI-33",
+      "title": "Further production and security work — documented scope slot 6 of 7",
+      "origin": "addition",
+      "sourceHeading": "SI-28–34 — Further production and security work"
+    },
+    {
+      "id": "SI-34",
+      "title": "Further production and security work — documented scope slot 7 of 7",
+      "origin": "addition",
+      "sourceHeading": "SI-28–34 — Further production and security work"
+    },
+    {
       "id": "SI-35",
       "title": "Reproducible builds and supply chain",
       "origin": "addition"
@@ -183,5 +225,6 @@
       "title": "Stable generic 1.0 release",
       "origin": "addition"
     }
-  ]
+  ],
+  "scopeNote": "SI-28 through SI-34 are seven work packages documented as a range in the source plan; titles reflect grouped scope, not fabricated verbatim historical titles."
 }
