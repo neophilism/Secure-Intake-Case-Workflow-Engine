@@ -1,0 +1,834 @@
+{
+  "schemaVersion": 1,
+  "repository": "neophilism/Secure-Intake-Case-Workflow-Engine",
+  "roadmapVersion": 1,
+  "planVerified": true,
+  "plannedPrCount": 42,
+  "observedAt": "2026-10-11T17:39:29.811Z",
+  "units": [
+    {
+      "id": "SI-01",
+      "title": "Foundation and architecture",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-02",
+      "title": "Organizations and tenancy",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-03",
+      "title": "Authentication and RBAC",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-04",
+      "title": "Configurable intake/forms",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-05",
+      "title": "Submission to case lifecycle",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-06",
+      "title": "Configurable workflow and transitions",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-07",
+      "title": "Assignment and routing",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-08",
+      "title": "Documents, attachments and evidence",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-09",
+      "title": "Immutable audit events",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-10",
+      "title": "Deadlines, statutory clocks and escalation",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-11",
+      "title": "Notes, correspondence and communication",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-12",
+      "title": "Notifications and jobs",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-13",
+      "title": "Review, reconsideration and appeals",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-14",
+      "title": "Public/private separation and redaction",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-15",
+      "title": "Search, queues and dashboards",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-16",
+      "title": "Integration API and webhooks",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-17",
+      "title": "Declarative thin applications",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-18",
+      "title": "Security hardening",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-19",
+      "title": "Accessibility and public-sector usability",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-20",
+      "title": "End-to-end reference application and 1.0 candidate",
+      "origin": "original",
+      "prs": []
+    },
+    {
+      "id": "SI-21",
+      "title": "Generic 1.0 release contract",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-22",
+      "title": "Encrypted protected compartments",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-23",
+      "title": "External participant portal",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-24",
+      "title": "Conditional participant messaging",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-25",
+      "title": "Public attachment quarantine",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-26",
+      "title": "Parallel referral and recipient deadlines",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-27",
+      "title": "Operational views / thin app contracts",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-28",
+      "title": "Further production and security work — documented scope slot 1 of 7",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-29",
+      "title": "Further production and security work — documented scope slot 2 of 7",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-30",
+      "title": "Further production and security work — documented scope slot 3 of 7",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-31",
+      "title": "Further production and security work — documented scope slot 4 of 7",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-32",
+      "title": "Further production and security work — documented scope slot 5 of 7",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-33",
+      "title": "Further production and security work — documented scope slot 6 of 7",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-34",
+      "title": "Further production and security work — documented scope slot 7 of 7",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-35",
+      "title": "Reproducible builds and supply chain",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-36",
+      "title": "Production deployment",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-37",
+      "title": "Data protection and durability",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-38",
+      "title": "E2EESA aligned security architecture",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-39",
+      "title": "Notifications and downstream integration",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-40",
+      "title": "Monitoring and production acceptance",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-41",
+      "title": "Release security/usability/load tests",
+      "origin": "addition",
+      "prs": []
+    },
+    {
+      "id": "SI-42",
+      "title": "Stable generic 1.0 release",
+      "origin": "addition",
+      "prs": []
+    }
+  ],
+  "pullRequests": [
+    {
+      "id": 4807491447,
+      "number": 38,
+      "title": "PR 38: Surface bounded readiness diagnosis without leaking secrets",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/38",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-10T00:57:23.000Z",
+      "updatedAt": "2026-10-10T15:57:27.000Z",
+      "closedAt": "2026-10-10T15:57:27.000Z",
+      "mergedAt": "2026-10-10T15:57:26.000Z",
+      "headSha": "8588a070dd62d4d9c3c66319be88ab717a384793",
+      "baseRef": "main",
+      "mergeCommitSha": "0a63f658be3b92a5c5faef711971acf6018b358e"
+    },
+    {
+      "id": 4807448347,
+      "number": 37,
+      "title": "PR 37: Secret-safe Neon/Render deployment preflight",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/37",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-10T00:50:22.000Z",
+      "updatedAt": "2026-10-10T00:59:04.000Z",
+      "closedAt": "2026-10-10T00:59:04.000Z",
+      "mergedAt": "2026-10-10T00:59:04.000Z",
+      "headSha": "d6cbac3991c9f96153daaf0578731e2839f021ef",
+      "baseRef": "main",
+      "mergeCommitSha": "87be4475c87f8a649d884f91e7161121bf94e697"
+    },
+    {
+      "id": 4807441262,
+      "number": 36,
+      "title": "PR 36: Monitor existing Secure Intake preview, not a duplicate",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/36",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-10T00:49:06.000Z",
+      "updatedAt": "2026-10-10T00:54:03.000Z",
+      "closedAt": "2026-10-10T00:54:03.000Z",
+      "mergedAt": "2026-10-10T00:54:03.000Z",
+      "headSha": "c87d7e7bf1007906a5cb567c090a9971c3b1b011",
+      "baseRef": "main",
+      "mergeCommitSha": "c593314b292429a60db1621b3913a7655462ee36"
+    },
+    {
+      "id": 4807394227,
+      "number": 35,
+      "title": "PR 35: Immutable Render deployment contract and smoke checks",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/35",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-10T00:40:46.000Z",
+      "updatedAt": "2026-10-10T00:45:08.000Z",
+      "closedAt": "2026-10-10T00:45:08.000Z",
+      "mergedAt": "2026-10-10T00:45:08.000Z",
+      "headSha": "ff323b8fd91815154dfe47352bbf91aab511781a",
+      "baseRef": "main",
+      "mergeCommitSha": "2825237c401ca7c0f60b8e942f2717de592dd7f0"
+    },
+    {
+      "id": 4781304652,
+      "number": 34,
+      "title": "PR 34: Immutable release-request automation + rc.9 request",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/34",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-08T03:20:17.000Z",
+      "updatedAt": "2026-10-08T03:32:10.000Z",
+      "closedAt": "2026-10-08T03:32:10.000Z",
+      "mergedAt": "2026-10-08T03:32:10.000Z",
+      "headSha": "1950f12aabd0d9dbc673a2a00551d46d9393b290",
+      "baseRef": "main",
+      "mergeCommitSha": "bf0667e8a7ab828b36c47e1222c7f736568479fe"
+    },
+    {
+      "id": 4781122036,
+      "number": 33,
+      "title": "PR 33: One-click validated release dispatch",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/33",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-08T02:52:39.000Z",
+      "updatedAt": "2026-10-08T03:11:23.000Z",
+      "closedAt": "2026-10-08T03:11:22.000Z",
+      "mergedAt": "2026-10-08T03:11:22.000Z",
+      "headSha": "3f34936c5572191c5be7e293167fec76ac411ded",
+      "baseRef": "main",
+      "mergeCommitSha": "2fb452f23e5e5464db03a3ec95d36c4bc2db4fa4"
+    },
+    {
+      "id": 4780705156,
+      "number": 32,
+      "title": "PR 31: Mainline immutable release evidence",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/32",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-08T01:51:12.000Z",
+      "updatedAt": "2026-10-08T01:51:37.000Z",
+      "closedAt": "2026-10-08T01:51:37.000Z",
+      "mergedAt": null,
+      "headSha": "d0c3bb84392ecf6d73db9db347111087d4bd8ffe",
+      "baseRef": "main",
+      "mergeCommitSha": "18b6a04c7b6d13ca0ad8a3e927252cdb55608289"
+    },
+    {
+      "id": 4780393274,
+      "number": 31,
+      "title": "PR 31: Land immutable release evidence on main",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/31",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-08T01:07:30.000Z",
+      "updatedAt": "2026-10-08T01:15:21.000Z",
+      "closedAt": "2026-10-08T01:15:21.000Z",
+      "mergedAt": "2026-10-08T01:15:21.000Z",
+      "headSha": "509b4734a5d65c9716b4a91ea34fa4b3979d9d17",
+      "baseRef": "main",
+      "mergeCommitSha": "788de83a9f00e9bb68c470838b4256fc8f932304"
+    },
+    {
+      "id": 4780239685,
+      "number": 30,
+      "title": "PR 30: Immutable container release evidence",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/30",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-08T00:44:10.000Z",
+      "updatedAt": "2026-10-08T01:03:28.000Z",
+      "closedAt": "2026-10-08T01:03:28.000Z",
+      "mergedAt": "2026-10-08T01:03:28.000Z",
+      "headSha": "ec2597e23af3475fd97eb1fce8b6e4eceff8435b",
+      "baseRef": "pr-29-health-readiness-contract",
+      "mergeCommitSha": "d0c3bb84392ecf6d73db9db347111087d4bd8ffe"
+    },
+    {
+      "id": 4780196938,
+      "number": 29,
+      "title": "PR 29: Liveness and readiness contracts",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/29",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-08T00:37:38.000Z",
+      "updatedAt": "2026-10-08T01:03:09.000Z",
+      "closedAt": "2026-10-08T01:03:09.000Z",
+      "mergedAt": "2026-10-08T01:03:09.000Z",
+      "headSha": "757e8c6f3e55419cbf12a877b37f798527323732",
+      "baseRef": "main",
+      "mergeCommitSha": "c7fd9dc36b88a1a53c5088996efb783994c0a83b"
+    },
+    {
+      "id": 4779697996,
+      "number": 28,
+      "title": "PR 28: Durable object storage and automatic malware scanning",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/28",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-07T23:25:27.000Z",
+      "updatedAt": "2026-10-08T00:08:17.000Z",
+      "closedAt": "2026-10-08T00:08:17.000Z",
+      "mergedAt": "2026-10-08T00:08:17.000Z",
+      "headSha": "e2d744ac0032e479438251513596eb5c7f7f03f9",
+      "baseRef": "main",
+      "mergeCommitSha": "e7a79a84c7025a862473b21fc5f36a2c4e5673c9"
+    },
+    {
+      "id": 4777894136,
+      "number": 27,
+      "title": "PR 27: Application operations profiles and participant-safe contact",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/27",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-07T20:10:10.000Z",
+      "updatedAt": "2026-10-07T20:45:38.000Z",
+      "closedAt": "2026-10-07T20:45:38.000Z",
+      "mergedAt": "2026-10-07T20:45:38.000Z",
+      "headSha": "539455dc6d61b93ab02c599b1da60c5639e9d1c3",
+      "baseRef": "main",
+      "mergeCommitSha": "ca4cdd236de76674830c45a64178999efffe4010"
+    },
+    {
+      "id": 4777408239,
+      "number": 26,
+      "title": "PR 26: Parallel case referrals and recipient-specific clocks",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/26",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-07T19:24:25.000Z",
+      "updatedAt": "2026-10-07T19:43:01.000Z",
+      "closedAt": "2026-10-07T19:43:01.000Z",
+      "mergedAt": "2026-10-07T19:43:01.000Z",
+      "headSha": "58bc74262266a85b1212ae6d2fad4d7abad319c2",
+      "baseRef": "main",
+      "mergeCommitSha": "6145c3401dcfdd64fa7b8bc1423bf52450aefe98"
+    },
+    {
+      "id": 4777116444,
+      "number": 25,
+      "title": "PR 25: Secure public attachment pipeline",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/25",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-07T18:58:45.000Z",
+      "updatedAt": "2026-10-07T19:08:25.000Z",
+      "closedAt": "2026-10-07T19:08:24.000Z",
+      "mergedAt": "2026-10-07T19:08:24.000Z",
+      "headSha": "f58a5d08f9296318375460ece35e4e4c754f4ff4",
+      "baseRef": "main",
+      "mergeCommitSha": "7b771d3b42647a8188414e13677bc754768c5b69"
+    },
+    {
+      "id": 4774592942,
+      "number": 24,
+      "title": "PR 24: Conditional participant messaging and true status-only access",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/24",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-07T15:06:14.000Z",
+      "updatedAt": "2026-10-07T15:22:42.000Z",
+      "closedAt": "2026-10-07T15:22:42.000Z",
+      "mergedAt": "2026-10-07T15:22:42.000Z",
+      "headSha": "c8889d92c6f872d30551253193165aa059502e7b",
+      "baseRef": "main",
+      "mergeCommitSha": "b7b1f74ed210d68eb61015efc6850167d03721da"
+    },
+    {
+      "id": 4762763123,
+      "number": 23,
+      "title": "PR 23: Protected external participant portal and secure case messaging",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/23",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T18:05:48.000Z",
+      "updatedAt": "2026-10-07T14:59:59.000Z",
+      "closedAt": "2026-10-07T14:59:59.000Z",
+      "mergedAt": "2026-10-07T14:59:59.000Z",
+      "headSha": "103edf2b6613620f1c134e023f3a9a99f5816e78",
+      "baseRef": "main",
+      "mergeCommitSha": "01a831819aad0268c996eed3e333e4e0551e0ac1"
+    },
+    {
+      "id": 4761987067,
+      "number": 22,
+      "title": "PR 22: Protected form compartments and dual-control reveal",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/22",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T16:55:24.000Z",
+      "updatedAt": "2026-10-06T17:14:05.000Z",
+      "closedAt": "2026-10-06T17:14:05.000Z",
+      "mergedAt": "2026-10-06T17:14:05.000Z",
+      "headSha": "707a48b128855387eae24483daf86702c81ea074",
+      "baseRef": "main",
+      "mergeCommitSha": "b8db6155657d7f7576fde72f1dba0563c190c853"
+    },
+    {
+      "id": 4760644814,
+      "number": 21,
+      "title": "PR 21: Generic 1.0 release contract and integration testing",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/21",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T15:03:16.000Z",
+      "updatedAt": "2026-10-06T15:39:39.000Z",
+      "closedAt": "2026-10-06T15:39:39.000Z",
+      "mergedAt": "2026-10-06T15:39:38.000Z",
+      "headSha": "cbe62ae80775e22ac1c596107baf99107552c413",
+      "baseRef": "main",
+      "mergeCommitSha": "84362ad69ffd45a421d026c1c6a5ec0621a6b203"
+    },
+    {
+      "id": 4760091577,
+      "number": 20,
+      "title": "PR 20: End-to-end reference application and 1.0 release candidate",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/20",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T14:20:36.000Z",
+      "updatedAt": "2026-10-06T15:11:35.000Z",
+      "closedAt": "2026-10-06T14:24:36.000Z",
+      "mergedAt": "2026-10-06T14:24:35.000Z",
+      "headSha": "f9394ed96713240fa259eaffbe76cae92c873a7a",
+      "baseRef": "main",
+      "mergeCommitSha": "b73185054055692c8d464b64e44a57b583a1423c"
+    },
+    {
+      "id": 4759552703,
+      "number": 19,
+      "title": "PR 19: Accessibility, usability, and public-sector quality",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/19",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T13:39:03.000Z",
+      "updatedAt": "2026-10-06T13:50:09.000Z",
+      "closedAt": "2026-10-06T13:50:09.000Z",
+      "mergedAt": "2026-10-06T13:50:09.000Z",
+      "headSha": "b27a0d76fc12d50873a2444c6e7451b71169a331",
+      "baseRef": "main",
+      "mergeCommitSha": "18b2435f80d04d818a69a28bebcee7f6c63900d8"
+    },
+    {
+      "id": 4759299785,
+      "number": 18,
+      "title": "PR 18: Security hardening",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/18",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T13:18:38.000Z",
+      "updatedAt": "2026-10-06T13:27:26.000Z",
+      "closedAt": "2026-10-06T13:27:26.000Z",
+      "mergedAt": "2026-10-06T13:27:26.000Z",
+      "headSha": "87743b6993b2287524010b026328cf947da46dbf",
+      "baseRef": "main",
+      "mergeCommitSha": "67b07f855ed34c133ecff7c57b730e24ed81f713"
+    },
+    {
+      "id": 4758978811,
+      "number": 17,
+      "title": "PR 17: Configuration and white-label application layer",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/17",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T12:51:57.000Z",
+      "updatedAt": "2026-10-06T13:01:03.000Z",
+      "closedAt": "2026-10-06T13:01:03.000Z",
+      "mergedAt": "2026-10-06T13:01:03.000Z",
+      "headSha": "d332d09b0bf519e2980fd835fdc356cad516d975",
+      "baseRef": "main",
+      "mergeCommitSha": "5c7d3e7be2212eba585772d93f36dc13df8e10e7"
+    },
+    {
+      "id": 4755107325,
+      "number": 16,
+      "title": "PR 16: API and webhooks",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/16",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T06:38:14.000Z",
+      "updatedAt": "2026-10-06T12:33:06.000Z",
+      "closedAt": "2026-10-06T12:33:06.000Z",
+      "mergedAt": "2026-10-06T12:33:06.000Z",
+      "headSha": "32d2f14a79fce64e13423d8290ed7bfb94f94be1",
+      "baseRef": "main",
+      "mergeCommitSha": "5df031277012f044e0583be8e402970ab6da8034"
+    },
+    {
+      "id": 4754968713,
+      "number": 15,
+      "title": "PR 15: Search, queues, and operational dashboards",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/15",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T06:21:40.000Z",
+      "updatedAt": "2026-10-06T06:24:57.000Z",
+      "closedAt": "2026-10-06T06:24:57.000Z",
+      "mergedAt": "2026-10-06T06:24:57.000Z",
+      "headSha": "be6bd46e932152bbc46a676eeea1ef09b3139786",
+      "baseRef": "main",
+      "mergeCommitSha": "9f96cafbfd3cb0d741a2c8a5b7fc7ec79533869b"
+    },
+    {
+      "id": 4754472424,
+      "number": 14,
+      "title": "PR 14: Public/private separation and redaction",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/14",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T05:17:15.000Z",
+      "updatedAt": "2026-10-06T05:32:28.000Z",
+      "closedAt": "2026-10-06T05:32:28.000Z",
+      "mergedAt": "2026-10-06T05:32:28.000Z",
+      "headSha": "134aa1c3590426578bbe6728d21f26f643f5064c",
+      "baseRef": "main",
+      "mergeCommitSha": "3b22649d801682e7548ca32abbdf91786e4da890"
+    },
+    {
+      "id": 4754242278,
+      "number": 13,
+      "title": "PR 13: Review, reconsideration, and appeals",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/13",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T04:43:22.000Z",
+      "updatedAt": "2026-10-06T04:59:34.000Z",
+      "closedAt": "2026-10-06T04:59:33.000Z",
+      "mergedAt": "2026-10-06T04:59:33.000Z",
+      "headSha": "c2ba95e62259805d601f81e4734d6702fa39133d",
+      "baseRef": "main",
+      "mergeCommitSha": "0452c135f1323532f80768c4fda8cf13c6719be9"
+    },
+    {
+      "id": 4753411487,
+      "number": 12,
+      "title": "PR 12: Notifications and background jobs",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/12",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T02:41:54.000Z",
+      "updatedAt": "2026-10-06T04:23:55.000Z",
+      "closedAt": "2026-10-06T04:23:55.000Z",
+      "mergedAt": "2026-10-06T04:23:55.000Z",
+      "headSha": "3d8a4cdd3be15c784f43a79dc9c8560d598768ef",
+      "baseRef": "main",
+      "mergeCommitSha": "801a45e508d68261dc60498d16472e9151c78be3"
+    },
+    {
+      "id": 4753270079,
+      "number": 11,
+      "title": "PR 11: Notes, correspondence, and communication",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/11",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T02:22:00.000Z",
+      "updatedAt": "2026-10-06T02:25:32.000Z",
+      "closedAt": "2026-10-06T02:25:32.000Z",
+      "mergedAt": "2026-10-06T02:25:32.000Z",
+      "headSha": "9d8c85515800d6162cc5a950fcabfa790d6b680c",
+      "baseRef": "main",
+      "mergeCommitSha": "292bb47c5fb1afd1413925f44e8b86468279dd22"
+    },
+    {
+      "id": 4753154669,
+      "number": 10,
+      "title": "PR 10: Deadlines, statutory clocks, and escalation",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/10",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T02:05:22.000Z",
+      "updatedAt": "2026-10-06T02:07:02.000Z",
+      "closedAt": "2026-10-06T02:07:02.000Z",
+      "mergedAt": "2026-10-06T02:07:02.000Z",
+      "headSha": "e9c6a81eb4f718afb1f5d8667d979b64ca3f6931",
+      "baseRef": "main",
+      "mergeCommitSha": "eeec0b90f81d3dc608b23901217d8da701970056"
+    },
+    {
+      "id": 4753035839,
+      "number": 9,
+      "title": "PR 9: Immutable audit event system",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/9",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T01:47:15.000Z",
+      "updatedAt": "2026-10-06T01:53:39.000Z",
+      "closedAt": "2026-10-06T01:53:39.000Z",
+      "mergedAt": "2026-10-06T01:53:39.000Z",
+      "headSha": "c693bf3922d3fee5b80f8bd435d11712b82029e3",
+      "baseRef": "main",
+      "mergeCommitSha": "c121018b2ca8e1a6a5ac86fb5ecec624ac71ff60"
+    },
+    {
+      "id": 4752898878,
+      "number": 8,
+      "title": "PR 8: Document and evidence subsystem",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/8",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T01:26:33.000Z",
+      "updatedAt": "2026-10-06T01:30:04.000Z",
+      "closedAt": "2026-10-06T01:30:04.000Z",
+      "mergedAt": "2026-10-06T01:30:04.000Z",
+      "headSha": "7476aee46a1c077bb0e210b47f12b18d636a46c3",
+      "baseRef": "main",
+      "mergeCommitSha": "c2110460a43b2471616ff8b051c982b1ec7d8ec5"
+    },
+    {
+      "id": 4752781757,
+      "number": 7,
+      "title": "PR 7: Assignment, routing, and escalation",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/7",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T01:10:01.000Z",
+      "updatedAt": "2026-10-06T01:16:34.000Z",
+      "closedAt": "2026-10-06T01:16:34.000Z",
+      "mergedAt": "2026-10-06T01:16:33.000Z",
+      "headSha": "259f797356aceb8b38768a7b47cafc47013fbe81",
+      "baseRef": "main",
+      "mergeCommitSha": "6ff7f4579cc13c0cdf22d6c69eba1ac3d93ff5de"
+    },
+    {
+      "id": 4752708930,
+      "number": 6,
+      "title": "PR 6: Configurable workflow and transition engine",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/6",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T01:00:21.000Z",
+      "updatedAt": "2026-10-06T01:02:16.000Z",
+      "closedAt": "2026-10-06T01:02:16.000Z",
+      "mergedAt": "2026-10-06T01:02:16.000Z",
+      "headSha": "1024dc9cebccc2a04b13de016159aa55b3eefa4f",
+      "baseRef": "main",
+      "mergeCommitSha": "64b4319f9bc2c0ed4abb5ed8b5212e8a53122113"
+    },
+    {
+      "id": 4752579841,
+      "number": 5,
+      "title": "PR 5: Submission-to-case lifecycle",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/5",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T00:42:35.000Z",
+      "updatedAt": "2026-10-06T00:49:52.000Z",
+      "closedAt": "2026-10-06T00:49:52.000Z",
+      "mergedAt": "2026-10-06T00:49:51.000Z",
+      "headSha": "607cc4468f188544818b03c90eb0e473166cb0de",
+      "baseRef": "main",
+      "mergeCommitSha": "584de0c69485602edaab90d351d4a136033f0c8c"
+    },
+    {
+      "id": 4752457195,
+      "number": 4,
+      "title": "PR 4: Configurable intake and form engine",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/4",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T00:25:54.000Z",
+      "updatedAt": "2026-10-06T00:36:53.000Z",
+      "closedAt": "2026-10-06T00:36:52.000Z",
+      "mergedAt": "2026-10-06T00:36:52.000Z",
+      "headSha": "ce94b55b75d858c790ff91ebffd25f5cfcc299f3",
+      "baseRef": "main",
+      "mergeCommitSha": "7387db3062ce0b6e93bdd874672fcde50f483c50"
+    },
+    {
+      "id": 4752370381,
+      "number": 3,
+      "title": "PR 3: Authentication and role-based access control",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/3",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T00:14:36.000Z",
+      "updatedAt": "2026-10-06T00:19:09.000Z",
+      "closedAt": "2026-10-06T00:19:09.000Z",
+      "mergedAt": "2026-10-06T00:19:09.000Z",
+      "headSha": "c0750df46e5ad26d954b6a5219f686f763c53547",
+      "baseRef": "main",
+      "mergeCommitSha": "e323a76c54642cb497bb08363dddef6914b41bb4"
+    },
+    {
+      "id": 4752293403,
+      "number": 2,
+      "title": "PR 2: Organizations, memberships, and tenant isolation",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/2",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-06T00:04:47.000Z",
+      "updatedAt": "2026-10-06T00:09:16.000Z",
+      "closedAt": "2026-10-06T00:09:16.000Z",
+      "mergedAt": "2026-10-06T00:09:16.000Z",
+      "headSha": "2772bdf0bb56ab12487d4d635039f4d715b08a8a",
+      "baseRef": "main",
+      "mergeCommitSha": "f3fe5060afaadc686d251d13b7288690119f0e36"
+    },
+    {
+      "id": 4752243002,
+      "number": 1,
+      "title": "PR 1: Foundation and architectural contract",
+      "url": "https://github.com/neophilism/Secure-Intake-Case-Workflow-Engine/pull/1",
+      "state": "closed",
+      "draft": false,
+      "createdAt": "2026-10-05T23:58:34.000Z",
+      "updatedAt": "2026-10-06T00:01:19.000Z",
+      "closedAt": "2026-10-06T00:01:19.000Z",
+      "mergedAt": "2026-10-06T00:01:19.000Z",
+      "headSha": "8a700aeba2680f7225e9f552e59f15357e5f29f3",
+      "baseRef": "main",
+      "mergeCommitSha": "ffd649d8199483169d990f7c3c6b849ac341dc91"
+    }
+  ]
+}
