@@ -1,0 +1,187 @@
+{
+  "repository": "neophilism/Secure-Intake-Case-Workflow-Engine",
+  "title": "Secure-Intake-Case-Workflow-Engine",
+  "version": 1,
+  "planVerified": true,
+  "plannedPrCount": 35,
+  "sourceFiles": [
+    "docs/DEVELOPMENT_PLAN.md"
+  ],
+  "milestones": [
+    {
+      "id": "SI-01",
+      "title": "Foundation and architecture",
+      "origin": "original"
+    },
+    {
+      "id": "SI-02",
+      "title": "Organizations and tenancy",
+      "origin": "original"
+    },
+    {
+      "id": "SI-03",
+      "title": "Authentication and RBAC",
+      "origin": "original"
+    },
+    {
+      "id": "SI-04",
+      "title": "Configurable intake/forms",
+      "origin": "original"
+    },
+    {
+      "id": "SI-05",
+      "title": "Submission to case lifecycle",
+      "origin": "original"
+    },
+    {
+      "id": "SI-06",
+      "title": "Configurable workflow and transitions",
+      "origin": "original"
+    },
+    {
+      "id": "SI-07",
+      "title": "Assignment and routing",
+      "origin": "original"
+    },
+    {
+      "id": "SI-08",
+      "title": "Documents, attachments and evidence",
+      "origin": "original"
+    },
+    {
+      "id": "SI-09",
+      "title": "Immutable audit events",
+      "origin": "original"
+    },
+    {
+      "id": "SI-10",
+      "title": "Deadlines, statutory clocks and escalation",
+      "origin": "original"
+    },
+    {
+      "id": "SI-11",
+      "title": "Notes, correspondence and communication",
+      "origin": "original"
+    },
+    {
+      "id": "SI-12",
+      "title": "Notifications and jobs",
+      "origin": "original"
+    },
+    {
+      "id": "SI-13",
+      "title": "Review, reconsideration and appeals",
+      "origin": "original"
+    },
+    {
+      "id": "SI-14",
+      "title": "Public/private separation and redaction",
+      "origin": "original"
+    },
+    {
+      "id": "SI-15",
+      "title": "Search, queues and dashboards",
+      "origin": "original"
+    },
+    {
+      "id": "SI-16",
+      "title": "Integration API and webhooks",
+      "origin": "original"
+    },
+    {
+      "id": "SI-17",
+      "title": "Declarative thin applications",
+      "origin": "original"
+    },
+    {
+      "id": "SI-18",
+      "title": "Security hardening",
+      "origin": "original"
+    },
+    {
+      "id": "SI-19",
+      "title": "Accessibility and public-sector usability",
+      "origin": "original"
+    },
+    {
+      "id": "SI-20",
+      "title": "End-to-end reference application and 1.0 candidate",
+      "origin": "original"
+    },
+    {
+      "id": "SI-21",
+      "title": "Generic 1.0 release contract",
+      "origin": "addition"
+    },
+    {
+      "id": "SI-22",
+      "title": "Encrypted protected compartments",
+      "origin": "addition"
+    },
+    {
+      "id": "SI-23",
+      "title": "External participant portal",
+      "origin": "addition"
+    },
+    {
+      "id": "SI-24",
+      "title": "Conditional participant messaging",
+      "origin": "addition"
+    },
+    {
+      "id": "SI-25",
+      "title": "Public attachment quarantine",
+      "origin": "addition"
+    },
+    {
+      "id": "SI-26",
+      "title": "Parallel referral and recipient deadlines",
+      "origin": "addition"
+    },
+    {
+      "id": "SI-27",
+      "title": "Operational views / thin app contracts",
+      "origin": "addition"
+    },
+    {
+      "id": "SI-35",
+      "title": "Reproducible builds and supply chain",
+      "origin": "addition"
+    },
+    {
+      "id": "SI-36",
+      "title": "Production deployment",
+      "origin": "addition"
+    },
+    {
+      "id": "SI-37",
+      "title": "Data protection and durability",
+      "origin": "addition"
+    },
+    {
+      "id": "SI-38",
+      "title": "E2EESA aligned security architecture",
+      "origin": "addition"
+    },
+    {
+      "id": "SI-39",
+      "title": "Notifications and downstream integration",
+      "origin": "addition"
+    },
+    {
+      "id": "SI-40",
+      "title": "Monitoring and production acceptance",
+      "origin": "addition"
+    },
+    {
+      "id": "SI-41",
+      "title": "Release security/usability/load tests",
+      "origin": "addition"
+    },
+    {
+      "id": "SI-42",
+      "title": "Stable generic 1.0 release",
+      "origin": "addition"
+    }
+  ]
+}
