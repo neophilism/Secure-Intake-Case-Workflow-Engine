@@ -1,9 +1,14 @@
 {
-  "schemaVersion": 1,
   "repository": "neophilism/Secure-Intake-Case-Workflow-Engine",
-  "roadmapVersion": 1,
+  "title": "Secure-Intake-Case-Workflow-Engine",
   "planVerified": true,
   "plannedPrCount": 42,
+  "sourceFiles": [
+    "docs/DEVELOPMENT_PLAN.md"
+  ],
+  "scopeNote": "SI-28 through SI-34 are seven work packages documented as a range in the source plan; titles reflect grouped scope, not fabricated verbatim historical titles.",
+  "schemaVersion": 1,
+  "roadmapVersion": 1,
   "observedAt": "2026-10-11T17:39:29.811Z",
   "units": [
     {
@@ -13,7 +18,10 @@
       "prs": [
         1
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-02",
@@ -22,7 +30,10 @@
       "prs": [
         2
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-03",
@@ -31,7 +42,10 @@
       "prs": [
         3
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-04",
@@ -40,7 +54,10 @@
       "prs": [
         4
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-05",
@@ -49,7 +66,10 @@
       "prs": [
         5
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-06",
@@ -58,7 +78,10 @@
       "prs": [
         6
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-07",
@@ -67,7 +90,10 @@
       "prs": [
         7
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-08",
@@ -76,7 +102,10 @@
       "prs": [
         8
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-09",
@@ -85,7 +114,10 @@
       "prs": [
         9
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-10",
@@ -94,7 +126,10 @@
       "prs": [
         10
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-11",
@@ -103,7 +138,10 @@
       "prs": [
         11
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-12",
@@ -112,7 +150,10 @@
       "prs": [
         12
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-13",
@@ -121,7 +162,10 @@
       "prs": [
         13
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-14",
@@ -130,7 +174,10 @@
       "prs": [
         14
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-15",
@@ -139,7 +186,10 @@
       "prs": [
         15
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-16",
@@ -148,7 +198,10 @@
       "prs": [
         16
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-17",
@@ -157,7 +210,10 @@
       "prs": [
         17
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-18",
@@ -166,7 +222,10 @@
       "prs": [
         18
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-19",
@@ -175,7 +234,10 @@
       "prs": [
         19
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-20",
@@ -184,7 +246,10 @@
       "prs": [
         20
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-21",
@@ -193,7 +258,10 @@
       "prs": [
         21
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-22",
@@ -202,7 +270,10 @@
       "prs": [
         22
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-23",
@@ -211,7 +282,10 @@
       "prs": [
         23
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-24",
@@ -220,7 +294,10 @@
       "prs": [
         24
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-25",
@@ -229,7 +306,10 @@
       "prs": [
         25
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-26",
@@ -238,7 +318,10 @@
       "prs": [
         26
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-27",
@@ -247,97 +330,152 @@
       "prs": [
         27
       ],
-      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit"
+      "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-28",
       "title": "Further production and security work — documented scope slot 1 of 7",
       "origin": "addition",
-      "prs": []
+      "prs": [],
+      "sourceHeading": "SI-28–34 — Further production and security work",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-29",
       "title": "Further production and security work — documented scope slot 2 of 7",
       "origin": "addition",
-      "prs": []
+      "prs": [],
+      "sourceHeading": "SI-28–34 — Further production and security work",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-30",
       "title": "Further production and security work — documented scope slot 3 of 7",
       "origin": "addition",
-      "prs": []
+      "prs": [],
+      "sourceHeading": "SI-28–34 — Further production and security work",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-31",
       "title": "Further production and security work — documented scope slot 4 of 7",
       "origin": "addition",
-      "prs": []
+      "prs": [],
+      "sourceHeading": "SI-28–34 — Further production and security work",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-32",
       "title": "Further production and security work — documented scope slot 5 of 7",
       "origin": "addition",
-      "prs": []
+      "prs": [],
+      "sourceHeading": "SI-28–34 — Further production and security work",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-33",
       "title": "Further production and security work — documented scope slot 6 of 7",
       "origin": "addition",
-      "prs": []
+      "prs": [],
+      "sourceHeading": "SI-28–34 — Further production and security work",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-34",
       "title": "Further production and security work — documented scope slot 7 of 7",
       "origin": "addition",
-      "prs": []
+      "prs": [],
+      "sourceHeading": "SI-28–34 — Further production and security work",
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-35",
       "title": "Reproducible builds and supply chain",
       "origin": "addition",
-      "prs": []
+      "prs": [],
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-36",
       "title": "Production deployment",
       "origin": "addition",
-      "prs": []
+      "prs": [],
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-37",
       "title": "Data protection and durability",
       "origin": "addition",
-      "prs": []
+      "prs": [],
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-38",
       "title": "E2EESA aligned security architecture",
       "origin": "addition",
-      "prs": []
+      "prs": [],
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-39",
       "title": "Notifications and downstream integration",
       "origin": "addition",
-      "prs": []
+      "prs": [],
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-40",
       "title": "Monitoring and production acceptance",
       "origin": "addition",
-      "prs": []
+      "prs": [],
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-41",
       "title": "Release security/usability/load tests",
       "origin": "addition",
-      "prs": []
+      "prs": [],
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     },
     {
       "id": "SI-42",
       "title": "Stable generic 1.0 release",
       "origin": "addition",
-      "prs": []
+      "prs": [],
+      "dependsOn": [],
+      "externalDependencies": [],
+      "externalPrerequisites": []
     }
   ],
   "pullRequests": [
