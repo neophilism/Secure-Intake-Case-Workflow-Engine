@@ -1,0 +1,89 @@
+version: 2.1
+
+# Full repository source/release-contract CI, real PostgreSQL, Docker and
+# security-status evidence. Live deployment/release remain separate human gates.
+jobs:
+  full-verification:
+    machine:
+      image: ubuntu-2404:current
+    resource_class: medium
+    environment:
+      DATABASE_URL: postgres://casework:casework@127.0.0.1:5432/casework
+      APP_BASE_URL: http://localhost:3000
+      PROTECTED_DATA_ENCRYPTION_KEY: "1111111111111111111111111111111111111111111111111111111111111111"
+    steps:
+      - checkout
+      - run:
+          name: Start genuine PostgreSQL 16 and install Node.js 22
+          command: |
+            docker run -d --name casework-ci-postgres -e POSTGRES_USER=casework -e POSTGRES_PASSWORD=casework -e POSTGRES_DB=casework -p 127.0.0.1:5432:5432 postgres:16-alpine
+            for i in $(seq 1 30); do
+              if docker exec casework-ci-postgres pg_isready -U casework -d casework; then break; fi
+              sleep 2
+            done
+            docker exec casework-ci-postgres pg_isready -U casework -d casework
+            curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+            sudo apt-get install -y nodejs ruby
+      - run: npm install
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run db:migrate
+      - run: npm run typecheck
+      - run: npm run verify:release-contract
+      - run:
+          name: Validate immutable release provenance writer
+          command: |
+            node scripts/write-release-evidence.mjs --image ghcr.io/neophilism/secure-intake-case-workflow-engine --digest sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --source bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb --tag "v$(node -p "require('./package.json').version")" --out /tmp/release-evidence.json
+            test -s /tmp/release-evidence.json
+      - run:
+          name: Verify manual signed-release workflow contract
+          command: |
+            ruby -e 'require "yaml"; YAML.load_file(".github/workflows/release.yml")'
+            grep -q "workflow_dispatch:" .github/workflows/release.yml
+            grep -q 'tags:' .github/workflows/release.yml
+            grep -q 'Create manual release tag after validation' .github/workflows/release.yml
+            grep -q 'softprops/action-gh-release@v2' .github/workflows/release.yml
+            grep -q 'release-evidence.json' .github/workflows/release.yml
+            grep -q 'steps.context.outputs.source_sha' .github/workflows/release.yml
+            grep -q 'steps.build.outputs.digest' .github/workflows/release.yml
+      - run:
+          name: Refuse mutable release requests and validate automated handoff
+          command: |
+            node -e '
+              const fs = require("fs");
+              const version = require("./package.json").version;
+              fs.writeFileSync("/tmp/release-request.json", JSON.stringify({schemaVersion:1, version, sourceRef:"a".repeat(40)}));
+              fs.writeFileSync("/tmp/invalid-release-request.json", JSON.stringify({schemaVersion:1, version, sourceRef:"main"}));
+            '
+            node scripts/validate-release-request.mjs --file /tmp/release-request.json
+            node scripts/validate-release-request.mjs --file release-request.json
+            if node scripts/validate-release-request.mjs --file /tmp/invalid-release-request.json; then
+              echo "Mutable release request improperly accepted" >&2
+              exit 1
+            fi
+            ruby -e 'require "yaml"; YAML.load_file(".github/workflows/release-request.yml")'
+            grep -q 'release-request.json' .github/workflows/release-request.yml
+            grep -q 'actions: write' .github/workflows/release-request.yml
+            grep -q 'gh workflow run release.yml' .github/workflows/release-request.yml
+      - run: node scripts/test-production-environment.mjs
+      - run: node scripts/test-probe-public.mjs
+      - run: npm run test:a11y
+      - run: npm test
+      - run: npm run test:integration
+      - run: npm run build
+      - run:
+          name: Build actual production Docker image
+          command: docker build -t secure-intake-case-workflow-engine:ci .
+
+  security-status-record:
+    docker:
+      - image: cimg/python:3.12
+    resource_class: small
+    steps:
+      - checkout
+      - run: python3 scripts/validate_e2eesa_status.py
+
+workflows:
+  all-required-source-tests:
+    jobs:
+      - full-verification
+      - security-status-record
