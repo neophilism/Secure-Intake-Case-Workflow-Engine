@@ -35,7 +35,7 @@ export function digestReceiptContent(content: Uint8Array | string): string {
 /** Canonical serialization has an explicit fixed order and rejects ambiguous inputs. */
 export function canonicalReceiptManifest(input: ReceiptInput): string {
   if (!input.submissionId.trim() || !input.authorityId.trim()) throw new Error("Missing receipt identity");
-  if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{1,3})?Z$/.test(input.receivedAt) ||
+  if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,3})?Z$/.test(input.receivedAt) ||
       !Number.isFinite(Date.parse(input.receivedAt))) throw new Error("Invalid UTC receipt time");
   if (!digestPattern.test(input.contentSha256)) throw new Error("Invalid content digest");
   const seen = new Set<string>();
