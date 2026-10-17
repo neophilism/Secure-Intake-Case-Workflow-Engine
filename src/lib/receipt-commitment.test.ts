@@ -19,15 +19,30 @@ describe("generic receipt content commitments", () => {
     expect(verifyReceiptCommitment({ ...original, contentSha256: digestReceiptContent("Modified") }, commitment)).toBe(false);
     expect(verifyReceiptCommitment({ ...original, documents:[{...original.documents[0], complete:false}] }, commitment)).toBe(false);
   });
-  it("rejects duplicate attachments, invalid hashes, and invalid timestamps", () => {
+  it("rejects duplicate attachments, invalid hashes, and non-canonical timestamps", () => {
     expect(() => canonicalReceiptManifest({...original,documents:[...original.documents,...original.documents]})).toThrow();
     expect(() => canonicalReceiptManifest({...original,contentSha256:"bad"})).toThrow();
-    expect(() => canonicalReceiptManifest({...original,receivedAt:"yesterday"})).toThrow();
+    for (const receivedAt of ["yesterday", "2026-02-30T12:30:00.000Z", "2026-10-14T12:30:00Z"]) {
+      expect(() => canonicalReceiptManifest({...original,receivedAt})).toThrow();
+    }
   });
-  it("never confuses attachment ordering with a changed manifest", () => {
-    const second = { id:"attachment-a",sha256:digestReceiptContent("A"),sizeBytes:1,complete:true };
-    const a={...original,documents:[original.documents[0],second]};
-    const b={...original,documents:[second,original.documents[0]]};
+  it("sorts by Unicode code points without locale-dependent collation", () => {
+    const first = { id:"z",sha256:digestReceiptContent("Z"),sizeBytes:1,complete:true };
+    const second = { id:"a",sha256:digestReceiptContent("A"),sizeBytes:1,complete:true };
+    const a={...original,documents:[first,second]};
+    const b={...original,documents:[second,first]};
     expect(createReceiptCommitment(a)).toEqual(createReceiptCommitment(b));
+    expect(JSON.parse(canonicalReceiptManifest(a)).documents.map((item: {id: string}) => item.id)).toEqual(["a", "z"]);
+  });
+  it("normalizes identifiers before duplicate detection", () => {
+    const composed = { id:"caf\u00e9",sha256:digestReceiptContent("A"),sizeBytes:1,complete:true };
+    const decomposed = { ...composed, id:"cafe\u0301" };
+    expect(() => canonicalReceiptManifest({...original,documents:[composed,decomposed]})).toThrow();
+  });
+  it("bounds identity and attachment manifests and rejects hidden controls", () => {
+    expect(() => canonicalReceiptManifest({...original,submissionId:" padded"})).toThrow();
+    expect(() => canonicalReceiptManifest({...original,authorityId:"bad\u0000authority"})).toThrow();
+    expect(() => canonicalReceiptManifest({...original,documents:new Array(10_001).fill(original.documents[0])})).toThrow();
+    expect(() => canonicalReceiptManifest({...original,documents:[{...original.documents[0],sizeBytes:Number.MAX_SAFE_INTEGER + 1}]})).toThrow();
   });
 });
