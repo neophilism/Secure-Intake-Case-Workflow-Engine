@@ -16,3 +16,4 @@
 **/*.sqlite
 **/*.dump
 **/*.backup
+package-lock.json
