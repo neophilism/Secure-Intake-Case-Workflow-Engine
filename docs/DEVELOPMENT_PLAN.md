@@ -186,6 +186,10 @@ Complete acceptance ledger, downstream compatibility, deploy, support runbooks..
 
 The original 20-stage baseline has changed through many later releases and separate downstream National Secure Ideas work. PR32 was reported closed/superseded in a later conversation and equivalent work in another PR; do not mark numbered tasks merged solely from position. Current Render health and Neon readiness must be tested independently.
 
+## Source reconciliation — 18 October 2026
+
+See [the source-bound reconciliation](ENGINE_ROOM_RECONCILIATION_20261018.md) for explicit ADR-to-PR definitions of SI-28–34, disclosed overlap, partial production contributions and the stable-release dependency gate. The canonical plan retains all stable IDs and records actual PR identities rather than treating ordinal numbers as GitHub numbers.
+
 ## Execution / release / status rules
 
 1. Read this plan plus the checked-in policy/data model, ADRs, current README and linked runbooks. Discover open and merged actual PRs, CI, image versions, migration versions, release tags, live Render/Neon state and dependent app contract versions; never trust outdated conversational status.
