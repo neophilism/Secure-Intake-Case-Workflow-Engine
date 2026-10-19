@@ -19,3 +19,5 @@ To run the regression checks without contacting external infrastructure:
 ```sh
 node scripts/test-production-environment.mjs
 ```
+
+Preflight rejects IP literals, local hostnames and ambiguous duplicate PostgreSQL `sslmode` parameters. This is syntactic defense only; resolve and enforce network egress policy at runtime to address DNS rebinding.

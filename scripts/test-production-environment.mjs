@@ -33,6 +33,22 @@ const bad = inspectProductionEnvironment({
 assert.equal(bad.ok, false);
 for (const check of ["database_tls_connection", "canonical_https_app_origin", "secure_s3_endpoint",
   "https_malware_scanner", "protected_data_encryption_key_format"]) assert(bad.failed.includes(check));
+for (const database of [
+  "postgresql://user:secret@localhost/neondb?sslmode=require",
+  "postgresql://user:secret@127.0.0.1/neondb?sslmode=require",
+  "postgresql://user:secret@neon.example.net/neondb?sslmode=require&sslmode=disable",
+  "postgresql://user:secret@neon.example.net/?sslmode=require"
+]) {
+  assert(inspectProductionEnvironment({ ...valid, DATABASE_URL: database }).failed.includes("database_tls_connection"));
+}
+for (const endpoint of [
+  "https://127.0.0.1/v1/scan",
+  "https://[::1]/v1/scan",
+  "https://scanner.local/v1/scan",
+  "https://localhost./v1/scan"
+]) {
+  assert(inspectProductionEnvironment({ ...valid, MALWARE_SCANNER_URL: endpoint }).failed.includes("https_malware_scanner"));
+}
 const partial = inspectProductionEnvironment({
   ...valid, PROTECTED_DATA_ENCRYPTION_KEY: undefined, WEBHOOK_ENCRYPTION_KEY: undefined
 });
