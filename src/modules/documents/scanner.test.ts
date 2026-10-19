@@ -28,6 +28,17 @@ afterEach(() => {
 });
 
 describe("HTTP malware scanner adapter", () => {
+  it("rejects oversized scanner metadata", async () => {
+    process.env.MALWARE_SCANNER_URL = "https://scanner.example.test/scan";
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      status: "clean", details: { blob: "x".repeat(70 * 1024) }
+    })));
+    await expect(getMalwareScanner()?.scan({
+      data: new Uint8Array([1]), filename: "file.bin",
+      mimeType: "application/octet-stream", sha256: "a".repeat(64)
+    })).rejects.toThrow(/exceeds 64 KiB/);
+  });
+
   it("does not forward document bytes or tokens across redirects", async () => {
     process.env.MALWARE_SCANNER_URL = "https://scanner.example.test/scan";
     process.env.MALWARE_SCANNER_TOKEN = "scanner-token";

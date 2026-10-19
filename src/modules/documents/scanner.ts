@@ -63,10 +63,26 @@ class HttpMalwareScanner implements MalwareScanner {
       );
     }
 
-    const body = (await response.json()) as {
-      status?: unknown;
-      details?: unknown;
-    };
+    if (!response.body) throw new Error("Malware scanner returned an empty body.");
+    const reader = response.body.getReader();
+    const chunks: Buffer[] = [];
+    let length = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      length += value.byteLength;
+      if (length > 64 * 1024) {
+        await reader.cancel();
+        throw new Error("Malware scanner response exceeds 64 KiB.");
+      }
+      chunks.push(Buffer.from(value));
+    }
+    let body: { status?: unknown; details?: unknown };
+    try {
+      body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as typeof body;
+    } catch {
+      throw new Error("Malware scanner returned invalid JSON.");
+    }
     if (
       body.status !== "clean" &&
       body.status !== "infected" &&
