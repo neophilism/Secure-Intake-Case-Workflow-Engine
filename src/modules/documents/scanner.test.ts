@@ -94,6 +94,10 @@ describe("HTTP malware scanner adapter", () => {
     expect(() => getMalwareScanner()).toThrow(/HTTPS URL/);
 
     process.env.MALWARE_SCANNER_URL =
+      "https://scanner.example.test/scan?token=secret";
+    expect(() => getMalwareScanner()).toThrow(/HTTPS URL/);
+
+    process.env.MALWARE_SCANNER_URL =
       "https://scanner.example.test/scan";
     vi.stubGlobal(
       "fetch",

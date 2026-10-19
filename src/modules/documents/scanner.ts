@@ -97,7 +97,9 @@ export function getMalwareScanner(): MalwareScanner | null {
   if (
     endpoint.protocol !== "https:" ||
     endpoint.username ||
-    endpoint.password
+    endpoint.password ||
+    endpoint.search ||
+    endpoint.hash
   ) {
     throw new Error(
       "MALWARE_SCANNER_URL must be an HTTPS URL without embedded credentials.",
