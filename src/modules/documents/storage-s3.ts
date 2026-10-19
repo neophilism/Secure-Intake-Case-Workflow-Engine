@@ -180,16 +180,12 @@ export class S3CompatibleStorageAdapter
     const response = await fetch(requestUrl, {
       method,
       headers,
+      redirect: "manual",
       ...(body ? { body: Buffer.from(body) } : {}),
     });
 
     if (!response.ok) {
-      const diagnostic = (
-        await response.text().catch(() => "")
-      ).slice(0, 500);
-      throw new Error(
-        `S3 storage ${method} failed with ${response.status}${diagnostic ? ": " + diagnostic : ""}`,
-      );
+      throw new Error(`S3 storage ${method} failed with ${response.status}.`);
     }
 
     return response;

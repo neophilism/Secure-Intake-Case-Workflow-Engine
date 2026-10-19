@@ -28,6 +28,22 @@ afterEach(() => {
 });
 
 describe("HTTP malware scanner adapter", () => {
+  it("does not forward document bytes or tokens across redirects", async () => {
+    process.env.MALWARE_SCANNER_URL = "https://scanner.example.test/scan";
+    process.env.MALWARE_SCANNER_TOKEN = "scanner-token";
+    const fetchMock = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => new Response(null, {
+      status: 307, headers: { location: "https://other.example.test/scan" }
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const scanner = getMalwareScanner();
+    await expect(scanner?.scan({
+      data: new Uint8Array([1]), filename: "file.bin",
+      mimeType: "application/octet-stream", sha256: "a".repeat(64)
+    })).rejects.toThrow("Malware scanner returned HTTP 307.");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[1]?.redirect).toBe("manual");
+  });
+
   it("returns null when scanning is not configured", () => {
     delete process.env.MALWARE_SCANNER_URL;
     expect(getMalwareScanner()).toBeNull();

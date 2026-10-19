@@ -22,6 +22,16 @@ function adapter() {
 }
 
 describe("S3-compatible document storage", () => {
+  it("rejects redirects without forwarding signed headers and omits provider diagnostics", async () => {
+    const fetchMock = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => new Response("secret upstream diagnostic", {
+      status: 307, headers: { location: "https://other.example.test/object" }
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(adapter().get("org/doc/version")).rejects.toThrow("S3 storage GET failed with 307.");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[1]?.redirect).toBe("manual");
+  });
+
   it("signs and writes immutable object bytes", async () => {
     const fetchMock = vi.fn(async (
       input: string | URL | Request,

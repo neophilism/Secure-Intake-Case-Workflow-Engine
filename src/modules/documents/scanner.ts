@@ -43,6 +43,7 @@ class HttpMalwareScanner implements MalwareScanner {
 
     const response = await fetch(this.endpoint, {
       method: "POST",
+      redirect: "manual",
       headers: {
         "content-type":
           input.mimeType || "application/octet-stream",
