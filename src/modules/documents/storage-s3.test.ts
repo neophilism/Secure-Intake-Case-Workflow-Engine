@@ -22,6 +22,17 @@ function adapter() {
 }
 
 describe("S3-compatible document storage", () => {
+  it("rejects unbounded request timeout configuration", async () => {
+    const previous = process.env.DOCUMENT_S3_TIMEOUT_MS;
+    process.env.DOCUMENT_S3_TIMEOUT_MS = "0";
+    try {
+      await expect(adapter().get("org/doc/version")).rejects.toThrow(/DOCUMENT_S3_TIMEOUT_MS/);
+    } finally {
+      if (previous === undefined) delete process.env.DOCUMENT_S3_TIMEOUT_MS;
+      else process.env.DOCUMENT_S3_TIMEOUT_MS = previous;
+    }
+  });
+
   it("rejects redirects without forwarding signed headers and omits provider diagnostics", async () => {
     const fetchMock = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => new Response("secret upstream diagnostic", {
       status: 307, headers: { location: "https://other.example.test/object" }
