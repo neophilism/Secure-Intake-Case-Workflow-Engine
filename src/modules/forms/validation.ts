@@ -30,7 +30,9 @@ export function validateSubmissionAnswers(
   for (const field of fieldsInDefinition(definition)) {
     if (!visibleFieldIds.has(field.id)) continue;
 
-    const value = answers[field.id];
+    const value = Object.prototype.hasOwnProperty.call(answers, field.id)
+      ? answers[field.id]
+      : undefined;
     const empty = isEmpty(value);
 
     if (!options.partial && field.required && empty) {
