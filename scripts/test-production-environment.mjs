@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { inspectProductionEnvironment } from "./verify-production-environment.mjs";
+import { verifyDeploymentImage } from "./verify-deployment-image.mjs";
 const valid = {
   DATABASE_URL: "postgresql://user:secret@neon.example.net/neondb?sslmode=require",
   APP_BASE_URL: "https://secure-intake-preview.onrender.com",
@@ -59,3 +60,18 @@ const text = JSON.stringify(inspectProductionEnvironment({
 }));
 assert(!text.includes("very-secret-credential"), "Never report secret values.");
 console.info("Deployment preflight checks passed.");
+
+const sourceSha = "a".repeat(40);
+const digest = "sha256:" + "b".repeat(64);
+const image = "ghcr.io/neophilism/secure-intake-case-workflow-engine";
+const evidence = {
+  schemaVersion: 1,
+  engine: { version: "1.0.0-rc.9", sourceCommit: sourceSha, tag: "v1.0.0-rc.9" },
+  container: { repository: image, digest, immutableRef: image + "@" + digest }
+};
+const blueprint = "services:\n  - type: web\n    image: " + image + "@" + digest + "\n";
+assert.equal(verifyDeploymentImage(evidence, sourceSha, blueprint).ok, true);
+assert(verifyDeploymentImage(evidence, "c".repeat(40), blueprint).failed.includes("source_commit"));
+assert(verifyDeploymentImage(evidence, sourceSha, blueprint.replace(digest, "latest")).failed.includes("blueprint_image"));
+assert(verifyDeploymentImage({ ...evidence, container: { ...evidence.container, digest: "sha256:" + "0".repeat(64) } },
+  sourceSha, blueprint).failed.includes("release_evidence"));

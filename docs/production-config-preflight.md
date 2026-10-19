@@ -21,3 +21,11 @@ node scripts/test-production-environment.mjs
 ```
 
 Preflight rejects IP literals, local hostnames and ambiguous duplicate PostgreSQL `sslmode` parameters. This is syntactic defense only; resolve and enforce network egress policy at runtime to address DNS rebinding.
+
+Before changing the existing Render service's image, download the release's `release-evidence.json` and run:
+
+```sh
+node scripts/verify-deployment-image.mjs --evidence release-evidence.json --source EXPECTED_40_CHARACTER_GIT_SHA --blueprint render.yaml
+```
+
+Run the same check against `deployment/worker.render.example.yaml` if deploying the separately authorized worker. This checks that each Blueprint pins the exact digest associated with the intended source commit. It does not contact Render/GHCR or prove that the image actually runs; verify the live deployment and attestation separately.
