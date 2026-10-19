@@ -15,7 +15,7 @@ function httpsEndpoint(value, originOnly = false) {
       !u.port && (!originOnly || u.pathname === "/") && !u.search && !u.hash;
   } catch { return false; }
 }
-function databaseUrl(value) {
+export function databaseUrl(value) {
   if (typeof value !== "string") return false;
   try {
     const u = new URL(value);

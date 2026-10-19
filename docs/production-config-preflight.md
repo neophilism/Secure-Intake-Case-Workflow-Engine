@@ -29,3 +29,5 @@ node scripts/verify-deployment-image.mjs --evidence release-evidence.json --sour
 ```
 
 Run the same check against `deployment/worker.render.example.yaml` if deploying the separately authorized worker. This checks that each Blueprint pins the exact digest associated with the intended source commit. It does not contact Render/GHCR or prove that the image actually runs; verify the live deployment and attestation separately.
+
+Before each migration, set `MIGRATION_EXPECTED_HOST` and `MIGRATION_EXPECTED_DATABASE` from the approved Neon target and run `node scripts/preflight-migrations.mjs`. The command prints only symbolic checks and rejects a mismatched host/database or insecure or ambiguous database TLS setting. Confirm the Neon project and branch, authorized maintenance window, and restorable backup independently before `npm run db:migrate`; this syntax check does not contact Neon or prove a backup.

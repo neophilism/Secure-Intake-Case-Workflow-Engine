@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { inspectProductionEnvironment } from "./verify-production-environment.mjs";
 import { verifyDeploymentImage } from "./verify-deployment-image.mjs";
+import { inspectMigrationTarget } from "./preflight-migrations.mjs";
 const valid = {
   DATABASE_URL: "postgresql://user:secret@neon.example.net/neondb?sslmode=require",
   APP_BASE_URL: "https://secure-intake-preview.onrender.com",
@@ -75,3 +76,18 @@ assert(verifyDeploymentImage(evidence, "c".repeat(40), blueprint).failed.include
 assert(verifyDeploymentImage(evidence, sourceSha, blueprint.replace(digest, "latest")).failed.includes("blueprint_image"));
 assert(verifyDeploymentImage({ ...evidence, container: { ...evidence.container, digest: "sha256:" + "0".repeat(64) } },
   sourceSha, blueprint).failed.includes("release_evidence"));
+
+const migrationTarget = {
+  DATABASE_URL: "postgresql://user:secret@ep-secure.example.net/casework?sslmode=require",
+  MIGRATION_EXPECTED_HOST: "ep-secure.example.net",
+  MIGRATION_EXPECTED_DATABASE: "casework"
+};
+assert.equal(inspectMigrationTarget(migrationTarget).ok, true);
+assert(inspectMigrationTarget({ ...migrationTarget, MIGRATION_EXPECTED_DATABASE: "other" })
+  .failed.includes("expected_database"));
+assert(inspectMigrationTarget({ ...migrationTarget, MIGRATION_EXPECTED_HOST: "other.example.net" })
+  .failed.includes("expected_host"));
+assert(inspectMigrationTarget({ ...migrationTarget, DATABASE_URL: migrationTarget.DATABASE_URL + "&sslmode=disable" })
+  .failed.includes("database_tls_connection"));
+assert(inspectMigrationTarget({ ...migrationTarget, MIGRATION_EXPECTED_HOST: "" })
+  .failed.includes("expected_host"));
