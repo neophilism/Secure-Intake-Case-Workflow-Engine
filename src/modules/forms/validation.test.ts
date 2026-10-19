@@ -46,6 +46,19 @@ const definition = parseFormDefinition({
 });
 
 describe("submission validation", () => {
+  it("does not read inherited constructor as a submitted answer", () => {
+    const special = parseFormDefinition({
+      schemaVersion: 1,
+      sections: [{ id: "main", title: "Main", fields: [
+        { id: "constructor", type: "short_text", label: "Constructor" },
+        { id: "detail", type: "short_text", label: "Detail", required: true,
+          condition: { fieldId: "constructor", operator: "exists" } },
+      ] }],
+    });
+    expect(validateSubmissionAnswers(special, {}).success).toBe(true);
+    expect(validateSubmissionAnswers(special, { constructor: "present" }).success).toBe(false);
+  });
+
   it("does not require a hidden conditional field", () => {
     const result = validateSubmissionAnswers(definition, {
       email: "person@example.test",
