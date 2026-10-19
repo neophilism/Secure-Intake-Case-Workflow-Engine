@@ -1,7 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { createDatabase } from "@/db/client";
 import { checkDatabaseReadiness } from "./readiness";
 
 describe("database readiness", () => {
+  it("bounds a stalled database query and closes its client", async () => {
+    const end = vi.fn(async () => undefined);
+    const open = () => ({ client: { unsafe: () => new Promise(() => undefined), end }, db: null })
+      as unknown as ReturnType<typeof createDatabase>;
+    await expect(checkDatabaseReadiness("postgresql://user:secret@example.net/db", open, 10))
+      .resolves.toEqual({ ready: false, status: "unavailable" });
+    expect(end).toHaveBeenCalledOnce();
+  });
+
   it("returns unavailable when the connection factory fails before opening a client", async () => {
     await expect(checkDatabaseReadiness("invalid-url", () => { throw new Error("invalid connection"); }))
       .resolves.toEqual({ ready: false, status: "unavailable" });
