@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseFormDefinition } from "./definition";
 import { validateSubmissionAnswers } from "./validation";
+import { answersFromFormData } from "./form-data";
 
 const definition = parseFormDefinition({
   schemaVersion: 1,
@@ -55,7 +56,9 @@ describe("submission validation", () => {
           condition: { fieldId: "constructor", operator: "exists" } },
       ] }],
     });
-    expect(validateSubmissionAnswers(special, {}).success).toBe(true);
+    const parsed = answersFromFormData(special, new FormData());
+    expect(Object.prototype.hasOwnProperty.call(parsed, "constructor")).toBe(false);
+    expect(validateSubmissionAnswers(special, parsed).success).toBe(true);
     expect(validateSubmissionAnswers(special, { constructor: "present" }).success).toBe(false);
   });
 
