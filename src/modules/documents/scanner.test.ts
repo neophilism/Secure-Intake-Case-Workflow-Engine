@@ -28,6 +28,15 @@ afterEach(() => {
 });
 
 describe("HTTP malware scanner adapter", () => {
+  it("rejects unbounded scanner timeout configuration", async () => {
+    process.env.MALWARE_SCANNER_URL = "https://scanner.example.test/scan";
+    process.env.MALWARE_SCANNER_TIMEOUT_MS = "300001";
+    await expect(getMalwareScanner()?.scan({
+      data: new Uint8Array([1]), filename: "file.bin",
+      mimeType: "application/octet-stream", sha256: "a".repeat(64)
+    })).rejects.toThrow(/MALWARE_SCANNER_TIMEOUT_MS/);
+  });
+
   it("rejects oversized scanner metadata", async () => {
     process.env.MALWARE_SCANNER_URL = "https://scanner.example.test/scan";
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({

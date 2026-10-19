@@ -35,9 +35,9 @@ class HttpMalwareScanner implements MalwareScanner {
     const timeoutMs = Number(
       process.env.MALWARE_SCANNER_TIMEOUT_MS ?? "120000",
     );
-    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1000) {
+    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 300000) {
       throw new Error(
-        "MALWARE_SCANNER_TIMEOUT_MS must be an integer >= 1000.",
+        "MALWARE_SCANNER_TIMEOUT_MS must be between 1000 and 300000.",
       );
     }
 

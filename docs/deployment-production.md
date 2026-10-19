@@ -36,3 +36,4 @@ The Blueprint intentionally leaves the database in Neon and does not purchase Re
 ## Transport configuration hardening
 
 The malware scanner URL must not contain a query string or fragment; provide its token through the provider-managed `MALWARE_SCANNER_TOKEN` secret. S3 and scanner redirects fail closed. For slow S3 providers, set `DOCUMENT_S3_TIMEOUT_MS` within 1000 to 300000 ms after measuring the largest supported upload; the default is 120000 ms. A timeout fails the operation and does not promote quarantined content.
+Scanner requests also enforce a 1000 to 300000 ms timeout through `MALWARE_SCANNER_TIMEOUT_MS` (default 120000 ms).

@@ -137,6 +137,6 @@ This PR adds generic adapters and automatic orchestration. It does not:
 
 ## SI-37 transport and diagnostic hardening
 
-S3 and scanner requests use manual redirect handling; a 3xx response fails instead of forwarding signed headers, bearer tokens or document bytes to a different destination. S3 errors report status only, without untrusted upstream body text. Scanner URLs reject query strings and fragments, and final scan failures store a categorical reason rather than an arbitrary exception message. Scanner JSON is bounded to 64 KiB before parsing. S3 operations use a bounded request timeout (default 120 seconds; `DOCUMENT_S3_TIMEOUT_MS` accepts 1000 through 300000).
+S3 and scanner requests use manual redirect handling; a 3xx response fails instead of forwarding signed headers, bearer tokens or document bytes to a different destination. S3 errors report status only, without untrusted upstream body text. Scanner URLs reject query strings and fragments, and final scan failures store a categorical reason rather than an arbitrary exception message. Scanner JSON is bounded to 64 KiB before parsing. Scanner requests enforce a 1 to 300 second timeout. S3 operations use a bounded request timeout (default 120 seconds; `DOCUMENT_S3_TIMEOUT_MS` accepts 1000 through 300000).
 
 These source safeguards do not establish provider key custody, encryption at rest, retention, backup restoration, actual scanner efficacy or production network egress restrictions. Verify those against the authorized deployment.
