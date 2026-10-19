@@ -5,8 +5,10 @@ import { checkDatabaseReadiness } from "./readiness";
 describe("database readiness", () => {
   it("bounds a stalled database query and closes its client", async () => {
     const end = vi.fn(async () => undefined);
-    const open = () => ({ client: { unsafe: () => new Promise(() => undefined), end }, db: null })
-      as unknown as ReturnType<typeof createDatabase>;
+    const open = (): ReturnType<typeof createDatabase> => ({
+      client: { unsafe: () => new Promise<never>(() => undefined), end },
+      db: null,
+    }) as unknown as ReturnType<typeof createDatabase>;
     await expect(checkDatabaseReadiness("postgresql://user:secret@example.net/db", open, 10))
       .resolves.toEqual({ ready: false, status: "unavailable" });
     expect(end).toHaveBeenCalledOnce();
