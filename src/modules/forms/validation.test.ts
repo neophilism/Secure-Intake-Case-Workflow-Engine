@@ -47,6 +47,20 @@ const definition = parseFormDefinition({
 });
 
 describe("submission validation", () => {
+  it("rejects undeclared nested address data", () => {
+    const addressDefinition = parseFormDefinition({
+      schemaVersion: 1,
+      sections: [{ id: "main", title: "Main", fields: [
+        { id: "address", type: "address", label: "Address" },
+      ] }],
+    });
+    const nested = validateSubmissionAnswers(addressDefinition, {
+      address: { line1: "1 Main St", hidden_note: "unapproved nested data" },
+    });
+    expect(nested.success).toBe(false);
+    expect(validateSubmissionAnswers(addressDefinition, { address: { line1: "1 Main St" } }).success).toBe(true);
+  });
+
   it("does not read inherited constructor as a submitted answer", () => {
     const special = parseFormDefinition({
       schemaVersion: 1,
