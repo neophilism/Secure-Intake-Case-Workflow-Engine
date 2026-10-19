@@ -11,7 +11,11 @@ export function inspectMigrationTarget(env) {
   if (databaseUrl(targetUrl)) {
     const target = new URL(targetUrl);
     if (target.hostname.toLowerCase() !== expectedHost?.toLowerCase()) failed.push("expected_host");
-    if (decodeURIComponent(target.pathname.slice(1)) !== expectedDatabase) failed.push("expected_database");
+    try {
+      if (decodeURIComponent(target.pathname.slice(1)) !== expectedDatabase) failed.push("expected_database");
+    } catch {
+      failed.push("expected_database");
+    }
   }
   return { ok: failed.length === 0, failed: [...new Set(failed)] };
 }

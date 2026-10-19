@@ -91,3 +91,5 @@ assert(inspectMigrationTarget({ ...migrationTarget, DATABASE_URL: migrationTarge
   .failed.includes("database_tls_connection"));
 assert(inspectMigrationTarget({ ...migrationTarget, MIGRATION_EXPECTED_HOST: "" })
   .failed.includes("expected_host"));
+assert(inspectMigrationTarget({ ...migrationTarget, DATABASE_URL: "postgresql://user:secret@ep-secure.example.net/%ZZ?sslmode=require" })
+  .failed.includes("expected_database"));
