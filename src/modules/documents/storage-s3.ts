@@ -96,6 +96,11 @@ export class S3CompatibleStorageAdapter
       throw new Error("Invalid document storage key.");
     }
 
+    const timeoutMs = Number(process.env.DOCUMENT_S3_TIMEOUT_MS ?? "120000");
+    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 300000) {
+      throw new Error("DOCUMENT_S3_TIMEOUT_MS must be between 1000 and 300000.");
+    }
+
     const now = new Date();
     const amzDate = now
       .toISOString()
@@ -180,16 +185,13 @@ export class S3CompatibleStorageAdapter
     const response = await fetch(requestUrl, {
       method,
       headers,
+      redirect: "manual",
+      signal: AbortSignal.timeout(timeoutMs),
       ...(body ? { body: Buffer.from(body) } : {}),
     });
 
     if (!response.ok) {
-      const diagnostic = (
-        await response.text().catch(() => "")
-      ).slice(0, 500);
-      throw new Error(
-        `S3 storage ${method} failed with ${response.status}${diagnostic ? ": " + diagnostic : ""}`,
-      );
+      throw new Error(`S3 storage ${method} failed with ${response.status}.`);
     }
 
     return response;
