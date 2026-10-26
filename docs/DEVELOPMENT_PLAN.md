@@ -1,4 +1,4 @@
-> **Canonical PR roadmap:** [`registry/roadmap.json`](../registry/roadmap.json). Historical complete development specifications remain below; new PRs and counts must be entered only in the canonical file.
+> **Canonical PR roadmap:** [`registry/prs.json`](../registry/prs.json). Historical complete development specifications remain below; new PRs and counts belong only in the canonical registry.
 
 # Secure Intake & Case Workflow Engine — recovered original development plan and independent-account handoff
 

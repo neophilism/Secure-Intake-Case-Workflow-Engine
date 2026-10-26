@@ -382,3 +382,8 @@ running engine worker in addition to the web process.
 If the worker or scanner is unavailable, files remain quarantined. Downstream
 applications must not create a shortcut that converts pending/failed scans to
 clean.
+
+
+## Authenticated API capability negotiation
+
+Downstream clients may call `GET /api/v1/capabilities` with their normal bearer credential to discover supported method/path/scopes and explicit limits before enabling an adapter. See [API capabilities](api-capabilities.md). A permission name does not imply an HTTP operation; unsupported binary, idempotency, participant and protected-data operations must remain disabled.
