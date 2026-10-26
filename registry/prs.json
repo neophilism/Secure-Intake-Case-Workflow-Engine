@@ -204,7 +204,10 @@
       "mappingEvidence": "GitHub merged PR title explicitly labels approved numbered work unit",
       "dependsOn": [],
       "externalDependencies": [],
-      "externalPrerequisites": []
+      "externalPrerequisites": [],
+      "contributingPrs": [
+        52
+      ]
     },
     {
       "id": "SI-17",
